@@ -1,0 +1,86 @@
+MODULE Hilbert;  (*NW 8.1.13 / AP 5.5.16  for RISC*)
+  IMPORT Display, Cursors, Viewers, Texts, Oberon, MenuViewers, TextViewers;
+
+  CONST Menu = "System.Close  System.Copy  System.Grow";
+
+  VAR x, y, d: INTEGER;
+    A, B, C, D: PROCEDURE (i: INTEGER);
+
+  PROCEDURE E;
+  BEGIN Display.ReplConst(Display.white, x, y, d, 1, Display.paint); INC(x, d)
+  END E;
+
+  PROCEDURE N;
+  BEGIN Display.ReplConst(Display.white, x, y, 1, d, Display.paint); INC(y, d)
+  END N;
+
+  PROCEDURE W;
+  BEGIN DEC(x, d); Display.ReplConst(Display.white, x, y, d, 1, Display.paint)
+  END W;
+
+  PROCEDURE S;
+  BEGIN DEC(y, d); Display.ReplConst(Display.white, x, y, 1, d, Display.paint)
+  END S;
+
+  PROCEDURE HA(i: INTEGER);
+  BEGIN
+    IF i > 0 THEN D(i-1); W; A(i-1); S; A(i-1); E; B(i-1) END
+  END HA;
+
+  PROCEDURE HB(i: INTEGER);
+  BEGIN
+    IF i > 0 THEN C(i-1); N; B(i-1); E; B(i-1); S; A(i-1) END
+  END HB;
+
+  PROCEDURE HC(i: INTEGER);
+  BEGIN
+    IF i > 0 THEN B(i-1); E; C(i-1); N; C(i-1); W; D(i-1) END
+  END HC;
+
+  PROCEDURE HD(i: INTEGER);
+  BEGIN
+    IF i > 0 THEN A(i-1); S; D(i-1); W; D(i-1); N; C(i-1) END
+  END HD;
+
+  PROCEDURE DrawHilbert(F: Viewers.Viewer);
+    VAR k, n, w, x0, y0: INTEGER;
+  BEGIN k := 0; d := 8;
+    IF F.W < F.H THEN w := F.W ELSE w := F.H END ;
+    WHILE d*2 < w DO d := d*2; INC(k) END ;
+    Display.ReplConst(Display.black, F.X, F.Y, F.W, F.H, Display.replace);
+    x0 := F.W DIV 2; y0 := F.H DIV 2; n := 0;
+    WHILE n < k DO
+      d := d DIV 2; INC(x0, d DIV 2); INC(y0, d DIV 2);
+      x := F.X + x0; y := F.Y + y0; INC(n); HA(n)
+    END
+  END DrawHilbert;
+
+  PROCEDURE Handler(F: Viewers.Viewer; VAR M: Viewers.Msg);
+    VAR F0: Viewers.Viewer;
+  BEGIN
+    IF M IS Viewers.InputMsg THEN
+      IF M(Viewers.InputMsg).id = Viewers.track THEN
+        Cursors.DrawMouseArrow(M(Viewers.InputMsg).X, M(Viewers.InputMsg).Y)
+      END
+    ELSIF M IS Viewers.ViewerMsg THEN (*M.id = restore, extend or reduce*)
+      F.Y := M(Viewers.ViewerMsg).Y; F.H := M(Viewers.ViewerMsg).H; DrawHilbert(F)
+    ELSIF M IS Viewers.ControlMsg THEN
+      IF M(Viewers.ControlMsg).id = Viewers.neutralize THEN Cursors.RemoveMarks(F.X, F.Y, F.W, F.H) END
+    ELSIF M IS Viewers.CopyMsg THEN
+      NEW(F0); F0^ := F^; M(Viewers.CopyMsg).V := F0
+    END
+  END Handler;
+
+  PROCEDURE New(): Viewers.Viewer;
+    VAR F: Viewers.Viewer;
+  BEGIN NEW(F); F.handle := Handler; RETURN F
+  END New;
+
+  PROCEDURE Draw*;
+    VAR V: Viewers.Viewer; X, Y: INTEGER;
+  BEGIN Oberon.AllocateUserViewer(Oberon.Par.vwr.X, X, Y);
+    V := MenuViewers.New(TextViewers.NewMenu("Hilbert", Menu), New(), TextViewers.menuH, X, Y)
+  END Draw;
+  
+BEGIN A := HA; B := HB; C := HC; D := HD
+END Hilbert.
