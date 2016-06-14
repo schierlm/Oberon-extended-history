@@ -1,7 +1,8 @@
-MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 5.5.16*)
-  IMPORT SYSTEM, Display, Cursors, Viewers, Texts, Oberon, Tasks, MenuViewers, TextViewers;
+MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 13.6.16*)
+  IMPORT SYSTEM, Display, Viewers, Texts, Oberon, MenuViewers, TextFrames;
 
-  CONST N = 6;  (*nof stars*)
+  CONST Menu = "Stars.Close System.Copy System.Grow Stars.Step Stars.Run Stars.Stop   | System.Clone";
+    N = 6;  (*nof stars*)
     w = 16;   (*width of star*)
     interval = 200;  (*millisec*)
 
@@ -11,7 +12,7 @@ MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 5.5.16*)
     RestoreMsg = RECORD (Viewers.Msg) END ;
     StepMsg = RECORD (Viewers.Msg) END ;
 
-  VAR T: Tasks.Task;
+  VAR T: Oberon.Task;
     W: Texts.Writer;
 
   PROCEDURE Draw(x, y: INTEGER);
@@ -20,7 +21,7 @@ MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 5.5.16*)
 
   PROCEDURE Restore(F: Frame);
     VAR x0, y0: INTEGER;
-  BEGIN Cursors.RemoveMarks(F.X, F.Y, F.W, F.H);
+  BEGIN Oberon.RemoveMarks(F.X, F.Y, F.W, F.H);
     Display.ReplConst(0, F.X+1, F.Y, F.W-1, F.H, 0);
     x0 := F.W DIV 2 + F.X; y0 := F.H DIV 2 + F.Y;
     F.s[0].x := x0; F.s[0].y := y0; F.s[0].dx := 2; F.s[0].dy := 4; Draw(F.s[0].x, F.s[0].y);
@@ -53,13 +54,16 @@ MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 5.5.16*)
       CASE M OF
         Viewers.InputMsg:
           IF M(Viewers.InputMsg).id = Viewers.track THEN
-            Cursors.DrawMouseArrow(M(Viewers.InputMsg).X, M(Viewers.InputMsg).Y)
+            Oberon.DrawMouseArrow(M(Viewers.InputMsg).X, M(Viewers.InputMsg).Y)
           END
       | StepMsg: Steps(F);
       | RestoreMsg: Restore(F)
-      | Viewers.CopyMsg: Tasks.Remove(T); NEW(F1); F1^ := F^; M.V := F1
-      | Viewers.ViewerMsg: (*M.id = restore, extend or reduce*)
-          IF (M.Y # F.Y) OR (M.H # F.H) THEN F.Y := M.Y; F.H := M.H; Restore(F) END
+      | Viewers.CopyMsg: Oberon.Remove(T); NEW(F1); F1^ := F^; M.V := F1
+      | Viewers.ViewerMsg:
+          IF M.id = Viewers.restore THEN Restore(F) 
+          ELSIF M.id = Viewers.modify THEN
+            IF (M.Y # F.Y) OR (M.H # F.H) THEN F.Y := M.Y; F.H := M.H; Restore(F) END
+          END
       END
     END
   END Handle;
@@ -77,16 +81,16 @@ MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 5.5.16*)
   BEGIN NEW(F); F.handle := Handle;
     Oberon.AllocateUserViewer(Oberon.Par.vwr.X, X, Y);
     V := MenuViewers.New(
-      TextViewers.NewMenu("Stars", "Stars.Close  System.Grow  System.Copy  Stars.Step  Stars.Run  Stars.Stop"),
-      F, TextViewers.menuH, X, Y)
+      TextFrames.NewMenu("Stars", Menu),
+      F, TextFrames.menuH, X, Y)
   END Open;
 
   PROCEDURE Run*;
-  BEGIN Tasks.Install(T)
+  BEGIN Oberon.Install(T)
   END Run;
 
   PROCEDURE Stop*;
-  BEGIN Tasks.Remove(T)
+  BEGIN Oberon.Remove(T)
   END Stop;
 
   PROCEDURE Close*;
@@ -105,6 +109,6 @@ MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 5.5.16*)
     IF S.class = Texts.Int THEN T.period := S.i END
   END SetPeriod;
 
-BEGIN Texts.OpenWriter(W); T := Tasks.NewTask(Step1, interval);
+BEGIN Texts.OpenWriter(W); T := Oberon.NewTask(Step1, interval)
 END Stars.
 

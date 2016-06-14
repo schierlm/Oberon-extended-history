@@ -1,5 +1,5 @@
-MODULE Curves;  (*NW 8.11.90 / 18.4.13 / AP 12.12.15*)
-  IMPORT Display, Files, Oberon, Graphics, GraphicViewers;
+MODULE Curves;  (*NW 8.11.90 / 18.4.13 / AP 13.6.16*)
+  IMPORT Display, Files, Oberon, Graphics, GraphicFrames;
 
   TYPE
     Curve* = POINTER TO CurveDesc;
@@ -12,21 +12,21 @@ MODULE Curves;  (*NW 8.11.90 / 18.4.13 / AP 12.12.15*)
 
   VAR method*: Graphics.Method;
 
-  PROCEDURE Dot(f: GraphicViewers.Viewer; col, x, y: INTEGER);
+  PROCEDURE Dot(f: GraphicFrames.Frame; col, x, y: INTEGER);
   BEGIN
     IF (x >= f.X) & (x+7 < f.X1) & (y >= f.Y) & (x+7 < f.Y1) THEN Display.Dot(col, x, y, Display.replace) END
   END Dot;
 
-  PROCEDURE mark(f: GraphicViewers.Viewer; col, x, y: INTEGER);
+  PROCEDURE mark(f: GraphicFrames.Frame; col, x, y: INTEGER);
   BEGIN DEC(x, 3); DEC(y, 3);
     IF (x >= f.X) & (x+7 < f.X1) & (y >= f.Y) & (y+7 < f.Y1) THEN
       IF col = Display.black THEN Display.ReplConst(Display.black, x, y, 7, 7, Display.replace)
-      ELSE Display.CopyPattern(col, GraphicViewers.tack, x, y, Display.replace)
+      ELSE Display.CopyPattern(col, GraphicFrames.tack, x, y, Display.replace)
       END
     END
   END mark;
 
-  PROCEDURE line(f: GraphicViewers.Viewer; col: INTEGER; x, y, w, h, d: LONGINT);
+  PROCEDURE line(f: GraphicFrames.Frame; col: INTEGER; x, y, w, h, d: LONGINT);
     VAR x1, y1, u: LONGINT;
   BEGIN
     IF h < w THEN
@@ -45,7 +45,7 @@ MODULE Curves;  (*NW 8.11.90 / 18.4.13 / AP 12.12.15*)
     END
   END line;
 
-  PROCEDURE circle(f: GraphicViewers.Viewer; col: INTEGER; x0, y0, r: LONGINT);
+  PROCEDURE circle(f: GraphicFrames.Frame; col: INTEGER; x0, y0, r: LONGINT);
     VAR x, y, u: LONGINT;
   BEGIN u := 1 - r; x := r; y := 0;
     WHILE y <= x DO
@@ -62,7 +62,7 @@ MODULE Curves;  (*NW 8.11.90 / 18.4.13 / AP 12.12.15*)
     END
   END circle;
 
-  PROCEDURE ellipse(f: GraphicViewers.Viewer; col: INTEGER; x0, y0, a, b: LONGINT);
+  PROCEDURE ellipse(f: GraphicFrames.Frame; col: INTEGER; x0, y0, a, b: LONGINT);
     VAR x, y, y1, aa, bb, d, g, h: LONGINT;
   BEGIN aa := a*a; bb := b*b;
     h := (aa DIV 4) - b*aa + bb; g := (9*aa DIV 4) - 3*b*aa + bb; x := 0; y := b;
@@ -98,9 +98,9 @@ MODULE Curves;  (*NW 8.11.90 / 18.4.13 / AP 12.12.15*)
   END Copy;
 
   PROCEDURE Draw(obj: Graphics.Object; VAR M: Graphics.Msg);
-    VAR x, y, w, h, col: INTEGER; f: GraphicViewers.Viewer;
+    VAR x, y, w, h, col: INTEGER; f: GraphicFrames.Frame;
   BEGIN
-    CASE M OF  GraphicViewers.DrawMsg:
+    CASE M OF  GraphicFrames.DrawMsg:
       x := obj.x + M.x; y := obj.y + M.y; w := obj.w; h := obj.h; f := M.f;
       IF M.col = Display.black THEN col := obj.col ELSE col := M.col END ;
       IF (x < f.X1) & (f.X <= x+w) & (y < f.Y1) & (f.Y <= y+h) THEN
@@ -176,10 +176,10 @@ MODULE Curves;  (*NW 8.11.90 / 18.4.13 / AP 12.12.15*)
   PROCEDURE MakeLine*;  (*command*)
     VAR x0, x1, y0, y1: INTEGER;
       c: Curve;
-      G: GraphicViewers.Viewer;
-  BEGIN G := GraphicViewers.Focus();
+      G: GraphicFrames.Frame;
+  BEGIN G := GraphicFrames.Focus();
     IF (G # NIL) & (G.mark.next # NIL) THEN
-      GraphicViewers.Deselect(G);
+      GraphicFrames.Deselect(G);
       x0 := G.mark.x; y0 := G.mark.y; x1 := G.mark.next.x; y1 := G.mark.next.y;
       NEW(c); c.col := Oberon.CurCol;
       c.w := ABS(x1-x0); c.h := ABS(y1-y0); c.lw := Graphics.width;
@@ -190,24 +190,24 @@ MODULE Curves;  (*NW 8.11.90 / 18.4.13 / AP 12.12.15*)
       END ;
       DEC(c.x, G.x); DEC(c.y, G.y); c.do := method;
       Graphics.Add(G.graph, c);
-      GraphicViewers.Defocus(G); GraphicViewers.DrawObj(G, c)
+      GraphicFrames.Defocus(G); GraphicFrames.DrawObj(G, c)
     END
   END MakeLine;
 
   PROCEDURE MakeCircle*;  (*command*)
     VAR x0, y0, r: INTEGER;
       c: Curve;
-      G: GraphicViewers.Viewer;
-  BEGIN G := GraphicViewers.Focus();
+      G: GraphicFrames.Frame;
+  BEGIN G := GraphicFrames.Focus();
     IF (G # NIL) & (G.mark.next # NIL) THEN
-      GraphicViewers.Deselect(G);
+      GraphicFrames.Deselect(G);
       x0 := G.mark.x; y0 := G.mark.y; r := ABS(G.mark.next.x-x0);
       IF r > 4 THEN
         NEW(c); c.x := x0 - r - G.x; c.y := y0 - r - G.y; c.w := 2*r+1; c.h := c.w;
         c.kind := 2; c.col := Oberon.CurCol;
         c.lw := Graphics.width; c.do := method;
         Graphics.Add(G.graph, c);
-        GraphicViewers.Defocus(G); GraphicViewers.DrawObj(G, c)
+        GraphicFrames.Defocus(G); GraphicFrames.DrawObj(G, c)
       END
     END
   END MakeCircle;
@@ -215,10 +215,10 @@ MODULE Curves;  (*NW 8.11.90 / 18.4.13 / AP 12.12.15*)
   PROCEDURE MakeEllipse*;  (*command*)
     VAR x0, y0, a, b: INTEGER;
       c: Curve;
-      G: GraphicViewers.Viewer;
-  BEGIN G := GraphicViewers.Focus();
+      G: GraphicFrames.Frame;
+  BEGIN G := GraphicFrames.Focus();
     IF (G # NIL) & (G.mark.next # NIL) & (G.mark.next.next # NIL) THEN
-      GraphicViewers.Deselect(G);
+      GraphicFrames.Deselect(G);
       x0 := G.mark.x; y0 := G.mark.y;
       a := ABS(G.mark.next.x-x0); b := ABS(G.mark.next.next.y - y0);
       IF (a > 4) & (b > 4) THEN
@@ -226,7 +226,7 @@ MODULE Curves;  (*NW 8.11.90 / 18.4.13 / AP 12.12.15*)
         c.kind := 3; c.col := Oberon.CurCol;
         c.lw := Graphics.width; c.do := method;
         Graphics.Add(G.graph, c);
-        GraphicViewers.Defocus(G); GraphicViewers.DrawObj(G, c)
+        GraphicFrames.Defocus(G); GraphicFrames.DrawObj(G, c)
       END
     END
   END MakeEllipse;

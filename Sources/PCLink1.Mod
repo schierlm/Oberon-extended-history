@@ -1,11 +1,11 @@
-MODULE PCLink1;  (*NW 25.7.2013  for Oberon on RISC / AP 12.12.15*)
-  IMPORT SYSTEM, Files, Texts, Oberon, Tasks;
+MODULE PCLink1;  (*NW 25.7.2013  for Oberon on RISC / AP 13.6.16*)
+  IMPORT SYSTEM, Files, Texts, Oberon;
   
   CONST data = -56; stat = -52;
     BlkLen = 255;
     REQ = 20H; REC = 21H; SND = 22H; ACK = 10H; NAK = 11H;
 
-  VAR T: Tasks.Task;
+  VAR T: Oberon.Task;
     W: Texts.Writer;
 
   PROCEDURE Rec(VAR x: BYTE);
@@ -75,14 +75,14 @@ MODULE PCLink1;  (*NW 25.7.2013  for Oberon on RISC / AP 12.12.15*)
   END Task;
 
   PROCEDURE Run*;
-  BEGIN Tasks.Install(T); Texts.WriteString(W, "PCLink started");
+  BEGIN Oberon.Install(T); Texts.WriteString(W, "PCLink started");
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END Run;
 
   PROCEDURE Stop*;
-  BEGIN Tasks.Remove(T); Texts.WriteString(W, "PCLink stopped");
+  BEGIN Oberon.Remove(T); Texts.WriteString(W, "PCLink stopped");
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END Stop;
 
-BEGIN Texts.OpenWriter(W); T := Tasks.NewTask(Task, 0)
+BEGIN Texts.OpenWriter(W); T := Oberon.NewTask(Task, 0)
 END PCLink1.

@@ -1,7 +1,7 @@
-MODULE Draw; (*NW 29.6.88 / 12.11.94 / 18.11.13 / AP 7.5.16*)
-  IMPORT Files, Fonts, Viewers, Texts, Oberon, TextViewers, MenuViewers, Graphics, GraphicViewers;
+MODULE Draw; (*NW 29.6.88 / 12.11.94 / 18.11.13 / AP 11.6.16*)
+  IMPORT Files, Fonts, Viewers, Texts, Oberon, TextFrames, MenuViewers, Graphics, GraphicFrames;
 
-  CONST Menu = "System.Close  System.Copy  System.Grow  Draw.Delete  Draw.Ticks  Draw.Restore  Draw.Store";
+  CONST Menu = "System.Close System.Copy System.Grow Draw.Delete Draw.Ticks Draw.Restore Draw.Store   | System.Clone";
 
   VAR W: Texts.Writer;
 
@@ -14,7 +14,7 @@ MODULE Draw; (*NW 29.6.88 / 12.11.94 / 18.11.13 / AP 7.5.16*)
     VAR X, Y: INTEGER;
       beg, end, t: LONGINT;
       G: Graphics.Graph;
-      F: GraphicViewers.Viewer;
+      F: GraphicFrames.Frame;
       V: Viewers.Viewer;
       S: Texts.Scanner;
       text: Texts.Text;
@@ -25,18 +25,18 @@ MODULE Draw; (*NW 29.6.88 / 12.11.94 / 18.11.13 / AP 7.5.16*)
     END ;
     IF S.class = Texts.Name THEN
       NEW(G); Graphics.Open(G, S.s);
-      NEW(F); GraphicViewers.Open(F, G);
+      NEW(F); GraphicFrames.Open(F, G);
       Oberon.AllocateUserViewer(Oberon.Par.vwr.X, X, Y);
-      V := MenuViewers.New(TextViewers.NewMenu(S.s, Menu), F, TextViewers.menuH, X, Y)
+      V := MenuViewers.New(TextFrames.NewMenu(S.s, Menu), F, TextFrames.menuH, X, Y)
     END
   END Open;
 
   PROCEDURE Delete*;
-    VAR F: GraphicViewers.Viewer;
+    VAR F: GraphicFrames.Frame;
   BEGIN
     IF Oberon.Par.frame = Oberon.Par.vwr.dsc THEN
-      F := Oberon.Par.vwr.dsc.next(GraphicViewers.Viewer);
-      GraphicViewers.Erase(F); Graphics.Delete(F.graph)
+      F := Oberon.Par.vwr.dsc.next(GraphicFrames.Frame);
+      GraphicFrames.Erase(F); Graphics.Delete(F.graph)
     END
   END Delete;
 
@@ -59,7 +59,7 @@ MODULE Draw; (*NW 29.6.88 / 12.11.94 / 18.11.13 / AP 7.5.16*)
     VAR S: Texts.Scanner; CM: Graphics.ColorMsg;
   BEGIN GetArg(S);
     IF S.class = Texts.Int THEN
-      CM.col := S.i MOD 16; GraphicViewers.Change(GraphicViewers.Selected(), CM)
+      CM.col := S.i MOD 16; GraphicFrames.Change(GraphicFrames.Selected(), CM)
     END
   END ChangeColor;
 
@@ -67,7 +67,7 @@ MODULE Draw; (*NW 29.6.88 / 12.11.94 / 18.11.13 / AP 7.5.16*)
     VAR S: Texts.Scanner; WM: Graphics.WidMsg;
   BEGIN GetArg(S);
     IF S.class = Texts.Int THEN
-      WM.w := S.i; GraphicViewers.Change(GraphicViewers.Selected(), WM)
+      WM.w := S.i; GraphicFrames.Change(GraphicFrames.Selected(), WM)
     END
   END ChangeWidth;
 
@@ -76,18 +76,18 @@ MODULE Draw; (*NW 29.6.88 / 12.11.94 / 18.11.13 / AP 7.5.16*)
   BEGIN GetArg(S);
     IF S.class = Texts.Name THEN
       FM.fnt := Fonts.This(S.s);
-      IF FM.fnt # NIL THEN GraphicViewers.Change(GraphicViewers.Selected(), FM) END
+      IF FM.fnt # NIL THEN GraphicFrames.Change(GraphicFrames.Selected(), FM) END
     END
   END ChangeFont;
 
   PROCEDURE Redraw(Q: BOOLEAN);
-    VAR v: Viewers.Viewer; G: GraphicViewers.Viewer;
+    VAR v: Viewers.Viewer; G: GraphicFrames.Frame;
   BEGIN
     IF Oberon.Par.frame = Oberon.Par.vwr.dsc THEN v := Oberon.Par.vwr
     ELSE v := Oberon.MarkedViewer()
     END ;
-    IF (v # NIL) & (v.dsc # NIL) & (v.dsc.next IS GraphicViewers.Viewer) THEN
-      G := v.dsc.next(GraphicViewers.Viewer); G.ticked := Q OR ~G.ticked; GraphicViewers.Restore(G)
+    IF (v # NIL) & (v.dsc # NIL) & (v.dsc.next IS GraphicFrames.Frame) THEN
+      G := v.dsc.next(GraphicFrames.Frame); G.ticked := Q OR ~G.ticked; GraphicFrames.Restore(G)
     END
   END Redraw;
 
@@ -112,26 +112,26 @@ MODULE Draw; (*NW 29.6.88 / 12.11.94 / 18.11.13 / AP 7.5.16*)
 
   PROCEDURE Store*;
     VAR S: Texts.Scanner;
-      Menu: TextViewers.Viewer; G: GraphicViewers.Viewer;
+      Menu: TextFrames.Frame; G: GraphicFrames.Frame;
       v: Viewers.Viewer;
   BEGIN
     IF Oberon.Par.frame = Oberon.Par.vwr.dsc THEN
-      Menu := Oberon.Par.vwr.dsc(TextViewers.Viewer); G := Menu.next(GraphicViewers.Viewer);
+      Menu := Oberon.Par.vwr.dsc(TextFrames.Frame); G := Menu.next(GraphicFrames.Frame);
       Texts.OpenScanner(S, Menu.text, 0); Texts.Scan(S);
       IF S.class = Texts.Name THEN
         Texts.WriteString(W, S.s); Texts.WriteString(W, " storing");
         Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
-        Backup(S.s); GraphicViewers.Store(G, S.s)
+        Backup(S.s); GraphicFrames.Store(G, S.s)
       END
     ELSE
       Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
       IF S.class = Texts.Name THEN
         v := Oberon.MarkedViewer();
-        IF (v.dsc # NIL) & (v.dsc.next IS GraphicViewers.Viewer) THEN
-          G := v.dsc.next(GraphicViewers.Viewer);
+        IF (v.dsc # NIL) & (v.dsc.next IS GraphicFrames.Frame) THEN
+          G := v.dsc.next(GraphicFrames.Frame);
           Texts.WriteString(W, S.s); Texts.WriteString(W, " storing");
           Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
-          Backup(S.s); GraphicViewers.Store(G, S.s)
+          Backup(S.s); GraphicFrames.Store(G, S.s)
         END
       END
     END
@@ -145,7 +145,7 @@ MODULE Draw; (*NW 29.6.88 / 12.11.94 / 18.11.13 / AP 7.5.16*)
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
     IF S.class = Texts.Name THEN
       Lname := S.s; Texts.Scan(S);
-      IF S.class = Texts.Name THEN GraphicViewers.Macro(Lname, S.s) END ;
+      IF S.class = Texts.Name THEN GraphicFrames.Macro(Lname, S.s) END ;
     END
   END Macro;
 

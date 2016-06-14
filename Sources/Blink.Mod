@@ -1,20 +1,20 @@
-MODULE Blink;   (*NW 30.5.13 / AP 12.12.15*)
-  IMPORT SYSTEM, Tasks;
+MODULE Blink;   (*NW 30.5.13 / AP 13.6.16*)
+  IMPORT SYSTEM, Oberon;
   VAR z: INTEGER;
-    T: Tasks.Task;
+    T: Oberon.Task;
   
   PROCEDURE Run*;
-  BEGIN Tasks.Install(T)
+  BEGIN Oberon.Install(T)
   END Run;
 
   PROCEDURE Stop*;
-  BEGIN Tasks.Remove(T)
+  BEGIN Oberon.Remove(T)
   END Stop;
 
   PROCEDURE Tick;
   BEGIN z := 1-z; LED(z)
   END Tick;
 
-BEGIN z := 0; T := Tasks.NewTask(Tick, 500)
+BEGIN z := 0; T := Oberon.NewTask(Tick, 500)
 END Blink.
 

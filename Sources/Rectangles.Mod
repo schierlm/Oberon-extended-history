@@ -1,5 +1,5 @@
-MODULE Rectangles;  (*NW 25.2.90 / 18.4.13 / AP 12.12.15*)
-  IMPORT SYSTEM, Display, Files, Input, Texts, Oberon, Graphics, GraphicViewers;
+MODULE Rectangles;  (*NW 25.2.90 / 18.4.13 / AP 13.6.16*)
+  IMPORT SYSTEM, Display, Files, Input, Texts, Oberon, Graphics, GraphicFrames;
 
   TYPE
     Rectangle* = POINTER TO RectDesc;
@@ -20,23 +20,23 @@ MODULE Rectangles;  (*NW 25.2.90 / 18.4.13 / AP 12.12.15*)
     dst(Rectangle).lw := src(Rectangle).lw; dst(Rectangle).vers := src(Rectangle).vers
   END Copy;
 
-  PROCEDURE mark(f: GraphicViewers.Viewer; col, x, y: INTEGER);
-  BEGIN GraphicViewers.ReplConst(f, col, x+1, y+1, 4, 4, 0)
+  PROCEDURE mark(f: GraphicFrames.Frame; col, x, y: INTEGER);
+  BEGIN GraphicFrames.ReplConst(f, col, x+1, y+1, 4, 4, 0)
   END mark;
 
   PROCEDURE Draw(obj: Graphics.Object; VAR M: Graphics.Msg);
-    VAR x, y, w, h, lw, col: INTEGER; f: GraphicViewers.Viewer;
+    VAR x, y, w, h, lw, col: INTEGER; f: GraphicFrames.Frame;
 
-    PROCEDURE draw(f: GraphicViewers.Viewer; col, x, y, w, h, lw: INTEGER);
+    PROCEDURE draw(f: GraphicFrames.Frame; col, x, y, w, h, lw: INTEGER);
     BEGIN
-      GraphicViewers.ReplConst(f, col, x, y, w, lw, Display.replace);
-      GraphicViewers.ReplConst(f, col, x+w-lw, y, lw, h, Display.replace);
-      GraphicViewers.ReplConst(f, col, x, y+h-lw, w, lw, Display.replace);
-      GraphicViewers.ReplConst(f, col, x, y, lw, h, Display.replace)
+      GraphicFrames.ReplConst(f, col, x, y, w, lw, Display.replace);
+      GraphicFrames.ReplConst(f, col, x+w-lw, y, lw, h, Display.replace);
+      GraphicFrames.ReplConst(f, col, x, y+h-lw, w, lw, Display.replace);
+      GraphicFrames.ReplConst(f, col, x, y, lw, h, Display.replace)
     END draw;
 
   BEGIN
-    CASE M OF GraphicViewers.DrawMsg:
+    CASE M OF GraphicFrames.DrawMsg:
       x := obj.x + M.x; y := obj.y + M.y; w := obj.w; h := obj.h; f := M.f;
       lw := obj(Rectangle).lw;
       IF (x < f.X1) & (x+w > f.X) & (y < f.Y1) & (y+h > f.Y) THEN
@@ -92,10 +92,10 @@ MODULE Rectangles;  (*NW 25.2.90 / 18.4.13 / AP 12.12.15*)
   PROCEDURE Make*;  (*command*)
     VAR x0, x1, y0, y1: INTEGER;
       R: Rectangle;
-      G: GraphicViewers.Viewer;
-  BEGIN G := GraphicViewers.Focus();
+      G: GraphicFrames.Frame;
+  BEGIN G := GraphicFrames.Focus();
     IF (G # NIL) & (G.mark.next # NIL) THEN
-      GraphicViewers.Deselect(G);
+      GraphicFrames.Deselect(G);
       x0 := G.mark.x; y0 := G.mark.y; x1 := G.mark.next.x; y1 := G.mark.next.y;
       NEW(R); R.col := Oberon.CurCol;
       R.w := ABS(x1-x0); R.h := ABS(y1-y0);
@@ -104,7 +104,7 @@ MODULE Rectangles;  (*NW 25.2.90 / 18.4.13 / AP 12.12.15*)
       R.x := x0 - G.x; R.y := y0 - G.y;
       R.lw := Graphics.width; R.vers := 0; R.do := method;
       Graphics.Add(G.graph, R);
-      GraphicViewers.Defocus(G); GraphicViewers.DrawObj(G, R)
+      GraphicFrames.Defocus(G); GraphicFrames.DrawObj(G, R)
     END
   END Make;
 

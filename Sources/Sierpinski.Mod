@@ -1,7 +1,7 @@
-MODULE Sierpinski;  (*NW 15.1.13 / AP 5.5.16*)
-  IMPORT Display, Cursors, Viewers, Oberon, MenuViewers, TextViewers;
+MODULE Sierpinski;  (*NW 15.1.13 / AP 13.6.16*)
+  IMPORT Display, Viewers, Oberon, MenuViewers, TextFrames;
 
-  CONST Menu = "System.Close  System.Copy  System.Grow";
+  CONST Menu = "System.Close System.Copy System.Grow   | System.Clone";
 
   VAR x, y, d: INTEGER;
     A, B, C, D: PROCEDURE (i: INTEGER);
@@ -85,12 +85,14 @@ MODULE Sierpinski;  (*NW 15.1.13 / AP 5.5.16*)
   BEGIN
     IF M IS Viewers.InputMsg THEN
       IF M(Viewers.InputMsg).id = Viewers.track THEN
-        Cursors.DrawMouseArrow(M(Viewers.InputMsg).X, M(Viewers.InputMsg).Y)
+        Oberon.DrawMouseArrow(M(Viewers.InputMsg).X, M(Viewers.InputMsg).Y)
       END
-    ELSIF M IS Viewers.ViewerMsg THEN (*M.id = restore, extend or reduce*)
-      F.Y := M(Viewers.ViewerMsg).Y; F.H := M(Viewers.ViewerMsg).H; DrawSierpinski(F)
+    ELSIF M IS Viewers.ViewerMsg THEN
+      IF (M(Viewers.ViewerMsg).id = Viewers.restore) OR (M(Viewers.ViewerMsg).id = Viewers.modify) THEN
+        F.Y := M(Viewers.ViewerMsg).Y; F.H := M(Viewers.ViewerMsg).H; DrawSierpinski(F)
+      END
     ELSIF M IS Viewers.ControlMsg THEN
-      IF M(Viewers.ControlMsg).id = Viewers.neutralize THEN Cursors.RemoveMarks(F.X, F.Y, F.W, F.H) END
+      IF M(Viewers.ControlMsg).id = Viewers.neutralize THEN Oberon.RemoveMarks(F.X, F.Y, F.W, F.H) END
     ELSIF M IS Viewers.CopyMsg THEN
        NEW(F1); F1^ := F^; M(Viewers.CopyMsg).V := F1
     END
@@ -104,7 +106,7 @@ MODULE Sierpinski;  (*NW 15.1.13 / AP 5.5.16*)
   PROCEDURE Draw*;
     VAR V: Viewers.Viewer; X, Y: INTEGER;
   BEGIN Oberon.AllocateUserViewer(Oberon.Par.vwr.X, X, Y);
-    V := MenuViewers.New(TextViewers.NewMenu("Sierpinski", Menu), New(), TextViewers.menuH, X, Y)
+    V := MenuViewers.New(TextFrames.NewMenu("Sierpinski", Menu), New(), TextFrames.menuH, X, Y)
   END Draw;
 
 BEGIN A := SA; B := SB; C := SC; D := SD

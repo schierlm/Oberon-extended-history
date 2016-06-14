@@ -1,5 +1,5 @@
-MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
-  IMPORT Kernel, Modules, Input, Display, Fonts, Texts, Cursors, Viewers, Oberon;
+MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 13.6.16 - full fractional line scrolling for Experimental Oberon*)
+  IMPORT Modules, Input, Display, Fonts, Texts, Viewers, Oberon;
 
   CONST replace* = 0; insert* = 1; delete* = 2; unmark* = 3; (*update message ids*)
     BS = 8X; TAB = 9X; CR = 0DX; DEL = 7FX; inf = 32767;
@@ -19,8 +19,8 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
       lin: Line
     END;
 
-    Viewer* = POINTER TO ViewerDesc;
-    ViewerDesc* = RECORD (Viewers.ViewerDesc)
+    Frame* = POINTER TO FrameDesc;
+    FrameDesc* = RECORD (Viewers.ViewerDesc)
       text*: Texts.Text;
       org*: LONGINT;
       col*: INTEGER;
@@ -51,33 +51,33 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
     menuH*, barW*, left*, right*, top*, bot*, lsp*: INTEGER; (*standard sizes*)
     asr, dsr, selH, markW, eolW: INTEGER;
     nextCh: CHAR;
-    ScrollMarker: Cursors.Marker;
+    ScrollMarker: Oberon.Marker;
     W, KW: Texts.Writer; (*keyboard writer*)
 
   PROCEDURE Min (i, j: INTEGER): INTEGER;
-  BEGIN IF i < j THEN j := i END ; RETURN j
+  BEGIN IF i < j THEN j := i END; RETURN j
   END Min;
 
   PROCEDURE Max (i, j: INTEGER): INTEGER;
-  BEGIN IF i > j THEN j := i END ; RETURN j
+  BEGIN IF i > j THEN j := i END; RETURN j
   END Max;
 
-  PROCEDURE NewLine (F: Viewer; VAR L: Line); (*reuse line from line pool if possible*)
+  PROCEDURE NewLine (F: Frame; VAR L: Line); (*reuse line from line pool if possible*)
   BEGIN IF F.pool # NIL THEN L := F.pool; F.pool := L.next ELSE NEW(L) END
   END NewLine;
 
-  PROCEDURE LastLine (F: Viewer; L: Line); (*move lines after L to line pool*)
+  PROCEDURE LastLine (F: Frame; L: Line); (*move lines after L to line pool*)
     VAR L0: Line;
   BEGIN (*L in closed F.trailer ring*)
     IF L.next # F.trailer THEN L0 := L;
       WHILE L0.next # F.trailer DO L0 := L0.next END;
-      L0.next := F.pool; F.pool:= L.next; L.next := F.trailer
+      L0.next := F.pool; F.pool := L.next; L.next := F.trailer
     END
   END LastLine;
 
   (*------------------display support------------------------*)
 
-  PROCEDURE ReplConst (col: INTEGER; F: Viewer; X, Y, W, H: INTEGER; mode: INTEGER);
+  PROCEDURE ReplConst (col: INTEGER; F: Frame; X, Y, W, H: INTEGER; mode: INTEGER);
     VAR topY, botY: INTEGER;
   BEGIN
     IF W > 0 THEN topY := F.Y + F.H - F.top; botY := F.Y + F.bot;
@@ -98,12 +98,12 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
       IF X < 3 THEN X := 3 ELSIF X > DW - 4 THEN X := DW - 4 END
     ELSE
       IF X < CL + 3 THEN X := CL + 4 ELSIF X > CL + DW - 4 THEN X := CL + DW - 4 END
-    END ;
+    END;
     IF Y < 6 THEN Y := 6 ELSIF Y > DH - 6 THEN Y := DH - 6 END;
     Display.CopyPattern(Display.white, Display.updown, X-4, Y-4, Display.invert)
   END FlipSM;
 
-  PROCEDURE UpdateMark (F: Viewer);  (*in scroll bar*)
+  PROCEDURE UpdateMark (F: Frame); (*in scroll bar*)
     VAR oldH: INTEGER;
   BEGIN oldH := F.markH; F.markH := F.org * F.H DIV (F.text.len + 1);
     IF F.hasMark & (F.left >= barW) & (F.markH # oldH) THEN
@@ -112,7 +112,15 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
     END
   END UpdateMark;
 
-  PROCEDURE SetChangeMark (F: Viewer; on: BOOLEAN);  (*in corner*)
+  PROCEDURE Mark* (F: Frame; on: BOOLEAN); (*in scroll bar*)
+  BEGIN
+    IF (F.H > 0) & (F.left >= barW) & ((F.hasMark & ~on) OR (~F.hasMark & on)) THEN
+      Display.ReplConst(Display.white, F.X + 1, F.Y + F.H - 1 - F.markH, markW, 1, Display.invert)
+    END;
+    F.hasMark := on
+  END Mark;
+
+  PROCEDURE SetChangeMark (F: Frame; on: BOOLEAN); (*in corner*)
   BEGIN
     IF F.H > menuH THEN
       IF on THEN Display.CopyPattern(Display.white, Display.block, F.X+F.W-12, F.Y+F.H-12, Display.paint)
@@ -131,7 +139,7 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
     RETURN ox
   END Width;
 
-  PROCEDURE PrepareLine (L: Line; VAR R: Texts.Reader); (*pass 1, reads data from file*)
+  PROCEDURE PrepareLine (L: Line; VAR R: Texts.Reader); (*pass 1*)
   BEGIN L.asr := asr; L.dsr := -dsr; L.len := 0;
     WHILE (nextCh # CR) & (R.fnt # NIL) DO
       IF R.fnt.maxY > L.asr THEN L.asr := R.fnt.maxY END;
@@ -142,12 +150,10 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
     L.eot := R.fnt = NIL; Texts.Read(R, nextCh)
   END PrepareLine;
 
-  PROCEDURE DisplayLine (F: Viewer; L: Line; (*pass 2, reads data from file buffer*)
+  PROCEDURE DisplayLine (F: Frame; L: Line; (*pass 2*)
     VAR R: Texts.Reader; X, Y, topY, botY: INTEGER; len: LONGINT);
     VAR patadr, NX, dx, x, y, w, h, thid, bhid, y0: INTEGER;
-  BEGIN NX := F.X + F.W;
-    IF (topY <= 0) OR (topY > F.Y + F.H - F.top) THEN topY := F.Y + F.H - F.top END;
-    IF (botY <= 0) OR (botY < F.Y + F.bot) THEN botY := F.Y + F.bot END;
+  BEGIN NX := F.X + F.W - F.right;
     WHILE (nextCh # CR) & (R.fnt # NIL) DO
       Fonts.GetPat(R.fnt, nextCh, dx, x, y, w, h, patadr);
       IF (X + x + w <= NX) & (h # 0) THEN y0 := Y + y;
@@ -174,17 +180,9 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
     END
   END Validate;
 
-  PROCEDURE Mark* (F: Viewer; on: BOOLEAN);
-  BEGIN
-    IF (F.H > 0) & (F.left >= barW) & ((F.hasMark & ~on) OR (~F.hasMark & on)) THEN
-      Display.ReplConst(Display.white, F.X + 1, F.Y + F.H - 1 - F.markH, markW, 1, Display.invert)
-    END;
-    F.hasMark := on
-  END Mark;
-
   (*------------------frame modifiers------------------------*)
 
-  PROCEDURE Restore* (F: Viewer);
+  PROCEDURE Restore* (F: Frame);
     VAR R: Texts.Reader; L, l: Line;
       org: LONGINT; curY, topY, botY: INTEGER;
   BEGIN Display.ReplConst(F.col, F.X, F.Y, F.W, F.H, Display.replace);
@@ -199,7 +197,7 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
         NewLine(F, l);
         PrepareLine(l, R);
         Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
-        DisplayLine(F, l, R, F.X + F.left, curY - l.asr, 0, 0, 0);
+        DisplayLine(F, l, R, F.X + F.left, curY - l.asr, topY, botY, 0);
         L.next := l; L := l; org := org + L.len; curY := curY - L.lsp
       END
     END;
@@ -207,36 +205,35 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
     F.markH := F.org * F.H DIV (F.text.len + 1)
   END Restore;
 
-  PROCEDURE Suspend* (F: Viewer);
+  PROCEDURE Suspend* (F: Frame);
   BEGIN F.trailer.next := F.trailer
   END Suspend;
 
-  PROCEDURE Extend* (F: Viewer; newY: INTEGER);
+  PROCEDURE Extend* (F: Frame; newY: INTEGER);
     VAR R: Texts.Reader; L, l: Line;
-      org: LONGINT; curY, topY, botY: INTEGER;
+      org: LONGINT; curY, topY, botY, botY0: INTEGER;
   BEGIN Display.ReplConst(F.col, F.X, newY, F.W, F.Y - newY, Display.replace);
     IF F.left >= barW THEN
       Display.ReplConst(Display.white, F.X + barW - 1, newY, 1, F.Y - newY, Display.invert)
     END;
-    topY := F.Y + F.H - F.top; botY := F.Y + F.bot;
-    F.H := F.H + F.Y - newY; F.Y := newY;
+    topY := F.Y + F.H - F.top; botY0 := F.Y + F.bot;
+    F.H := F.H + F.Y - newY; F.Y := newY; botY := F.Y + F.bot;
     IF F.trailer.next = F.trailer THEN Validate(F.text, F.org) END;
     L := F.trailer; org := F.org; curY := topY + F.voff;
-    WHILE (L.next # F.trailer) & (curY > botY) DO
+    WHILE (L.next # F.trailer) & (curY > botY0) DO
       L := L.next; org := org + L.len; curY := curY - L.lsp
     END;
-    IF (L # F.trailer) & (curY < botY) THEN (*old bottom line was fractional*)
+    IF (L # F.trailer) & (curY < botY0) THEN (*old bottom line was fractional*)
       Texts.OpenReader(R, F.text, org - L.len); Texts.Read(R, nextCh);
-      DisplayLine(F, L, R, F.X + F.left, curY + L.dsr, botY, 0, 0)
+      DisplayLine(F, L, R, F.X + F.left, curY + L.dsr, botY0, botY, 0)
     ELSE Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh)
     END;
-    botY := F.Y + F.bot;
     IF topY > botY THEN
       WHILE ~L.eot & (curY > botY) DO
         NewLine(F, l);
         PrepareLine(l, R);
         Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
-        DisplayLine(F, l, R, F.X + F.left, curY - l.asr, 0, 0, 0);
+        DisplayLine(F, l, R, F.X + F.left, curY - l.asr, topY, botY, 0);
         L.next := l; L := l; org := org + L.len; curY := curY - L.lsp
       END
     END;
@@ -244,7 +241,7 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
     F.markH := F.org * F.H DIV (F.text.len + 1)
   END Extend;
 
-  PROCEDURE Reduce* (F: Viewer; newY: INTEGER);
+  PROCEDURE Reduce* (F: Frame; newY: INTEGER);
     VAR L: Line; curY, topY, botY: INTEGER;
   BEGIN F.H := F.H + F.Y - newY; F.Y := newY;
     topY := F.Y + F.H - F.top; botY := F.Y + F.bot; L := F.trailer; 
@@ -264,7 +261,7 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
 
   (*------------------fractional line scroll support------------------------*)
 
-  PROCEDURE ScrollDown (F: Viewer; pos: LONGINT; dY, voff: INTEGER);
+  PROCEDURE ScrollDown (F: Frame; pos: LONGINT; dY, voff: INTEGER);
     VAR R: Texts.Reader; L, L0, l: Line;
       topY, botY, curY, dy, dy1, h, h1: INTEGER;
   BEGIN (*dY > 0 & 0 <= pos <= F.org*)
@@ -280,21 +277,21 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
     curY := topY + voff; botY := Max(topY + F.voff - dY, botY);
     F.org := pos; F.voff := voff; L := F.trailer; L0 := L.next;
     Texts.OpenReader(R, F.text, pos); Texts.Read(R, nextCh);
-    WHILE ~L.eot & (curY > botY) DO (*read from file buffer*)
+    WHILE ~L.eot & (curY > botY) DO
       NewLine(F, l);
       PrepareLine(l, R);
       Texts.OpenReader(R, F.text, pos); Texts.Read(R, nextCh);
-      DisplayLine(F, l, R, F.X + F.left, curY - l.asr, 0, 0, 0);
+      DisplayLine(F, l, R, F.X + F.left, curY - l.asr, topY, botY, 0);
       L.next := l; L := l; pos := pos + L.len; curY := curY - L.lsp
     END;
     L.next := L0;
     IF (L0 # F.trailer) & (curY > dy1) THEN (*old top line was fractional*)
-      DisplayLine(F, L0, R, F.X + F.left, curY - L0.asr, 0, dy1, 0)
+      DisplayLine(F, L0, R, F.X + F.left, curY - L0.asr, topY, dy1, 0)
     END;
     UpdateMark(F)
   END ScrollDown;
 
-  PROCEDURE ScrollUp (F: Viewer; pos: LONGINT; dY: INTEGER; VAR full: BOOLEAN);
+  PROCEDURE ScrollUp (F: Frame; pos: LONGINT; dY: INTEGER; VAR full: BOOLEAN);
     VAR R: Texts.Reader; L, L0, l: Line; org: LONGINT;
       topY, botY, curY, Y0, sy, dy, h, h1: INTEGER;
   BEGIN (*dY > 0 & pos unknown OR pos > F.org & dY unknown*)
@@ -316,41 +313,42 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
       org := org + L.len; Y0 := curY; curY := curY + dY - L.lsp;
       IF Y0 - L.lsp < botY THEN (*old bottom line was fractional*)
         Texts.OpenReader(R, F.text, org - L.len); Texts.Read(R, nextCh);
-        DisplayLine(F, L, R, F.X + F.left, curY + L.dsr, dy, 0, 0)
+        DisplayLine(F, L, R, F.X + F.left, curY + L.dsr, dy, botY, 0)
       ELSE Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh)
       END;
       WHILE ~L.eot & (curY > botY) DO
         NewLine(F, l);
         PrepareLine(l, R);
         Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
-        DisplayLine(F, l, R, F.X + F.left, curY - l.asr, 0, 0, 0);
+        DisplayLine(F, l, R, F.X + F.left, curY - l.asr, topY, botY, 0);
         L.next := l; L := l; org := org + L.len; curY := curY - L.lsp
       END;
-      L.next := F.trailer; UpdateMark(F)
+      L.next := F.trailer
     ELSE full := org < F.text.len
-    END
+    END;
+    UpdateMark(F)
   END ScrollUp;
 
-  PROCEDURE Scroll (F: Viewer; dY: INTEGER); (*scroll displayed text dY pixels up or down*)
+  PROCEDURE Scroll (F: Frame; dY: INTEGER); (*scroll displayed text dY pixels up or down*)
     CONST P = 100; len = 75; (*assumed average line length*)
     VAR R: Texts.Reader; b: BOOLEAN; L: Line;
-      org, q: LONGINT; k, dy: INTEGER; p: ARRAY P OF LONGINT; ls: ARRAY P OF INTEGER;
+      org, q: LONGINT; k, dy: INTEGER; p: ARRAY P OF LONGINT; d: ARRAY P OF INTEGER;
   BEGIN (*dY # 0*)
     IF F.trailer.next # F.trailer THEN
       IF dY < 0 THEN dY := -dY;
         IF dY <= F.voff THEN ScrollDown(F, F.org, dY, F.voff - dY)
         ELSE NEW(L); b := FALSE; 
-          q := Max(F.org - len*(1 + (dY - F.voff - 1) DIV lsp), 0); (*first guess using len and lsp*)
+          q := Max(F.org - len*(1 + (dY - F.voff - 1) DIV lsp), 0); (*first guess*)
           REPEAT org := q; Validate(F.text, org); k := 0; dy := 0;
-            Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh); (*read to file buffer*)
+            Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
             WHILE (org < F.org) & (k < P) DO PrepareLine(L, R);
-              dy := dy + L.lsp; p[k] := org; ls[k] := L.lsp; org := org + L.len; INC(k)
+              dy := dy + L.lsp; p[k] := org; d[k] := L.lsp; org := org + L.len; INC(k)
             END;
             IF org < F.org THEN (*k = P*) q := p[1] (*next guess forward*)
             ELSIF q = 0 THEN ScrollDown(F, 0, dy + F.voff, 0); b := TRUE
-            ELSIF (k = 0) OR (dy + F.voff < dY) THEN q := Max(q - len, 0) (*next guess backward*)
+            ELSIF (k = 0) OR (dy + F.voff < dY) THEN q := Max(q - len, 0) (*next guess back*)
             ELSE k := 0;
-              WHILE dy - ls[k] + F.voff >= dY DO dy := dy - ls[k]; INC(k) END;
+              WHILE dy - d[k] + F.voff >= dY DO dy := dy - d[k]; INC(k) END;
               ScrollDown(F, p[k], dY, F.voff + dy - dY); b := TRUE
             END
           UNTIL b
@@ -361,7 +359,7 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
     END
   END Scroll;
 
-  PROCEDURE Show* (F: Viewer; pos: LONGINT); (*scroll specified text position to the top*)
+  PROCEDURE Show* (F: Frame; pos: LONGINT); (*scroll specified text position to the top*)
     VAR R: Texts.Reader; full: BOOLEAN; L: Line;
       org: LONGINT; botY, k, dy, m: INTEGER;
   BEGIN
@@ -369,7 +367,7 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
       Validate(F.text, pos); full := FALSE;
       IF pos < F.org THEN NEW(L);
         org := pos; k := 0; dy := 0; m := F.H - F.top - F.bot + F.voff;
-        Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh); (*read to file buffer*)
+        Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
         WHILE (org < F.org) & (dy < m) DO PrepareLine(L, R);
           dy := dy + L.lsp; org := org + L.len; INC(k)
         END;
@@ -390,7 +388,7 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
 
   (*------------------locators------------------------*)
 
-  PROCEDURE LocateLine (F: Viewer; y: INTEGER; VAR loc: Location);
+  PROCEDURE LocateLine (F: Frame; y: INTEGER; VAR loc: Location);
     VAR L: Line; org: LONGINT; cury: INTEGER;
   BEGIN org := F.org; L := F.trailer.next; cury := F.H - F.top + F.voff; 
     WHILE (L.next # F.trailer) & (cury > y + L.lsp) DO
@@ -399,7 +397,7 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
     loc.org := org; loc.lin := L; loc.y := cury - L.asr
   END LocateLine;
 
-  PROCEDURE LocateString (F: Viewer; x, y: INTEGER; VAR loc: Location);
+  PROCEDURE LocateString (F: Frame; x, y: INTEGER; VAR loc: Location);
     VAR R: Texts.Reader;
       patadr, bpos, pos, lim: LONGINT;
       bx, ex, ox, dx, u, v, w, h: INTEGER;
@@ -428,7 +426,7 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
     loc.pos := bpos; loc.dx := ex - bx; loc.x := bx
   END LocateString;
 
-  PROCEDURE LocateChar (F: Viewer; x, y: INTEGER; VAR loc: Location);
+  PROCEDURE LocateChar (F: Frame; x, y: INTEGER; VAR loc: Location);
     VAR R: Texts.Reader;
       patadr, pos, lim: LONGINT;
       ox, dx, u, v, w, h: INTEGER;
@@ -444,11 +442,11 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
         IF pos = lim THEN dx := eolW END
       ELSE lim := pos
       END
-    END ;
+    END;
     loc.pos := pos; loc.dx := dx; loc.x := ox
   END LocateChar;
 
-  PROCEDURE LocatePos (F: Viewer; pos: LONGINT; VAR loc: Location);
+  PROCEDURE LocatePos (F: Frame; pos: LONGINT; VAR loc: Location);
     VAR T: Texts.Text; R: Texts.Reader; L: Line;
       org: LONGINT; cury: INTEGER;  
   BEGIN T := F.text;
@@ -463,14 +461,14 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
     loc.x := F.left + Width(R, pos - org); loc.y := cury - L.asr
   END LocatePos;
 
-  PROCEDURE Pos* (F: Viewer; X, Y: INTEGER): LONGINT;
+  PROCEDURE Pos* (F: Frame; X, Y: INTEGER): LONGINT;
     VAR loc: Location;
   BEGIN LocateChar(F, X - F.X, Y - F.Y, loc); RETURN loc.pos
   END Pos;
 
   (*------------------caret and selection, mouse tracking------------------------*)
 
-  PROCEDURE FlipCaret (F: Viewer);
+  PROCEDURE FlipCaret (F: Frame);
   BEGIN
     IF (F.carloc.x < F.W) & (F.carloc.y >= 10) & (F.carloc.x + 12 < F.W) THEN
       Display.CopyPattern(Display.white, Display.hook,
@@ -478,11 +476,11 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
     END
   END FlipCaret;
 
-  PROCEDURE SetCaret* (F: Viewer; pos: LONGINT);
+  PROCEDURE SetCaret* (F: Frame; pos: LONGINT);
   BEGIN LocatePos(F, pos, F.carloc); FlipCaret(F); F.hasCar := TRUE
   END SetCaret;
 
-  PROCEDURE TrackCaret* (F: Viewer; X, Y: INTEGER; VAR keysum: SET);
+  PROCEDURE TrackCaret* (F: Frame; X, Y: INTEGER; VAR keysum: SET);
     VAR loc: Location; keys: SET;
   BEGIN
     IF F.trailer.next # F.trailer THEN
@@ -490,18 +488,18 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
       FlipCaret(F);
       keysum := {};
       REPEAT Input.Mouse(keys, X, Y); keysum := keysum + keys;
-        Cursors.DrawMouseArrow(X, Y); LocateChar(F, X - F.X, Y - F.Y, loc);
+        Oberon.DrawMouseArrow(X, Y); LocateChar(F, X - F.X, Y - F.Y, loc);
         IF loc.pos # F.carloc.pos THEN FlipCaret(F); F.carloc := loc; FlipCaret(F) END
       UNTIL keys = {};
       F.hasCar := TRUE
     END
   END TrackCaret;
 
-  PROCEDURE RemoveCaret* (F: Viewer);
+  PROCEDURE RemoveCaret* (F: Frame);
   BEGIN IF F.hasCar THEN FlipCaret(F); F.hasCar := FALSE END
   END RemoveCaret;
 
-  PROCEDURE FlipSelection (F: Viewer; VAR beg, end: Location);
+  PROCEDURE FlipSelection (F: Frame; VAR beg, end: Location);
     VAR L: Line; Y: INTEGER; org: LONGINT; beg0: Location;
   BEGIN
     IF end.org >= F.org THEN
@@ -528,16 +526,16 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
     END
   END FlipSelection;
 
-  PROCEDURE SetSelection* (F: Viewer; beg, end: LONGINT);
+  PROCEDURE SetSelection* (F: Frame; beg, end: LONGINT);
   BEGIN
     IF F.hasSel THEN FlipSelection(F, F.selbeg, F.selend) END;
     LocatePos(F, beg, F.selbeg); LocatePos(F, end, F.selend);
     IF F.selbeg.pos < F.selend.pos THEN
-      FlipSelection(F, F.selbeg, F.selend); F.time := Kernel.Time(); F.hasSel := TRUE
+      FlipSelection(F, F.selbeg, F.selend); F.time := Oberon.Time(); F.hasSel := TRUE
     END
   END SetSelection;
 
-  PROCEDURE TrackSelection* (F: Viewer; X, Y: INTEGER; VAR keysum: SET);
+  PROCEDURE TrackSelection* (F: Frame; X, Y: INTEGER; VAR keysum: SET);
     VAR loc, L, R: Location; keys: SET; start, prev: LONGINT;
   BEGIN
     IF F.trailer.next # F.trailer THEN
@@ -553,18 +551,18 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
           IF (F.selbeg.org = F.selend.org) OR (prev <= start) THEN L := F.selbeg; R := F.selend
           ELSE R := F.selend; L.org := F.selend.org; L.pos := L.org; L.x := F.left
           END;
-          FlipSelection(F, L, R); Cursors.FadeMouse;
+          FlipSelection(F, L, R); Oberon.FadeMouse;
           Scroll(F, F.Y + F.bot - Y); Y := F.Y + F.bot;
           FlipSelection(F, L, R)
         ELSIF (Y > F.Y + F.H - F.top - 1) & ((F.org > 0) OR (F.voff > 0)) THEN (*scroll text down*)
           IF (F.selbeg.org = F.selend.org) OR (prev > start) THEN L := F.selbeg; R := F.selend
           ELSE L := F.selbeg; R.org := F.selbeg.org; R.pos := F.selbeg.lin.len; R.x := F.left + F.selbeg.lin.wid
           END;
-          FlipSelection(F, L, R); Cursors.FadeMouse;
+          FlipSelection(F, L, R); Oberon.FadeMouse;
           Scroll(F, F.Y + F.H - F.top - 1 - Y); Y := F.Y + F.H - F.top - 1;
           FlipSelection(F, L, R)
         END;
-        Cursors.DrawMouseArrow(X, Y);
+        Oberon.DrawMouseArrow(X, Y);
         LocateChar(F, X - F.X, Y - F.Y, loc);
         IF prev > start THEN INC(loc.pos); loc.x := loc.x + loc.dx;
           IF loc.pos > start THEN
@@ -580,15 +578,15 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
         ELSIF loc.pos < F.selbeg.pos THEN FlipSelection(F, loc, F.selbeg); F.selbeg := loc
         END
       UNTIL keys = {};
-      F.time := Kernel.Time(); F.hasSel := TRUE
+      F.time := Oberon.Time(); F.hasSel := TRUE
     END
   END TrackSelection;
 
-  PROCEDURE RemoveSelection* (F: Viewer);
+  PROCEDURE RemoveSelection* (F: Frame);
   BEGIN IF F.hasSel THEN FlipSelection(F, F.selbeg, F.selend); F.hasSel := FALSE END
   END RemoveSelection;
 
-  PROCEDURE TrackLine* (F: Viewer; X, Y: INTEGER; VAR org: LONGINT; VAR keysum: SET);
+  PROCEDURE TrackLine* (F: Frame; X, Y: INTEGER; VAR org: LONGINT; VAR keysum: SET);
     VAR old, new: Location; keys: SET;
   BEGIN
     IF F.trailer.next # F.trailer THEN
@@ -597,7 +595,7 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
       keysum := {};
       REPEAT Input.Mouse(keys, X, Y);
         keysum := keysum + keys;
-        Cursors.DrawMouse(ScrollMarker, X, Y);
+        Oberon.DrawMouse(ScrollMarker, X, Y);
         LocateLine(F, Y - F.Y, new);
         IF new.org # old.org THEN
           ReplConst(Display.white, F, F.X + F.left, F.Y + old.y - old.lin.dsr, old.lin.wid, 2, Display.invert);
@@ -611,7 +609,7 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
     END
   END TrackLine;
 
-  PROCEDURE TrackWord* (F: Viewer; X, Y: INTEGER; VAR pos: LONGINT; VAR keysum: SET);
+  PROCEDURE TrackWord* (F: Frame; X, Y: INTEGER; VAR pos: LONGINT; VAR keysum: SET);
     VAR old, new: Location; keys: SET;
   BEGIN
     IF F.trailer.next # F.trailer THEN
@@ -620,7 +618,7 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
       keysum := {};
       REPEAT
         Input.Mouse(keys, X, Y); keysum := keysum + keys;
-        Cursors.DrawMouseArrow(X, Y);
+        Oberon.DrawMouseArrow(X, Y);
         LocateString(F, X - F.X, Y - F.Y, new);
         IF new.pos # old.pos THEN
           ReplConst(Display.white, F, F.X + old.x, F.Y + old.y - old.lin.dsr, old.dx, 2, Display.invert);
@@ -636,9 +634,9 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
 
   (*------------------text modifiers------------------------*)
 
-  PROCEDURE Replace* (F: Viewer; beg, end: LONGINT);
+  PROCEDURE Replace* (F: Frame; beg, end: LONGINT);
     VAR R: Texts.Reader; L, L0, l: Line;
-      org, len: LONGINT; curY, botY, wid, oldlsp, oldasr, dy: INTEGER;
+      org, len: LONGINT; curY, topY, botY, wid, oldlsp, oldasr, dy: INTEGER;
   BEGIN
     IF end > F.org THEN
       IF beg < F.org THEN beg := F.org END;
@@ -647,32 +645,29 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
         org := org + L.len; curY := curY - L.lsp; L0 := L; L := L.next
       END;
       IF L # F.trailer THEN
+        topY := F.Y + F.H - F.top; botY := F.Y + F.bot;
         Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
         oldlsp := L.lsp; oldasr := L.asr;
-        PrepareLine(L, R); (*set L.lsp, L.asr, L.dsr*)
-        dy := L.lsp - oldlsp;
+        PrepareLine(L, R); dy := L.lsp - oldlsp;
         Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
         IF dy # 0 THEN
           ReplConst(F.col, F, F.X + F.left, curY - Max(oldlsp, L.lsp),
               F.W - F.left, Max(oldlsp, L.lsp), Display.replace);
-          DisplayLine(F, L, R, F.X + F.left, curY - L.asr, 0, 0, 0)
-        ELSE
-          len := beg - org; wid := Width(R, len);
+          DisplayLine(F, L, R, F.X + F.left, curY - L.asr, topY, botY, 0)
+        ELSE len := beg - org; wid := Width(R, len);
           ReplConst(F.col, F, F.X + F.left + wid, curY - oldlsp, L.wid - wid, oldlsp, Display.replace);
-          DisplayLine(F, L, R, F.X + F.left + wid, curY - oldasr, 0, 0, len)
+          DisplayLine(F, L, R, F.X + F.left + wid, curY - oldasr, topY, botY, len)
         END;
         org := org + L.len; curY := curY - L.lsp; L0 := L; L := L.next;
         WHILE (L # F.trailer) & (org <= end) & (dy = 0) DO
           oldlsp := L.lsp; oldasr := L.asr;
-          PrepareLine(L, R); (*set L.lsp, L.asr, L.dsr*)
-          dy := L.lsp - oldlsp;
+          PrepareLine(L, R); dy := L.lsp - oldlsp;
           Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
           ReplConst(F.col, F, F.X + F.left, curY - Max(oldlsp, L.lsp),
               F.W - F.left, Max(oldlsp, L.lsp), Display.replace);
-          DisplayLine(F, L, R, F.X + F.left, curY - L.asr, 0, 0, 0);
+          DisplayLine(F, L, R, F.X + F.left, curY - L.asr, topY, botY, 0);
           org := org + L.len; curY := curY - L.lsp; L0 := L; L := L.next
         END;
-        botY := F.Y + F.bot;
         IF ~L0.eot & (curY > botY) & (dy # 0) THEN
           Display.ReplConst(F.col, F.X + F.left, botY, F.W - F.left, curY - botY, Display.replace);
           LastLine(F, L0);
@@ -680,7 +675,7 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
             NewLine(F, l);
             PrepareLine(l, R);
             Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
-            DisplayLine(F, l, R, F.X + F.left, curY - l.asr, 0, 0, 0);
+            DisplayLine(F, l, R, F.X + F.left, curY - l.asr, topY, botY, 0);
             L0.next := l; L0:= l; org := org + L0.len; curY := curY - L0.lsp
           END;
           L0.next := F.trailer
@@ -690,9 +685,9 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
     UpdateMark(F)
   END Replace;
 
-  PROCEDURE Insert* (F: Viewer; beg, end: LONGINT);
+  PROCEDURE Insert* (F: Frame; beg, end: LONGINT);
     VAR R: Texts.Reader; L, L0, l: Line;
-      org, len: LONGINT; curY, botY, wid, oldlsp, oldasr, dy: INTEGER;
+      org, len: LONGINT; curY, topY, botY, wid, oldlsp, oldasr, dy: INTEGER;
   BEGIN
     IF beg < F.org THEN F.org := F.org + (end - beg)
     ELSE
@@ -701,28 +696,26 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
         org := org + L.len; curY := curY - L.lsp; L := L.next
       END;
       IF L # F.trailer THEN
-        botY := F.Y + F.bot;
+        topY := F.Y + F.H - F.top; botY := F.Y + F.bot;
         Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
         oldlsp := L.lsp; oldasr := L.asr;
-        PrepareLine(L, R); (*set L.lsp, L.asr, L.dsr*)
-        dy := L.lsp - oldlsp;
+        PrepareLine(L, R); dy := L.lsp - oldlsp;
         Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
         IF dy # 0 THEN
           ReplConst(F.col, F, F.X + F.left, curY - Max(oldlsp, L.lsp),
               F.W - F.left, Max(oldlsp, L.lsp), Display.replace);
-          DisplayLine(F, L, R, F.X + F.left, curY - L.asr, 0, 0, 0)
-        ELSE
-          len := beg - org; wid := Width(R, len);
+          DisplayLine(F, L, R, F.X + F.left, curY - L.asr, topY, botY, 0)
+        ELSE len := beg - org; wid := Width(R, len);
           ReplConst(F.col, F, F.X + F.left + wid, curY - oldlsp, L.wid - wid, oldlsp, Display.replace);
-          DisplayLine(F, L, R, F.X + F.left + wid, curY - oldasr, 0, 0, len)
+          DisplayLine(F, L, R, F.X + F.left + wid, curY - oldasr, topY, botY, len)
         END;
         org := org + L.len; curY := curY - L.lsp; L0 := L.next;
-        WHILE (org <= end) & (curY > botY) DO (*note: new lines may have variable line spaces*)
+        WHILE (org <= end) & (curY > botY) DO (*new lines may have variable line spaces*)
           NewLine(F, l);
           PrepareLine(l, R);
           Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
           ReplConst(F.col, F, F.X + F.left, curY - l.lsp, F.W - F.left, l.lsp, Display.replace);
-          DisplayLine(F, l, R, F.X + F.left, curY - l.asr, 0, 0, 0);
+          DisplayLine(F, l, R, F.X + F.left, curY - l.asr, topY, botY, 0);
           L.next := l; L := l;
           org := org + L.len; curY := curY - L.lsp
         END;
@@ -735,7 +728,7 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
             NewLine(F, l);
             PrepareLine(l, R);
             Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
-            DisplayLine(F, l, R, F.X + F.left, curY - l.asr, 0, 0, 0);
+            DisplayLine(F, l, R, F.X + F.left, curY - l.asr, topY, botY, 0);
             L.next := l; L := l; org := org + L.len; curY := curY - L.lsp
           END;
           L.next := F.trailer
@@ -745,9 +738,9 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
     UpdateMark(F)
   END Insert;
 
-  PROCEDURE Delete* (F: Viewer; beg, end: LONGINT);
+  PROCEDURE Delete* (F: Frame; beg, end: LONGINT);
     VAR R: Texts.Reader; L, L0, l: Line;
-      org, org0, len: LONGINT; curY, botY, Y0, Y1, wid, bvis, oldlsp, oldasr, dy: INTEGER;
+      org, org0, len: LONGINT; curY, topY, botY, Y0, Y1, wid, bvis, oldlsp, oldasr, dy: INTEGER;
   BEGIN
     IF end <= F.org THEN F.org := F.org - (end - beg)
     ELSE
@@ -760,7 +753,7 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
         org := org + L.len; curY := curY - L.lsp; L := L.next
       END;
       IF L # F.trailer THEN
-        botY := F.Y + F.bot;
+        topY := F.Y + F.H - F.top; botY := F.Y + F.bot;
         org0 := org; L0 := L; l := L; Y0 := curY;
         WHILE (L # F.trailer) & (org <= end) DO
           org := org + L.len; curY := curY - L.lsp; l := L; L := L.next
@@ -768,17 +761,15 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
         Y1 := curY;
         Texts.OpenReader(R, F.text, org0); Texts.Read(R, nextCh);
         oldlsp := L0.lsp; oldasr := L0.asr;
-        PrepareLine(L0, R); (*set L0.lsp, L0.asr, L0.dsr*)
-        dy := L0.lsp - oldlsp;
+        PrepareLine(L0, R); dy := L0.lsp - oldlsp;
         Texts.OpenReader(R, F.text, org0); Texts.Read(R, nextCh);
         IF dy # 0 THEN
           ReplConst(F.col, F, F.X + F.left, Y0 - Max(oldlsp, L0.lsp),
               F.W - F.left, Max(oldlsp, L0.lsp), Display.replace);
-          DisplayLine(F, L0, R, F.X + F.left, Y0 - L0.asr, 0, 0, 0)
-        ELSE
-          len := beg - org0; wid := Width(R, len);
+          DisplayLine(F, L0, R, F.X + F.left, Y0 - L0.asr, topY, botY, 0)
+        ELSE len := beg - org0; wid := Width(R, len);
           ReplConst(F.col, F, F.X + F.left + wid, Y0 - oldlsp, L0.wid - wid, oldlsp, Display.replace);
-          DisplayLine(F, L0, R, F.X + F.left + wid, Y0 - oldasr, 0, 0, len)
+          DisplayLine(F, L0, R, F.X + F.left + wid, Y0 - oldasr, topY, botY, len)
         END;
         org := org0 + L0.len;
         Y0 := Y0 - L0.lsp;
@@ -792,7 +783,7 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
             NewLine(F, l);
             PrepareLine(l, R);
             Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
-            DisplayLine(F, l, R, F.X + F.left, curY - l.asr, 0, 0, 0);
+            DisplayLine(F, l, R, F.X + F.left, curY - l.asr, topY, botY, 0);
             L.next := l; L := l; org := org + L.len; curY := curY - L.lsp
           END;
           L.next := F.trailer
@@ -807,11 +798,11 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
               Display.CopyBlock(F.X + F.left, curY + bvis, F.W - F.left, Y1 - curY - bvis,
                   F.X + F.left, curY + (Y0 - Y1) + bvis, 0)
             END;
-            curY := curY + (Y0 - Y1) + L.lsp;  (*!*)
+            curY := curY + (Y0 - Y1) + L.lsp;
             ReplConst(F.col, F, F.X + F.left, F.Y,
                 F.W - F.left, curY + L.lsp - L.asr - (F.Y + L.dsr), Display.replace);
             Texts.OpenReader(R, F.text, org - L.len); Texts.Read(R, nextCh);
-            DisplayLine(F, L, R, F.X + F.left, curY - L.asr, 0, 0, 0); (*old fractional bottom line*)
+            DisplayLine(F, L, R, F.X + F.left, curY - L.asr, topY, botY, 0); (*old fractional bottom line*)
             curY := curY - L.lsp
           ELSE
             Display.CopyBlock(F.X + F.left, curY, F.W - F.left, Y1 - curY,
@@ -825,7 +816,7 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
             NewLine(F, l);
             PrepareLine(l, R);
             Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
-            DisplayLine(F, l, R, F.X + F.left, curY - l.asr, 0, 0, 0);
+            DisplayLine(F, l, R, F.X + F.left, curY - l.asr, topY, botY, 0);
             L.next := l; L := l; org := org + L.len; curY := curY - L.lsp
           END;
           L.next := F.trailer
@@ -841,7 +832,7 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
 
   (*------------------message handling------------------------*)
 
-  PROCEDURE RemoveMarks (F: Viewer);
+  PROCEDURE RemoveMarks (F: Frame);
   BEGIN RemoveCaret(F); RemoveSelection(F)
   END RemoveMarks;
 
@@ -850,7 +841,7 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
   BEGIN M.id := op; M.text := T; M.beg := beg; M.end := end; Viewers.Broadcast(M)
   END NotifyDisplay;
 
-  PROCEDURE Call* (F: Viewer; pos: LONGINT; new: BOOLEAN);
+  PROCEDURE Call* (F: Frame; pos: LONGINT; new: BOOLEAN);
     VAR S: Texts.Scanner; res: INTEGER;
   BEGIN
     Texts.OpenScanner(S, F.text, pos); Texts.Scan(S);
@@ -859,9 +850,9 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
       IF res > 0 THEN
         Texts.WriteString(W, "Call error: "); Texts.WriteString(W, Modules.importing);
         IF res = 1 THEN Texts.WriteString(W, " module not found")
-        ELSIF res = 2 THEN  Texts.WriteString(W, " bad version")
+        ELSIF res = 2 THEN Texts.WriteString(W, " bad version")
         ELSIF res = 3 THEN Texts.WriteString(W, " imports ");
-          Texts.WriteString(W, Modules.imported); Texts.WriteString(W, " with bad key");
+          Texts.WriteString(W, Modules.imported); Texts.WriteString(W, " with bad key")
         ELSIF res = 4 THEN Texts.WriteString(W, " corrupted obj file")
         ELSIF res = 5 THEN Texts.WriteString(W, " command not found")
         ELSIF res = 7 THEN Texts.WriteString(W, " insufficient space")
@@ -871,26 +862,26 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
     END
   END Call;
 
-  PROCEDURE Write* (F: Viewer; ch: CHAR; fnt: Fonts.Font; col, voff: INTEGER);
+  PROCEDURE Write* (F: Frame; ch: CHAR; fnt: Fonts.Font; col, voff: INTEGER);
     VAR buf: Texts.Buffer;
   BEGIN (*F.hasCar*)
     IF ch = BS THEN (*backspace*)
       IF F.carloc.pos > F.org THEN
         Texts.Delete(F.text, F.carloc.pos - 1, F.carloc.pos, DelBuf); SetCaret(F, F.carloc.pos - 1)
       END
-    ELSIF ch = 1X THEN (*ctrl-a select-all*)
+    ELSIF ch = 1X THEN (*ctrl-a  select-all*)
       IF F.hasSel THEN FlipSelection(F, F.selbeg, F.selend) END;
       F.selbeg.org := 0; F.selbeg.pos := 0; F.selbeg.x := F.left;
       F.selend.org := F.text.len; F.selend.pos := F.text.len; F.selend.x := F.left;
-      FlipSelection(F, F.selbeg, F.selend); F.time := Kernel.Time(); F.hasSel := TRUE
-    ELSIF ch = 3X THEN (*ctrl-c copy*)
+      FlipSelection(F, F.selbeg, F.selend); F.time := Oberon.Time(); F.hasSel := TRUE
+    ELSIF ch = 3X THEN (*ctrl-c  copy*)
       IF F.hasSel THEN
         NEW(TBuf); Texts.OpenBuf(TBuf); Texts.Save(F.text, F.selbeg.pos, F.selend.pos, TBuf)
       END
-    ELSIF ch = 16X THEN (*ctrl-v paste*)
+    ELSIF ch = 16X THEN (*ctrl-v  paste*)
       NEW(buf); Texts.OpenBuf(buf); Texts.Copy(TBuf, buf); Texts.Insert(F.text, F.carloc.pos, buf);
       SetCaret(F, F.carloc.pos + TBuf.len)
-    ELSIF ch = 18X THEN (*ctrl-x cut*)
+    ELSIF ch = 18X THEN (*ctrl-x  cut*)
       IF F.hasSel THEN
         NEW(TBuf); Texts.OpenBuf(TBuf); Texts.Delete(F.text, F.selbeg.pos, F.selend.pos, TBuf)
       END
@@ -901,34 +892,35 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
     END
   END Write;
 
-  PROCEDURE Defocus* (F: Viewer);
+  PROCEDURE Defocus* (F: Frame);
   BEGIN RemoveCaret(F)
   END Defocus;
 
-  PROCEDURE Neutralize* (F: Viewer);
+  PROCEDURE Neutralize* (F: Frame);
   BEGIN RemoveMarks(F)
   END Neutralize;
 
-  PROCEDURE Modify* (F: Viewer; id, dY, Y, H: INTEGER);
-    VAR hasSel, hasCar: BOOLEAN;
-  BEGIN hasSel := F.hasSel; hasCar := F.hasCar;
-    Mark(F, FALSE); RemoveMarks(F); SetChangeMark(F,  FALSE);
-    IF id = Viewers.restore THEN
-      Display.ReplConst(F.col, F.X, F.Y, F.W, F.H, Display.replace);
-      Restore(F)
-    ELSIF id = Viewers.extend THEN
-      IF dY > 0 THEN Display.CopyBlock(F.X, F.Y, F.W, F.H, F.X, F.Y + dY, 0); F.Y := F.Y + dY END;
-      Extend(F, Y)
-    ELSIF id = Viewers.reduce THEN
-      Reduce(F, Y + dY);
-      IF dY > 0 THEN Display.CopyBlock(F.X, F.Y, F.W, F.H, F.X, Y, 0); F.Y := Y END
+  PROCEDURE Modify* (F: Frame; id, Y, H: INTEGER);
+    VAR hasSel, hasCar: BOOLEAN; dY: INTEGER;
+  BEGIN hasSel := F.hasSel; hasCar := F.hasCar; dY := Y + H - F.Y - F.H;
+    Mark(F, FALSE); RemoveMarks(F); SetChangeMark(F, FALSE);
+    IF id = Viewers.restore THEN Restore(F)
+    ELSIF id = Viewers.modify THEN
+      IF H > F.H THEN (*extend*)
+        IF dY # 0 THEN Display.CopyBlock(F.X, F.Y, F.W, F.H, F.X, F.Y + dY, 0); F.Y := F.Y + dY END;
+        Extend(F, Y)
+      ELSIF H < F.H THEN (*reduce*)
+        Reduce(F, F.Y + F.H - H);
+        IF dY # 0 THEN Display.CopyBlock(F.X, F.Y, F.W, F.H, F.X, Y, 0); F.Y := Y END
+      ELSIF dY # 0 THEN (*move*) Display.CopyBlock(F.X, F.Y, F.W, F.H, F.X, Y, 0); F.Y := Y
+      END
     END;
-    IF F.H > 0 THEN Mark(F, TRUE); SetChangeMark(F,  F.text.changed) END;
+    IF F.H > 0 THEN Mark(F, TRUE); SetChangeMark(F, F.text.changed) END;
     IF hasSel THEN SetSelection(F, F.selbeg.pos, F.selend.pos) END;
     IF hasCar THEN SetCaret(F, F.carloc.pos) END
   END Modify;
 
-  PROCEDURE Open* (F: Viewer; H: Viewers.Handler; T: Texts.Text; org: LONGINT;
+  PROCEDURE Open* (F: Frame; H: Viewers.Handler; T: Texts.Text; org: LONGINT;
         col, left, right, top, bot, lsp: INTEGER);
     VAR L: Line;
   BEGIN NEW(L);
@@ -939,12 +931,12 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
     F.pool := NIL; F.voff := 0; F.parent := NIL
   END Open;
 
-  PROCEDURE Copy* (F: Viewer; VAR F1: Viewer);
+  PROCEDURE Copy* (F: Frame; VAR F1: Frame);
   BEGIN NEW(F1);
     Open(F1, F.handle, F.text, F.org, F.col, F.left, F.right, F.top, F.bot, F.lsp)
   END Copy;
 
-  PROCEDURE CopyOver(F: Viewer; text: Texts.Text; beg, end: LONGINT);
+  PROCEDURE CopyOver(F: Frame; text: Texts.Text; beg, end: LONGINT);
     VAR buf: Texts.Buffer;
   BEGIN
     IF F.hasCar THEN
@@ -954,7 +946,7 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
     END
   END CopyOver;
 
-  PROCEDURE GetSelection* (F: Viewer; VAR text: Texts.Text; VAR beg, end, time: LONGINT);
+  PROCEDURE GetSelection* (F: Frame; VAR text: Texts.Text; VAR beg, end, time: LONGINT);
   BEGIN
     IF F.hasSel THEN
       IF F.time > time THEN
@@ -967,17 +959,17 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
     END
   END GetSelection;
 
-  PROCEDURE Update* (F: Viewer; VAR M: UpdateMsg);
+  PROCEDURE Update* (F: Frame; VAR M: UpdateMsg);
   BEGIN (*F.text = M.text*) SetChangeMark(F, FALSE);
-    RemoveMarks(F); Cursors.RemoveMarks(F.X, F.Y, F.W, F.H);
+    RemoveMarks(F); Oberon.RemoveMarks(F.X, F.Y, F.W, F.H);
     IF M.id = replace THEN Replace(F, M.beg, M.end)
     ELSIF M.id = insert THEN Insert(F, M.beg, M.end)
     ELSIF M.id = delete THEN Delete(F, M.beg, M.end)
-    END ;
-    SetChangeMark(F,  F.text.changed)
+    END;
+    SetChangeMark(F, F.text.changed)
   END Update;
 
-  PROCEDURE Edit* (F: Viewer; X, Y: INTEGER; Keys: SET);
+  PROCEDURE Edit* (F: Frame; X, Y: INTEGER; Keys: SET);
     VAR M: CopyOverMsg;
       text: Texts.Text;
       buf: Texts.Buffer;
@@ -987,74 +979,72 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
       fnt: Fonts.Font;
       col, voff, Y0, SL, SR: INTEGER;
   BEGIN SL := F.X + Min(F.left, barW);
-    IF X < SL THEN  (*cursor starts in scroll bar*)
-      Cursors.DrawMouse(ScrollMarker, X, Y); keysum := Keys;
-      IF Keys = {2} THEN  (*ML: continuous scroll*)
+    IF X < SL THEN (*cursor starts in scroll bar*)
+      Oberon.DrawMouse(ScrollMarker, X, Y); keysum := Keys;
+      IF Keys = {2} THEN (*ML: continuous scroll*)
         Y0 := F.Y + F.H - 1 - F.markH; SR := SL + Min(100, F.W DIV 2);
-        WHILE Keys # {} DO Cursors.DrawMouse(ScrollMarker, X, Y);
+        WHILE Keys # {} DO Oberon.DrawMouse(ScrollMarker, X, Y);
           IF Y # Y0 THEN
             SetChangeMark(F, FALSE);
-            RemoveMarks(F); Cursors.RemoveMarks(F.X, F.Y, F.W, F.H);
-            IF X < SR THEN (*cursor stays near scroll bar*)
-              Show(F, (F.Y + F.H - Y) * (F.text.len) DIV F.H)
-            ELSE (*cursor moves into text area*)
-              Scroll(F, Y0 - Y)
-            END ;
+            RemoveMarks(F); Oberon.RemoveMarks(F.X, F.Y, F.W, F.H);
+            IF X < SR THEN Show(F, (F.Y + F.H - Y) * (F.text.len) DIV F.H)
+            ELSE Scroll(F, Y0 - Y)
+            END;
             Y0 := Y
-          END ;
+          END;
           Input.Mouse(Keys, X, Y)
         END
-      ELSIF Keys = {1} THEN  (*MM: positional scrolling*)   keysum := Keys;
+      ELSIF Keys = {1} THEN (*MM: positional scrolling*) keysum := Keys;
         REPEAT Input.Mouse(Keys, X, Y); keysum := keysum + Keys;
-          Cursors.DrawMouse(ScrollMarker, X, Y)
+          Oberon.DrawMouse(ScrollMarker, X, Y)
         UNTIL Keys = {};
         IF keysum # {0, 1, 2} THEN
           IF 0 IN keysum THEN pos := 0
           ELSIF 2 IN keysum THEN pos := Max(F.text.len - 40, 0)
           ELSE pos := (F.Y + F.H - Y) * (F.text.len) DIV F.H
-          END ;
+          END;
           SetChangeMark(F, FALSE);
-          RemoveMarks(F); Cursors.RemoveMarks(F.X, F.Y, F.W, F.H);
+          RemoveMarks(F); Oberon.RemoveMarks(F.X, F.Y, F.W, F.H);
           Show(F, pos)
         END
-      ELSIF Keys = {0} THEN  (*MR: track line and scroll up or down*)
+      ELSIF Keys = {0} THEN (*MR: track line and scroll up or down*)
         TrackLine(F, X, Y, pos, keysum);
         IF keysum # {0, 1, 2} THEN
           IF (pos >= 0) & (keysum = {0}) THEN (*MR, scroll up*)
             SetChangeMark(F, FALSE);
-            RemoveMarks(F); Cursors.RemoveMarks(F.X, F.Y, F.W, F.H);
+            RemoveMarks(F); Oberon.RemoveMarks(F.X, F.Y, F.W, F.H);
             Show(F, pos)
           ELSIF (keysum = {0,1}) THEN (*MR and MM, scroll down*)
             SetChangeMark(F, FALSE);
-            RemoveMarks(F); Cursors.RemoveMarks(F.X, F.Y, F.W, F.H);
+            RemoveMarks(F); Oberon.RemoveMarks(F.X, F.Y, F.W, F.H);
             Show(F, F.org*2 - pos - 100)
           END
         END
       END
-    ELSE  (*cursor is in text area*)
-      Cursors.DrawMouseArrow(X, Y);
-      IF 0 IN Keys THEN  (*MR: select*)
+    ELSE (*cursor is in text area*)
+      Oberon.DrawMouseArrow(X, Y);
+      IF 0 IN Keys THEN (*MR: select*)
         TrackSelection(F, X, Y, keysum);
         IF F.hasSel THEN
           IF keysum = {0, 2} THEN (*MR, ML: delete text*)
             Oberon.GetSelection(text, beg, end, time);
             Texts.Delete(text, beg, end, TBuf);
             Viewers.PassFocus(Viewers.ThisViewer(F)); SetCaret(F, beg)
-          ELSIF keysum = {0, 1} THEN  (*MR, MM: copy to caret*)
+          ELSIF keysum = {0, 1} THEN (*MR, MM: copy to caret*)
             Oberon.GetSelection(text, beg, end, time);
             M.text := text; M.beg := beg; M.end := end;
-            Viewers.FocusViewer.handle(Viewers.FocusViewer, M)
+            Viewers.CurDisplay.focusViewer.handle(Viewers.CurDisplay.focusViewer, M)
           END
         END
-      ELSIF 1 IN Keys THEN  (*MM: call*)
+      ELSIF 1 IN Keys THEN (*MM: call*)
         TrackWord(F, X, Y, pos, keysum);
         IF (pos >= 0) & ~(0 IN keysum) THEN Call(F, pos, 2 IN keysum) END
-      ELSIF 2 IN Keys THEN  (*ML: set caret*)
+      ELSIF 2 IN Keys THEN (*ML: set caret*)
         Viewers.PassFocus(Viewers.ThisViewer(F));
         TrackCaret(F, X, Y, keysum);
         IF keysum = {2, 1} THEN (*ML, MM: copy from selection to caret*)
-           Oberon.GetSelection(text, beg, end, time);
-           IF time >= 0 THEN
+          Oberon.GetSelection(text, beg, end, time);
+          IF time >= 0 THEN
             NEW(TBuf); Texts.OpenBuf(TBuf);
             Texts.Save(text, beg, end, TBuf); Texts.Insert(F.text, F.carloc.pos, TBuf);
             SetSelection(F, F.carloc.pos, F.carloc.pos + (end  - beg));
@@ -1076,21 +1066,25 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
   END Edit;
 
   PROCEDURE Handle* (F: Viewers.Viewer; VAR M: Viewers.Msg);
-    VAR F1: Viewer; buf: Texts.Buffer;
+    VAR F1: Frame; buf: Texts.Buffer;
   BEGIN
-    CASE F OF Viewer:
+    CASE F OF Frame:
       CASE M OF
+      Viewers.ViewerMsg:
+        IF M.id = Viewers.restore THEN (*Restore(F)*) Modify(F, M.id, M.Y, M.H)
+        ELSIF M.id = Viewers.suspend THEN Suspend(F)
+        ELSIF M.id = Viewers.modify THEN Modify(F, M.id, M.Y, M.H)
+        END |
+      Viewers.InputMsg:
+        IF M.id = Viewers.track THEN Edit(F, M.X, M.Y, M.keys)
+        ELSIF M.id = Viewers.consume THEN
+          IF F.hasCar THEN Write(F, M.ch, Oberon.CurFnt, Oberon.CurCol, Oberon.CurOff) END
+        END |
       Viewers.ControlMsg:
         IF M.id = Viewers.defocus THEN Defocus(F)
         ELSIF M.id = Viewers.neutralize THEN Neutralize(F)
         END |
       Viewers.CopyMsg: Copy(F, F1); M.V := F1 |
-      Viewers.ViewerMsg: Modify(F, M.id, M.dY, M.Y, M.H) |
-      Viewers.InputMsg:  (*uses Oberon.CurFnt, Oberon.CurCol, Oberon.CurOff*)
-        IF M.id = Viewers.track THEN Edit(F, M.X, M.Y, M.keys)
-        ELSIF M.id = Viewers.consume THEN
-          IF F.hasCar THEN Write(F, M.ch, Oberon.CurFnt, Oberon.CurCol, Oberon.CurOff) END
-        END |
       Oberon.SelectionMsg: GetSelection(F, M.text, M.beg, M.end, M.time) |
       CopyOverMsg: CopyOver(F, M.text, M.beg, M.end) |
       UpdateMsg: IF F.text = M.text THEN Update(F, M) END
@@ -1112,14 +1106,14 @@ MODULE TextViewers; (*JG 8.10.90 / NW 16.11.15 / AP 9.5.16*)
   BEGIN NEW(T); T.notify := NotifyDisplay; Texts.Open(T, name); RETURN T
   END Text;
 
-  PROCEDURE NewMenu* (name, commands: ARRAY OF CHAR): Viewer;
-    VAR F: Viewer; T: Texts.Text;
+  PROCEDURE NewMenu* (name, commands: ARRAY OF CHAR): Frame;
+    VAR F: Frame; T: Texts.Text;
   BEGIN NEW(F); T := Menu(name, commands);
     Open(F, Handle, T, 0, Display.white, left DIV 4, 0, 0, 0, lsp); RETURN F
   END NewMenu;
 
-  PROCEDURE NewText* (text: Texts.Text; pos: LONGINT): Viewer;
-    VAR F: Viewer;
+  PROCEDURE NewText* (text: Texts.Text; pos: LONGINT): Frame;
+    VAR F: Frame;
   BEGIN NEW(F);
     Open(F, Handle, text, pos, Display.black, left, right, top, bot, lsp); RETURN F
   END NewText;
@@ -1136,4 +1130,4 @@ BEGIN NEW(TBuf); NEW(DelBuf);
   eolW := lsp DIV 2;
   ScrollMarker.Fade := FlipSM; ScrollMarker.Draw := FlipSM;
   Texts.OpenWriter(W); Texts.OpenWriter(KW)
-END TextViewers.
+END TextFrames.

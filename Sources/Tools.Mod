@@ -1,5 +1,7 @@
-MODULE Tools;   (*NW 22.2.14 / AP 7.5.16*)
-  IMPORT SYSTEM, Kernel, Files, Modules, Input, Texts, Viewers, Oberon, MenuViewers, TextViewers;
+MODULE Tools;   (*NW 22.2.14 / AP 11.6.16*)
+  IMPORT SYSTEM, Kernel, Files, Modules, Input, Texts, Viewers, Oberon, MenuViewers, TextFrames;
+
+  CONST StandardMenu = "System.Close System.Copy System.Grow Edit.Search Edit.Store   | System.Clone";
 
   VAR T: Texts.Text; V: MenuViewers.Viewer; W: Texts.Writer;
 
@@ -8,8 +10,8 @@ MODULE Tools;   (*NW 22.2.14 / AP 7.5.16*)
   BEGIN 
     Oberon.AllocateUserViewer(0, X, Y);
     V := MenuViewers.New(
-        TextViewers.NewMenu(title, "System.Close  System.Copy  System.Grow  Edit.Search  Edit.Store"),
-        TextViewers.NewText(T, 0), TextViewers.menuH, X, Y)
+        TextFrames.NewMenu(title, StandardMenu),
+        TextFrames.NewText(T, 0), TextFrames.menuH, X, Y)
   END OpenViewer;
 
   PROCEDURE Clear*;  (*used to clear output*)
@@ -105,7 +107,7 @@ MODULE Tools;   (*NW 22.2.14 / AP 7.5.16*)
   BEGIN Texts.WriteHex(W, SYSTEM.H(1)); Texts.WriteLn(W); Texts.Append(T, W.buf)
   END Id;
 
-BEGIN Texts.OpenWriter(W); T := TextViewers.Text(""); OpenViewer(T, "Tools.Text")
+BEGIN Texts.OpenWriter(W); T := TextFrames.Text(""); OpenViewer(T, "Tools.Text")
 END Tools.
 
 Tools.Clear  (clear tool viewer)

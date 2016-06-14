@@ -1,8 +1,8 @@
-MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 7.5.16*)
-  IMPORT Files, Fonts, Texts, Cursors, Viewers, Oberon, MenuViewers, TextViewers;
+MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 13.6.16*)
+  IMPORT Files, Fonts, Texts, Viewers, Oberon, MenuViewers, TextFrames;
 
   CONST CR = 0DX; maxlen = 32;
-    StandardMenu = "System.Close System.Copy System.Grow Edit.Search Edit.Store";
+    StandardMenu = "System.Close System.Copy System.Grow Edit.Search Edit.Store   | System.Clone";
 
   VAR W: Texts.Writer;
     time: LONGINT;
@@ -30,15 +30,15 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 7.5.16*)
     IF S.class = Texts.Name THEN
       Oberon.AllocateUserViewer(Oberon.Par.vwr.X, X, Y);
       V := MenuViewers.New(
-        TextViewers.NewMenu(S.s, StandardMenu),
-        TextViewers.NewText(TextViewers.Text(S.s), 0),
-        TextViewers.menuH, X, Y)
+        TextFrames.NewMenu(S.s, StandardMenu),
+        TextFrames.NewText(TextFrames.Text(S.s), 0),
+        TextFrames.menuH, X, Y)
     END
   END Open;
 
   PROCEDURE Store*;
     VAR V: Viewers.Viewer;
-      Text: TextViewers.Viewer;
+      Text: TextFrames.Frame;
       T: Texts.Text;
       S: Texts.Scanner;
       beg, end, time, len: LONGINT;
@@ -53,7 +53,7 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 7.5.16*)
 
   BEGIN Texts.WriteString(W, "Edit.Store ");
     IF Oberon.Par.frame = Oberon.Par.vwr.dsc THEN
-      V := Oberon.Par.vwr; Texts.OpenScanner(S, V.dsc(TextViewers.Viewer).text, 0)
+      V := Oberon.Par.vwr; Texts.OpenScanner(S, V.dsc(TextFrames.Frame).text, 0)
     ELSE V := Oberon.MarkedViewer(); Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos)
     END;
     Texts.Scan(S);
@@ -61,8 +61,8 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 7.5.16*)
       Oberon.GetSelection(T, beg, end, time);
       IF time >= 0 THEN Texts.OpenScanner(S, T, beg); Texts.Scan(S) END
     END;
-    IF (S.class = Texts.Name) & (V.dsc # NIL) & (V.dsc.next IS TextViewers.Viewer) THEN
-      Text := V.dsc.next(TextViewers.Viewer);
+    IF (S.class = Texts.Name) & (V.dsc # NIL) & (V.dsc.next IS TextFrames.Frame) THEN
+      Text := V.dsc.next(TextFrames.Frame);
       Texts.WriteString(W, S.s); Texts.WriteInt(W, Text.text.len, 8);
       Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
       Backup(S.s); Texts.Close(Text.text, S.s)
@@ -71,15 +71,15 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 7.5.16*)
 
   PROCEDURE CopyLooks*;
     VAR T: Texts.Text;
-      F: TextViewers.Viewer;
+      F: TextFrames.Frame;
       v: Viewers.Viewer;
       beg, end, time: LONGINT;
       fnt: Fonts.Font; col, voff: INTEGER;
   BEGIN Oberon.GetSelection(T, beg, end, time);
     IF time >= 0 THEN
-      v := Viewers.FocusViewer;
-      IF (v # NIL) & (v.dsc # NIL) & (v.dsc.next IS TextViewers.Viewer) THEN
-        F := v.dsc.next(TextViewers.Viewer);
+      v := Viewers.CurDisplay.focusViewer;
+      IF (v # NIL) & (v.dsc # NIL) & (v.dsc.next IS TextFrames.Frame) THEN
+        F := v.dsc.next(TextFrames.Frame);
         Texts.Attributes(F.text, F.carloc.pos, fnt, col, voff);
         Texts.ChangeLooks(T, beg, end, {0,1,2}, fnt, col, voff)
       END
@@ -123,7 +123,7 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 7.5.16*)
   END ChangeOffset;
 
   PROCEDURE Search*;  (*uses global variables M, pat, d for Boyer-Moore search*)
-    VAR Text: TextViewers.Viewer;
+    VAR Text: TextFrames.Frame;
       V: Viewers.Viewer;
       R: Texts.Reader;
       T: Texts.Text;
@@ -138,9 +138,9 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 7.5.16*)
     END Forward;
 
   BEGIN V := Oberon.Par.vwr;
-    IF Oberon.Par.frame # V.dsc THEN V := Viewers.FocusViewer END;
-    IF (V.dsc # NIL) & (V.dsc.next IS TextViewers.Viewer) THEN
-      Text := V.dsc.next(TextViewers.Viewer);
+    IF Oberon.Par.frame # V.dsc THEN V := Viewers.CurDisplay.focusViewer END;
+    IF (V.dsc # NIL) & (V.dsc.next IS TextFrames.Frame) THEN
+      Text := V.dsc.next(TextFrames.Frame);
       prevTime := time; Oberon.GetSelection(T, beg, end, time);
       IF time > prevTime THEN
         Texts.OpenReader(R, T, beg);
@@ -163,34 +163,34 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 7.5.16*)
         REPEAT DEC(j) UNTIL (j < 0) OR (buf[j] # pat[j])
       END ;
       IF j < 0 THEN
-        TextViewers.RemoveSelection(Text); TextViewers.RemoveCaret(Text);
-        Cursors.RemoveMarks(Text.X, Text.Y, Text.W, Text.H);
-        TextViewers.Show(Text, pos - 300); Viewers.PassFocus(V);
-        TextViewers.SetCaret(Text, pos)
+        TextFrames.RemoveSelection(Text); TextFrames.RemoveCaret(Text);
+        Oberon.RemoveMarks(Text.X, Text.Y, Text.W, Text.H);
+        TextFrames.Show(Text, pos - 300); Viewers.PassFocus(V);
+        TextFrames.SetCaret(Text, pos)
       END
     END
   END Search;
 
   PROCEDURE Locate*;
-    VAR Text: TextViewers.Viewer;
+    VAR Text: TextFrames.Frame;
       T: Texts.Text; S: Texts.Scanner;
       V: Viewers.Viewer;
       beg, end, time: LONGINT;
   BEGIN
-    V := Viewers.FocusViewer;
-    IF (V.dsc # NIL) & (V.dsc.next IS TextViewers.Viewer) THEN
-      Text := V.dsc.next(TextViewers.Viewer);
+    V := Viewers.CurDisplay.focusViewer;
+    IF (V.dsc # NIL) & (V.dsc.next IS TextFrames.Frame) THEN
+      Text := V.dsc.next(TextFrames.Frame);
       Oberon.GetSelection(T, beg, end, time);
       IF time >= 0 THEN
         Texts.OpenScanner(S, T, beg);
         REPEAT Texts.Scan(S) UNTIL (S.class >= Texts.Int); (*skip names*)
         IF S.class = Texts.Int THEN
-          TextViewers.RemoveSelection(Text);
-          TextViewers.RemoveCaret(Text);
-          Cursors.RemoveMarks(Text.X, Text.Y, Text.W, Text.H);
-          TextViewers.Show(Text, Max(0, S.i - 200));
+          TextFrames.RemoveSelection(Text);
+          TextFrames.RemoveCaret(Text);
+          Oberon.RemoveMarks(Text.X, Text.Y, Text.W, Text.H);
+          TextFrames.Show(Text, Max(0, S.i - 200));
           Viewers.PassFocus(V);
-          TextViewers.SetCaret(Text, S.i)
+          TextFrames.SetCaret(Text, S.i)
         END
       END
     END
@@ -201,25 +201,25 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 7.5.16*)
       buf: Texts.Buffer;
       V: Viewers.Viewer;
       pos: LONGINT;
-      M: TextViewers.Viewer;
-  BEGIN V := Viewers.FocusViewer;
+      M: TextFrames.Frame;
+  BEGIN V := Viewers.CurDisplay.focusViewer;
     IF (V # NIL) & (V IS MenuViewers.Viewer) THEN
       Menu := V.dsc; Main := V.dsc.next;
-      IF Main IS TextViewers.Viewer THEN
-        M := Main(TextViewers.Viewer);
+      IF Main IS TextFrames.Frame THEN
+        M := Main(TextFrames.Frame);
         IF M.hasCar THEN
-          TextViewers.Recall(buf);
+          TextFrames.Recall(buf);
           pos := M.carloc.pos + buf.len;
           Texts.Insert(M.text, M.carloc.pos, buf);
-          TextViewers.SetCaret(M, pos)
+          TextFrames.SetCaret(M, pos)
         END
-      ELSIF Menu IS TextViewers.Viewer THEN
-        M := Menu(TextViewers.Viewer);
+      ELSIF Menu IS TextFrames.Frame THEN
+        M := Menu(TextFrames.Frame);
         IF M.hasCar THEN
-          TextViewers.Recall(buf);
+          TextFrames.Recall(buf);
           pos := M.carloc.pos + buf.len;
           Texts.Insert(M.text, M.carloc.pos, buf);
-          TextViewers.SetCaret(M, pos)
+          TextFrames.SetCaret(M, pos)
         END
       END
     END

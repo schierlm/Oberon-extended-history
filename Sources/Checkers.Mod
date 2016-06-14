@@ -1,5 +1,7 @@
-MODULE Checkers;  (*NW 4.10.90 / 10.3.13 / AP 5.5.16*)
-  IMPORT SYSTEM, Display, Cursors, Viewers, Oberon, MenuViewers, TextViewers;
+MODULE Checkers;  (*NW 4.10.90 / 10.3.13 / AP 13.6.16*)
+  IMPORT SYSTEM, Display, Viewers, Oberon, MenuViewers, TextFrames;
+
+  CONST Menu = "System.Close System.Copy System.Grow   | System.Clone";
 
   TYPE Viewer = POINTER TO ViewerDesc;
 
@@ -12,7 +14,7 @@ MODULE Checkers;  (*NW 4.10.90 / 10.3.13 / AP 5.5.16*)
     pat: ARRAY 17 OF INTEGER;
 
   PROCEDURE Restore(F: Viewer);
-  BEGIN Cursors.RemoveMarks(F.X, F.Y, F.W, F.H);
+  BEGIN Oberon.RemoveMarks(F.X, F.Y, F.W, F.H);
     Display.ReplConst(Display.black, F.X, F.Y, F.W, F.H, Display.replace); (*clear*)
     Display.ReplPattern(F.col, checks, F.X+1, F.Y, F.W-1, F.H-1, Display.paint)
   END Restore;
@@ -23,11 +25,14 @@ MODULE Checkers;  (*NW 4.10.90 / 10.3.13 / AP 5.5.16*)
     CASE G OF Viewer:
       CASE M OF
       Viewers.InputMsg:
-        IF M.id = Viewers.track THEN Cursors.DrawMouseArrow(M.X, M.Y) END |
+        IF M.id = Viewers.track THEN Oberon.DrawMouseArrow(M.X, M.Y) END |
       Viewers.CopyMsg:
-        Cursors.RemoveMarks(G.X, G.Y, G.W, G.H); NEW(G1); G1^ := G^; M.V := G1 |
-      Viewers.ViewerMsg: (*M.id = restore, extend or reduce*)
-        IF (M.Y # G.Y) OR (M.H # G.H) THEN G.Y := M.Y; G.H := M.H; Restore(G) END
+        Oberon.RemoveMarks(G.X, G.Y, G.W, G.H); NEW(G1); G1^ := G^; M.V := G1 |
+      Viewers.ViewerMsg:
+        IF M.id = Viewers.restore THEN G.Y := M.Y; G.H := M.H; Restore(G)
+        ELSIF M.id = Viewers.modify THEN
+          IF (M.Y # G.Y) OR (M.H # G.H) THEN G.Y := M.Y; G.H := M.H; Restore(G) END
+        END
       END
     END
   END Handle;
@@ -37,8 +42,8 @@ MODULE Checkers;  (*NW 4.10.90 / 10.3.13 / AP 5.5.16*)
   BEGIN NEW(F); F.col := 14; F.handle := Handle;
     Oberon.AllocateUserViewer(Oberon.Par.vwr.X, X, Y);
     V := MenuViewers.New(
-      TextViewers.NewMenu("CheckerViewer", "System.Close System.Copy System.Grow"),
-      F, TextViewers.menuH, X, Y)
+      TextFrames.NewMenu("CheckerViewer", Menu),
+      F, TextFrames.menuH, X, Y)
   END Open;
 
 BEGIN checks := SYSTEM.ADR(pat); pat[0] := 1010H; i := 1;

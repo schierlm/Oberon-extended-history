@@ -1,4 +1,4 @@
-MODULE Display;  (*NW 5.11.13 / AP 12.12.15 CopyPattern1 with top and bottom margins for fractional rendering*)
+MODULE Display;  (*NW 5.11.13 / AP 10.5.16*)
   IMPORT SYSTEM;
 
   CONST black* = 0; white* = 1;  (*black = background*)

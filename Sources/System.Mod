@@ -1,10 +1,9 @@
-MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.5.16*)
+MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 13.6.16*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules, Input, Fonts, Texts,
-    Viewers, Oberon, Tasks, MenuViewers, TextViewers;
+    Viewers, Oberon, MenuViewers, TextFrames;
 
-  CONST
-    StandardMenu = "System.Close System.Copy System.Grow Edit.Search Edit.Store";
-    LogMenu = "Edit.Locate Edit.Search System.Copy System.Grow System.Clear";
+  CONST StandardMenu = "System.Close System.Copy System.Grow Edit.Search Edit.Store     | System.Clone";
+    LogMenu = "Edit.Locate Edit.Search System.Copy System.Grow System.Clear   | System.Clone";
 
   VAR W: Texts.Writer;
     pat: ARRAY 32 OF CHAR;
@@ -68,97 +67,107 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.5.16*)
   END Date;
 
   PROCEDURE Collect*;
-  BEGIN Tasks.Collect(0)
+  BEGIN Oberon.Collect(0)
   END Collect;
 
-  (* ------------- Toolbox for logical display area management ---------------*)
+  (* ------------- Toolbox for logical display areas ---------------*)
 
-  PROCEDURE OpenViewers;
-    VAR logV, toolV: Viewers.Viewer;
-      menu, main: Viewers.Viewer;
-      d: LONGINT; X, Y: INTEGER;
-  BEGIN d := Kernel.Clock(); Texts.WriteString(W, "Oberon V6  NW 14.4.13 / AP 24.4.16  Display ");
-    Texts.WriteInt(W, Viewers.CurDisplay.id, 2); Texts.Write(W, " ");
-    Texts.WriteString(W, Viewers.CurDisplay.name); EndLine;
-    Oberon.AllocateSystemViewer(0, X, Y);
-    menu := TextViewers.NewMenu("System.Log", LogMenu);
-    main := TextViewers.NewText(Viewers.CurDisplay(Oberon.DisplayArea).log, 0);   (*!*)
-    logV := MenuViewers.New(menu, main, TextViewers.menuH, X, Y);
-    Oberon.AllocateSystemViewer(0, X, Y);
-    menu := TextViewers.NewMenu("System.Tool", StandardMenu);
-    main := TextViewers.NewText(TextViewers.Text("System.Tool"), 0);
-    toolV := MenuViewers.New(menu, main, TextViewers.menuH, X, Y)
-  END OpenViewers;
-
-  PROCEDURE MakeDisplayName (x: INTEGER; VAR name: ARRAY OF CHAR); (*0 <= x < 10^5*)
+  PROCEDURE MakeDisplayName (x: INTEGER; prefix: ARRAY OF CHAR; VAR name: ARRAY OF CHAR); (*0 <= x < 10^5*)
     VAR i, j: INTEGER; buf: ARRAY 5 OF INTEGER;
-  BEGIN name := "Display "; i := 0; j := 8;
+  BEGIN i := 0; j := 0;
+    WHILE prefix[j] > 0X DO name[j] := prefix[j]; INC(j) END;
     REPEAT buf[i] := x MOD 10; x := x DIV 10; INC(i) UNTIL x = 0;
     REPEAT DEC(i); name[j] := CHR(buf[i] + ORD("0")); INC(j) UNTIL (i = 0) OR (j = Viewers.DnLength);
     IF j < Viewers.DnLength THEN name[j] := 0X END
   END MakeDisplayName;
 
+  PROCEDURE WelcomeMsg (old: INTEGER);
+  BEGIN Texts.WriteString(W, "Now in display "); Texts.WriteInt(W, Viewers.CurDisplay.id, 2);
+    Texts.WriteString(W,", to go back to previous display:  System.SetDisplay ");
+    Texts.WriteInt(W, old, 2);
+  END WelcomeMsg;
+
+  PROCEDURE OpenViewers;
+    VAR logV, toolV, menu, main: Viewers.Viewer; curD: Viewers.Display;
+      d: LONGINT; X, Y: INTEGER;
+  BEGIN d := Kernel.Clock(); curD := Viewers.CurDisplay;
+    Texts.WriteString(W, "Oberon V6  NW 14.4.13 / AP 10.6.16  Display ");
+    Texts.WriteInt(W, curD.id, 2); Texts.Write(W, " ");
+    Texts.WriteString(W, curD.name); EndLine;
+    Oberon.AllocateSystemViewer(0, X, Y);
+    menu := TextFrames.NewMenu("System.Log", LogMenu);
+    main := TextFrames.NewText(curD(Oberon.DisplayArea).log, 0);
+    logV := MenuViewers.New(menu, main, TextFrames.menuH, X, Y);
+    Oberon.AllocateSystemViewer(0, X, Y);
+    menu := TextFrames.NewMenu("System.Tool", StandardMenu);
+    main := TextFrames.NewText(TextFrames.Text("System.Tool"), 0);
+    toolV := MenuViewers.New(menu, main, TextFrames.menuH, X, Y)
+  END OpenViewers;
+
   PROCEDURE OpenDisplay (name: ARRAY OF CHAR); (*if name is empty, a default name will be created*)
-    VAR D: Oberon.DisplayArea; DW, DH: INTEGER;
+    VAR D: Oberon.DisplayArea; V: Viewers.Viewer; DW, DH: INTEGER;
   BEGIN DW := Oberon.DisplayWidth(0); DH := Oberon.DisplayHeight(0);
-    Oberon.OpenDisplay(D, DW, DH, name);
-    IF D.name = "" THEN MakeDisplayName(D.id, D.name) END;
-    Viewers.SetCurDisplay(D);                        (*required for InitTrack*)
-    Oberon.InitTrack(D, DW DIV 8 * 5, DH);           (*add and init user track*)
-    Oberon.InitTrack(D, DW DIV 8 * 3, DH);           (*add and init system track*)
-    Viewers.SetFocusViewer(Viewers.This(D, 0, 0));
-    Oberon.SetDisplayLog(D, TextViewers.Text(""));   (*create a new log for the new display*)
-    Oberon.OpenLog(D.log);                           (*make Oberon.Log point to it*)
-    OpenViewers;
+    NEW(D); Viewers.InitDisplay(D, DW, DH, name);
+    IF D.name = "" THEN MakeDisplayName(D.id, "Display ", D.name) END;
+    Oberon.OpenTrack(D, DW DIV 8 * 5, DH);         (*open user track (adjusts D.curW)*)
+    Oberon.OpenTrack(D, DW DIV 8 * 3, DH);         (*open system track (adjusts D.curW)*)
+    Viewers.SetDisplay(D);
+    Input.SetMouseLimits(D.curW, D.H);
+    V := Viewers.This(D, 0, 0);
+    Viewers.SetFocusViewer(V);
+    Oberon.OpenDisplayLog(D, TextFrames.Text("")); (*open a new log for the new display*)
+    Oberon.OpenLog(D.log);                         (*make Oberon.Log point to D.log*)
+    OpenViewers
   END OpenDisplay;
 
   PROCEDURE NewDisplay*; (*create new display with standard Oberon tracks and viewers*)
-    VAR S: Texts.Scanner;
-  BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
-    IF S.class = Texts.Name THEN OpenDisplay(S.s) ELSE OpenDisplay("") END
+    VAR S: Texts.Scanner; old: INTEGER;
+  BEGIN old := Viewers.CurDisplay.id; 
+    Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
+    IF S.class = Texts.Name THEN OpenDisplay(S.s) ELSE OpenDisplay("") END;
+    WelcomeMsg(old); Texts.WriteLn(W); Oberon.WriteLog(W)
   END NewDisplay;
 
-  PROCEDURE CloseDisplay*; (*display id is provided as parameter*)
-    VAR D: Viewers.DisplayArea; S: Texts.Scanner;
+  PROCEDURE CloseDisplay*; (*display id is provided as parameter; one cannot close the current display*)
+    VAR D: Viewers.Display; S: Texts.Scanner;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
     IF S.class = Texts.Int THEN D := Viewers.GetDisplay(S.i);
       IF D = NIL THEN Texts.WriteString(W, " no such display ")
       ELSIF D = Viewers.CurDisplay THEN Texts.WriteString(W, " cannot close current display ")
       ELSE Texts.WriteString(W, " closing display "); Texts.WriteInt(W, D.id, 2);
         Texts.Write(W, " "); Texts.WriteString(W, D.name);
-        Viewers.CloseDisplay(D)
+        Viewers.CloseDisplay(S.i)
       END;
-      Texts.WriteLn(W); Oberon.WrLog(W);
+      Texts.WriteLn(W); Oberon.WriteLog(W)
     END
   END CloseDisplay;
 
   PROCEDURE ThisDisplay*;
-    VAR V: Viewers.Viewer; D: Viewers.DisplayArea;
+    VAR V: Viewers.Viewer; D: Viewers.Display;
   BEGIN V := Oberon.Par.vwr; D := Viewers.ThisDisplay(V);
     Texts.WriteString(W, " current display "); Texts.WriteInt(W, D.id, 2); Texts.Write(W, " ");
-    Texts.WriteString(W, D.name); Texts.WriteLn(W); Oberon.WrLog(W);
+    Texts.WriteString(W, D.name); Texts.WriteLn(W); Oberon.WriteLog(W)
   END ThisDisplay;
 
-  PROCEDURE SetDisplay*; (*set the current display, display id is provided as parameter*)
-    VAR D: Viewers.DisplayArea; S: Texts.Scanner;
+  PROCEDURE SetDisplay*; (*set the new current display, display id is provided as parameter*)
+    VAR D: Viewers.Display; V: Viewers.Viewer; S: Texts.Scanner; old: INTEGER;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
     IF S.class = Texts.Int THEN D := Viewers.GetDisplay(S.i);
       IF D = NIL THEN Texts.WriteString(W, " no such display ")
-      ELSIF D = Viewers.CurDisplay THEN Texts.WriteString(W, " already the current display ")
-      ELSE
-        Oberon.OpenLog(D(Oberon.DisplayArea).log); (*make Oberon.Log point to log of new current display*)
-        Viewers.SetCurDisplay(D);
-        Input.SetMouseLimits(D.curW, D.H);
-        Viewers.SetFocusViewer(Viewers.This(D, 0, 0));
-        Texts.WriteString(W, " Welcome back to display "); Texts.WriteInt(W, D.id, 2);
-        Texts.Write(W, " "); Texts.WriteString(W, D.name);
+      ELSE old := Viewers.CurDisplay.id;
+        IF D.id = old THEN Texts.WriteString(W, " already the current display ")
+        ELSE Viewers.SetDisplay(D);
+          Input.SetMouseLimits(D.curW, D.H);
+          Oberon.OpenLog(D(Oberon.DisplayArea).log); (*make Oberon.Log point to D.log*)
+          WelcomeMsg(old)
+        END
       END;
-      Texts.WriteLn(W); Oberon.WrLog(W)
+      Texts.WriteLn(W); Oberon.WriteLog(W)
     END
   END SetDisplay;
 
   PROCEDURE SetDisplayName*; (*display id and new name are provided as parameters*)
-    VAR D: Viewers.DisplayArea; S: Texts.Scanner;
+    VAR D: Viewers.Display; S: Texts.Scanner;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
     IF S.class = Texts.Int THEN  Texts.Scan(S);
       IF S.class = Texts.Name THEN D := Viewers.GetDisplay(S.i);
@@ -167,29 +176,31 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.5.16*)
           Texts.WriteString(W, " name of display "); Texts.WriteInt(W, D.id, 2);
           Texts.Write(W, " "); Texts.WriteString(W, " set to "); Texts.WriteString(W, D.name)
         END
-      ELSE Texts.WriteString(W, " no display name provided (SetDisplayName id name)");
+      ELSE Texts.WriteString(W, " no display name provided (SetDisplayName id name)")
       END
-    ELSE Texts.WriteString(W, " no display id provided (SetDisplayName id name)");
+    ELSE Texts.WriteString(W, " no display id provided (SetDisplayName id name)")
     END;
-    Texts.WriteLn(W); Oberon.WrLog(W)
+    Texts.WriteLn(W); Oberon.WriteLog(W)
   END SetDisplayName;
   
   PROCEDURE ShowDisplays*;
-     VAR D: Viewers.DisplayArea;
+    VAR D: Viewers.Viewer; curD: Viewers.Display;
   BEGIN Texts.WriteString(W, "System.ShowDisplays"); EndLine;
-     D := Viewers.FirstDisplay();
-     WHILE ~Viewers.EndDisplay(D) DO Texts.WriteString(W, " ");
-       Texts.WriteString(W, " display "); Texts.WriteInt(W, D.id, 2);
-       Texts.Write(W, " "); Texts.WriteString(W, D.name);
-       IF D = Viewers.CurDisplay THEN Texts.WriteString(W, "      (current display)") END;
-       Texts.WriteLn(W); Oberon.WrLog(W);
-       D := Viewers.NextDisplay(D);
-     END
+    curD := Viewers.CurDisplay; D := curD;
+    WHILE D.state # 1 DO D := D.next END; (*filler display*)
+    D := D.next; (*first display*)
+    WHILE D.state # 1 DO Texts.WriteString(W, " ");
+      Texts.WriteString(W, " display "); Texts.WriteInt(W, D(Viewers.Display).id, 2);
+      Texts.Write(W, " "); Texts.WriteString(W, D(Viewers.Display).name);
+      IF D = curD THEN Texts.WriteString(W, "      (current display)") END;
+      Texts.WriteLn(W); Oberon.WriteLog(W);
+      D := D.next
+    END
   END ShowDisplays;
 
   (* ------------- Toolbox for standard display ---------------*)
 
-  PROCEDURE Open*;  (*open viewer in system track*)
+  PROCEDURE Open*; (*open viewer in system track*)
     VAR X, Y: INTEGER;
       V: Viewers.Viewer;
       S: Texts.Scanner;
@@ -197,16 +208,16 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.5.16*)
     IF S.class = Texts.Name THEN
       Oberon.AllocateSystemViewer(Oberon.Par.vwr.X, X, Y);
       V := MenuViewers.New(
-        TextViewers.NewMenu(S.s, StandardMenu),
-        TextViewers.NewText(TextViewers.Text(S.s), 0), TextViewers.menuH, X, Y)
+        TextFrames.NewMenu(S.s, StandardMenu),
+        TextFrames.NewText(TextFrames.Text(S.s), 0), TextFrames.menuH, X, Y)
     END
   END Open;
 
-  PROCEDURE Clear*;  (*used to clear Log*)
+  PROCEDURE Clear*; (*used to clear Log*)
     VAR T: Texts.Text; V: Viewers.Viewer; buf: Texts.Buffer;
   BEGIN V := Oberon.Par.frame;
-    IF (V # NIL) & (V.next IS TextViewers.Viewer) & (V = Oberon.Par.vwr.dsc) THEN
-      T := V.next(TextViewers.Viewer).text; Texts.Delete(T, 0, T.len, buf)
+    IF (V # NIL) & (V.next IS TextFrames.Frame) & (V = Oberon.Par.vwr.dsc) THEN
+      T := V.next(TextFrames.Frame).text; Texts.Delete(T, 0, T.len, buf)
     END
   END Clear;
 
@@ -219,61 +230,53 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.5.16*)
     Viewers.Close(V)
   END Close;
 
-  PROCEDURE CloseTrack*;
-    VAR V: Viewers.Viewer;
-  BEGIN V := Oberon.MarkedViewer(); Viewers.CloseTrack(Viewers.CurDisplay, V.X)
-  END CloseTrack;
-
   PROCEDURE Recall*;
-    VAR V: Viewers.Viewer; M: Viewers.ViewerMsg;
-  BEGIN Viewers.Recall(Viewers.CurDisplay, V);
+    VAR V: Viewers.Viewer; curD: Viewers.Display; M: Viewers.ViewerMsg;
+  BEGIN curD := Viewers.CurDisplay; Viewers.Recall(curD, V);
     IF (V # NIL) & (V.state = 0) THEN
-      Viewers.Open(Viewers.CurDisplay, V, V.X, V.Y + V.H); M.id := Viewers.restore; V.handle(V, M)
+      Viewers.Open(curD, V, V.X, V.Y + V.H); M.id := Viewers.restore; V.handle(V, M)
     END
   END Recall;
 
-  PROCEDURE Copy*;  (*if "n" is pressed, the copied viewer is opened in user track of a new display*)
+  PROCEDURE Copy*; (*create a copy of the viewer in the current display area*)
     VAR V, V1: Viewers.Viewer; M: Viewers.CopyMsg; N: Viewers.ViewerMsg;
-      X, Y: INTEGER; ch: CHAR;
-  BEGIN V := Oberon.Par.vwr; X := V.X; Y := V.Y + V.H DIV 2;
-    IF Input.Available() > 0 THEN Input.Read(ch);
-      IF ch = "n" THEN OpenDisplay(""); X := 0; Y := Oberon.DisplayHeight(X) END
-    END;
-    V.handle(V, M); V1 := M.V(Viewers.Viewer);
-    Viewers.Open(Viewers.CurDisplay, V1, X, Y);
+  BEGIN V := Oberon.Par.vwr; V.handle(V, M); V1 := M.V(Viewers.Viewer);
+    Viewers.Open(Viewers.CurDisplay, V1, V.X, V.Y + V.H DIV 2);
     N.id := Viewers.restore; V1.handle(V1, N)
   END Copy;
 
-  PROCEDURE Grow*;
-    VAR V, V1: Viewers.Viewer; M: Viewers.CopyMsg; N: Viewers.ViewerMsg;
-      DW, DH: INTEGER;
-  BEGIN V := Oberon.Par.vwr;
-    DW := Oberon.DisplayWidth(V.X); DH := Oberon.DisplayHeight(V.X);
-    IF V.H < DH - Viewers.CurDisplay.minH THEN Oberon.OpenTrack(V.X, V.W)
-    ELSIF V.W < DW THEN Oberon.OpenTrack(Oberon.UserTrack(V.X), DW)
-    END;
-    IF (V.H < DH - Viewers.CurDisplay.minH) OR (V.W < DW) THEN
-      V.handle(V, M); V1 := M.V(Viewers.Viewer);
-      Viewers.Open(Viewers.CurDisplay, V1, V.X, DH);;
-      N.id := Viewers.restore; V1.handle(V1, N)
-    END
+  PROCEDURE Clone*; (*create a copy of the viewer in a newly created display area*)
+    VAR V, V1: Viewers.Viewer; M: Viewers.CopyMsg; N: Viewers.ViewerMsg; old: INTEGER;
+       name: ARRAY Viewers.DnLength OF CHAR;
+  BEGIN V := Oberon.Par.vwr; V.handle(V, M); V1 := M.V(Viewers.Viewer);
+    old := Viewers.CurDisplay.id; MakeDisplayName(old, "cloned from display ", name);
+    OpenDisplay(name);
+    Viewers.Open(Viewers.CurDisplay, V1, 0, Oberon.DisplayHeight(0));
+    N.id := Viewers.restore; V1.handle(V1, N);
+    WelcomeMsg(old); Texts.WriteLn(W); Oberon.WriteLog(W)
+  END Clone;
+
+  PROCEDURE Grow*; (*expand the viewer as much as possible by compressing the others*)
+    VAR V: Viewers.Viewer; y, h: INTEGER;
+  BEGIN V := Oberon.Par.vwr; y := 0; h := Oberon.DisplayHeight(0);
+    Viewers.Validate(V, y, h); Viewers.Change(V, y, h)
   END Grow;
 
-  PROCEDURE ExtendDisplay*;
-    VAR V: Viewers.Viewer;
+  PROCEDURE ExtendDisplay*; (*extend the current display to the right*)
+    VAR V: Viewers.Viewer; curD: Viewers.Display;
       X, Y, DX, DW, DH: INTEGER;
       S: Texts.Scanner;
   BEGIN GetArg(S);
-    IF S.class = Texts.Name THEN
-      DX := Viewers.CurDisplay.curW;
+    IF S.class = Texts.Name THEN curD := Viewers.CurDisplay; DX := curD.curW;
       DW := Oberon.DisplayWidth(DX); DH := Oberon.DisplayHeight(DX);
-      Oberon.InitTrack(Viewers.CurDisplay, DW DIV 8 * 5, DH);  (*init additional user track*)
-      Oberon.InitTrack(Viewers.CurDisplay, DW DIV 8 * 3, DH);  (*init additional system track*)
+      Oberon.OpenTrack(curD, DW DIV 8 * 5, DH); (*user track*)
+      Oberon.OpenTrack(curD, DW DIV 8 * 3, DH); (*system track*)
+      Input.SetMouseLimits(curD.curW, curD.H);
       Oberon.AllocateSystemViewer(DX, X, Y);
       V := MenuViewers.New(
-        TextViewers.NewMenu(S.s, StandardMenu),
-        TextViewers.NewText(TextViewers.Text(S.s), 0),
-        TextViewers.menuH, X, Y)
+        TextFrames.NewMenu(S.s, StandardMenu),
+        TextFrames.NewText(TextFrames.Text(S.s), 0),
+        TextFrames.menuH, X, Y)
     END
   END ExtendDisplay;
 
@@ -300,7 +303,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.5.16*)
     ELSE
       WHILE S.class = Texts.Name DO Free1(S); Texts.Scan(S) END
     END ;
-    Tasks.Collect(0)
+    Oberon.Collect(0)
   END Free;
 
   PROCEDURE FreeFonts*;
@@ -358,14 +361,14 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.5.16*)
     i := 0;
     WHILE ch > "!" DO pat[i] := ch; INC(i); Texts.Read(R, ch) END;
     pat[i] := 0X;
-    IF ch = "!" THEN pat[i+1] := "!" END ;  (*directory option*)
+    IF ch = "!" THEN pat[i+1] := "!" END ; (*directory option*)
     i := 0;
     WHILE pat[i] > "*" DO pre[i] := pat[i]; INC(i) END;
     pre[i] := 0X;
-    Oberon.AllocateSystemViewer(Oberon.Par.vwr.X, X, Y); t := TextViewers.Text("");
+    Oberon.AllocateSystemViewer(Oberon.Par.vwr.X, X, Y); t := TextFrames.Text("");
     V := MenuViewers.New(
-      TextViewers.NewMenu("System.Directory", StandardMenu),
-      TextViewers.NewText(t, 0), TextViewers.menuH, X, Y);
+      TextFrames.NewMenu("System.Directory", StandardMenu),
+      TextFrames.NewText(t, 0), TextFrames.menuH, X, Y);
     FileDir.Enumerate(pre, List); Texts.Append(t, W.buf)
   END Directory;
 
@@ -441,7 +444,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.5.16*)
     Texts.WriteInt(W, Kernel.allocated * 100 DIV (Kernel.heapLim - Kernel.heapOrg), 4); Texts.Write(W, "%"); EndLine;
     Texts.WriteString(W, "  Disk sectors "); Texts.WriteInt(W, Kernel.NofSectors, 4);
     Texts.WriteInt(W, Kernel.NofSectors * 100 DIV 10000H, 4); Texts.Write(W, "%"); EndLine;
-    Texts.WriteString(W, "  Tasks"); Texts.WriteInt(W, Tasks.NofTasks, 4); EndLine
+    Texts.WriteString(W, "  Tasks"); Texts.WriteInt(W, Oberon.NofTasks, 4); EndLine
   END Watch;
 
   PROCEDURE ShowModules*;
@@ -449,10 +452,10 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.5.16*)
       V: Viewers.Viewer;
       M: Modules.Module;
       X, Y: INTEGER;
-  BEGIN T := TextViewers.Text("");
+  BEGIN T := TextFrames.Text("");
     Oberon.AllocateSystemViewer(Oberon.Par.vwr.X, X, Y);
-    V := MenuViewers.New(TextViewers.NewMenu("System.ShowModules", StandardMenu),
-        TextViewers.NewText(T, 0), TextViewers.menuH, X, Y);
+    V := MenuViewers.New(TextFrames.NewMenu("System.ShowModules", StandardMenu),
+        TextFrames.NewText(T, 0), TextFrames.menuH, X, Y);
     M := Modules.root;
     WHILE M # NIL DO
       IF M.name[0] # 0X THEN
@@ -476,9 +479,9 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.5.16*)
     IF S.class = Texts.Name THEN
       Modules.Load(S.s, M);
       IF M # NIL THEN
-        Oberon.AllocateSystemViewer(Oberon.Par.vwr.X, X, Y); T := TextViewers.Text("");
-        V := MenuViewers.New(TextViewers.NewMenu("System.Commands", StandardMenu),
-            TextViewers.NewText(T, 0), TextViewers.menuH, X, Y);
+        Oberon.AllocateSystemViewer(Oberon.Par.vwr.X, X, Y); T := TextFrames.Text("");
+        V := MenuViewers.New(TextFrames.NewMenu("System.Commands", StandardMenu),
+            TextFrames.NewText(T, 0), TextFrames.menuH, X, Y);
         comadr := M.cmd; SYSTEM.GET(comadr, ch); INC(comadr);
         WHILE ch # 0X DO
           Texts.WriteString(W, S.s); Texts.Write(W, ".");
@@ -525,22 +528,16 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.5.16*)
       WHILE (mod # NIL) & ((u < mod.code) OR (u >= mod.imp)) DO mod := mod.next END ;
       IF mod # NIL THEN Texts.WriteString(W, " in "); Texts.WriteString(W, mod.name) END ;
       Texts.WriteString(W, " at"); Texts.WriteHex(W, u);
-      Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); Tasks.Reset
+      Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); Oberon.Reset
     END
   END Trap;
 
   PROCEDURE Abort;
     VAR n: INTEGER;
   BEGIN n := SYSTEM.REG(15); Texts.WriteString(W, "  ABORT  "); Texts.WriteHex(W, n);
-    Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); Tasks.Reset
+    Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); Oberon.Reset
   END Abort;
 
-BEGIN Texts.OpenWriter(W);
-  IF (Viewers.CurDisplay # NIL) & (Viewers.CurDisplay IS Oberon.DisplayArea) THEN
-    Oberon.SetDisplayLog(Viewers.CurDisplay(Oberon.DisplayArea), TextViewers.Text("")); (*create a new log for CurDisplay*)
-    Oberon.OpenLog(Viewers.CurDisplay(Oberon.DisplayArea).log)                     (*make Oberon.Log point to it*)
-  END;
-  OpenViewers;
-  Kernel.Install(SYSTEM.ADR(Trap), 20H); Kernel.Install(SYSTEM.ADR(Abort), 0);
-  Tasks.Loop
+BEGIN Texts.OpenWriter(W); OpenDisplay("Oberon");  
+  Kernel.Install(SYSTEM.ADR(Trap), 20H); Kernel.Install(SYSTEM.ADR(Abort), 0)
 END System.

@@ -1,5 +1,5 @@
-MODULE Clipboard; (*AP 7.5.16*)
-  IMPORT SYSTEM, Texts, Viewers, Oberon, TextViewers;
+MODULE Clipboard; (*AP 13.6.16*)
+  IMPORT SYSTEM, Texts, Viewers, Oberon, TextFrames;
 
   CONST control = -24; data = -20;
 
@@ -26,11 +26,11 @@ MODULE Clipboard; (*AP 7.5.16*)
 
   PROCEDURE CopyViewer*;
     VAR V: Viewers.Viewer;
-      F: TextViewers.Viewer;
+      F: TextFrames.Frame;
   BEGIN
     V := Oberon.MarkedViewer();
-    IF (V # NIL) & (V.dsc # NIL) & (V.dsc.next IS TextViewers.Viewer) THEN
-      F := V.dsc.next(TextViewers.Viewer);
+    IF (V # NIL) & (V.dsc # NIL) & (V.dsc.next IS TextFrames.Frame) THEN
+      F := V.dsc.next(TextFrames.Frame);
       Copy(F.text, 0, F.text.len)
     END
   END CopyViewer;
@@ -38,12 +38,12 @@ MODULE Clipboard; (*AP 7.5.16*)
   PROCEDURE Paste*;
     VAR W: Texts.Writer;
       V: Viewers.Viewer;
-      F: TextViewers.Viewer;
+      F: TextFrames.Frame;
       len, i: INTEGER;
       ch: CHAR;
   BEGIN
-    V := Viewers.FocusViewer;
-    IF (V # NIL) & (V.dsc # NIL) & (V.dsc.next IS TextViewers.Viewer) THEN
+    V := Viewers.CurDisplay.focusViewer;
+    IF (V # NIL) & (V.dsc # NIL) & (V.dsc.next IS TextFrames.Frame) THEN
       SYSTEM.GET(control, len);
       IF len > 0 THEN
         Texts.OpenWriter(W);
@@ -51,9 +51,9 @@ MODULE Clipboard; (*AP 7.5.16*)
           SYSTEM.GET(data, ch);
           Texts.Write(W, ch)
         END;
-        F := V.dsc.next(TextViewers.Viewer);
+        F := V.dsc.next(TextFrames.Frame);
         Texts.Insert(F.text, F.carloc.pos, W.buf);
-        TextViewers.SetCaret(F, F.carloc.pos + len)
+        TextFrames.SetCaret(F, F.carloc.pos + len)
       END
     END
   END Paste;
