@@ -1,4 +1,4 @@
-MODULE Rectangles;  (*NW 25.2.90 / 18.4.13 / AP 13.6.16*)
+MODULE Rectangles;  (*NW 25.2.90 / 18.4.2013*)
   IMPORT SYSTEM, Display, Files, Input, Texts, Oberon, Graphics, GraphicFrames;
 
   TYPE

@@ -1,4 +1,4 @@
-MODULE ORG; (* NW  18.4.2016 / AP 9.5.2016  code generator in Oberon-07 for RISC*)
+MODULE ORG; (* NW  18.4.2016  / AP 7.7.16 code generator in Oberon-07 for RISC*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser OSAP; result in array "code".

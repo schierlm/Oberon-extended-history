@@ -1,8 +1,8 @@
-MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 13.6.16*)
+MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 12.12.90 / 23.6.16*)
   IMPORT Files, Fonts, Texts, Viewers, Oberon, MenuViewers, TextFrames;
 
   CONST CR = 0DX; maxlen = 32;
-    StandardMenu = "System.Close System.Copy System.Grow Edit.Search Edit.Store   | System.Clone";
+    StandardMenu = "System.Close System.Copy System.Grow Edit.Search Edit.Store | System.Expand System.Clone";
 
   VAR W: Texts.Writer;
     time: LONGINT;

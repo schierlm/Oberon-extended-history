@@ -1,7 +1,9 @@
-MODULE Draw; (*NW 29.6.88 / 12.11.94 / 18.11.13 / AP 11.6.16*)
-  IMPORT Files, Fonts, Viewers, Texts, Oberon, TextFrames, MenuViewers, Graphics, GraphicFrames;
+MODULE Draw; (*NW 29.6.88 / 12.11.94 / 18.11.2013*)
 
-  CONST Menu = "System.Close System.Copy System.Grow Draw.Delete Draw.Ticks Draw.Restore Draw.Store   | System.Clone";
+  IMPORT Files, Fonts, Viewers, Texts, Oberon,
+    TextFrames, MenuViewers, Graphics, GraphicFrames;
+
+  CONST Menu = "System.Close  System.Copy  System.Grow  Draw.Delete  Draw.Ticks  Draw.Restore  Draw.Store";
 
   VAR W: Texts.Writer;
 

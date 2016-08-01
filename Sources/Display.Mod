@@ -1,14 +1,16 @@
-MODULE Display;  (*NW 5.11.13 / AP 10.5.16*)
+MODULE Display;  (*NW 5.11.2013 / 3.7.2016 / AP 5.7.16*)
   IMPORT SYSTEM;
 
   CONST black* = 0; white* = 1;  (*black = background*)
     replace* = 0; paint* = 1; invert* = 2;  (*modes*)
-    base = 0E7F00H; (*adr of 1024 x 768 pixel, monocolor display frame*)
+    base = 0E7F00H;  (*adr of 1024 x 768 pixel, monocolor display frame*)
 
   VAR Base*, Width*, Height*: INTEGER;
     arrow*, star*, hook*, updown*, block*, cross*, grey*: INTEGER;
     (*a pattern is an array of bytes; the first is its width (< 32), the second its height, the rest the raster*)
 
+  (* raster ops *)
+    
   PROCEDURE Dot*(col, x, y, mode: INTEGER);
     VAR a: INTEGER; u, s: SET;
   BEGIN a := base + (x DIV 32)*4 + y*128;
@@ -33,7 +35,7 @@ MODULE Display;  (*NW 5.11.13 / AP 10.5.16*)
         ELSE (* (mode = paint) OR (mode = replace) & (col # black) *) SYSTEM.PUT(a1, pix + mid)
         END
       END
-    ELSE
+    ELSIF ar > al THEN
       left := {(x MOD 32) .. 31}; right := {0 .. ((x+w-1) MOD 32)};
       FOR a0 := al TO al + (h-1)*128 BY 128 DO
         SYSTEM.GET(a0, pixl); SYSTEM.GET(ar, pixr);
@@ -157,7 +159,7 @@ MODULE Display;  (*NW 5.11.13 / AP 10.5.16*)
         SYSTEM.GET(a1, pix); SYSTEM.GET(pta0, ptw); SYSTEM.PUT(a1, (pix - mid) + (pix/ptw * mid)); INC(pta0, 4);
         IF pta0 = pta1 THEN pta0 := patadr+4 END
       END
-    ELSE
+    ELSIF ar > al THEN
       left := {(x MOD 32) .. 31}; right := {0 .. ((x+w-1) MOD 32)};
       FOR a0 := al TO al + (h-1)*128 BY 128 DO
         SYSTEM.GET(a0, pixl); SYSTEM.GET(pta0, ptw); SYSTEM.PUT(a0, (pixl - left) + (pixl/ptw * left));

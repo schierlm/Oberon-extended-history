@@ -1,4 +1,4 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 13.6.2016*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016*)
   IMPORT SYSTEM, Files;
   CONST versionkey = 1X; MT = 12; DescSize = 80;
 

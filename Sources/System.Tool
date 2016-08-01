@@ -1,26 +1,29 @@
 System.Open ^  System.Recall  System.Watch  System.Collect
-Edit.Open ^  Edit.Recall Edit.Locate ^ Edit.Search ^ Test.Init
-Edit.ChangeFont Oberon8.Scn.Fnt  System.RunInit Test
-
+Edit.Open ^  Edit.Recall
+Edit.ChangeFont Oberon8.Scn.Fnt
 Edit.ChangeFont Oberon10i.Scn.Fnt
 Edit.ChangeFont Oberon16.Scn.Fnt
 Edit.ChangeFont Times24.Scn.Fnt
 
-System.Directory ^ *.Mod *.Bak *.Tool *.Text *.Scn.Fnt *.smb *.txt *.bin
+System.Directory ^
+  *.Mod  *.Bak  *.Tool  *.Text  *.Scn.Fnt  *.smb  *.rsc
 
-ORP.Compile @  ORP.Compile @/s  ORP.Compile ^ ORP.Compile ^/s
-System.Open Draw.Tool ~            System.ThisDisplay
-System.Free ~                                System.ShowDisplays
-System.CopyFiles ~                        System.NewDisplay Andreas ~
-System.RenameFiles ~                  System.CloseDisplay 0 ~
-System.DeleteFiles ~                     System.SetDisplay 1 ~
-System.ShowModules                   System.SetDisplayName 0 New ~
-System.ShowCommands System ~ 
+ORP.Compile @  ORP.Compile @/s  ORP.Compile name~
+System.Free ~
+System.Open Draw.Tool
+System.CopyFiles ~
+System.RenameFiles ~
+System.DeleteFiles ~
 
-Tools.Inspect 0     Tools.Sector 1     Tools.Recall      Tools.Clear
-Tools.ShowFiles    Tools.GCoff         Tools.Read        Tools.Write
+System.ShowModules  System.ShowCommands ^ 
 
-PCLink1.Run Hilbert.Draw  Sierpinski.Draw  Blink.Run  Stars.Open
+PCLink1.Run
+Hilbert.Draw  Sierpinski.Draw  Blink.Run  Stars.Open
+
+Tools.Inspect 0
+Tools.Sector 1
+Tools.ShowFile 
+Tools.Recall  Tools.Clear
 
 # ------------ rebuilding the system ----------------
 
@@ -41,7 +44,7 @@ ORP.Compile ORS.Mod/s ORB.Mod/s ~  ORP.Compile Tools.Mod ~
 ORP.Compile ORG.Mod/s ORP.Mod/s ~  ORP.Compile ORTool.Mod ~
 
 ORP.Compile PCLink1.Mod RS232.Mod Clipboard.Mod ~
-ORP.Compile Linker.Mod/s Builder.Mod BootLoad.Mod BootLoadDisk.Mod ~
+ORP.Compile Linker.Mod/s Builder.Mod BootLoad.Mod ~
 
 ORP.Compile Graphics.Mod/s ~  ORP.Compile GraphicFrames.Mod/s ~
 ORP.Compile GraphTool.Mod Draw.Mod ~

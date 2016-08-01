@@ -1,4 +1,4 @@
-MODULE PCLink1;  (*NW 25.7.2013  for Oberon on RISC / AP 13.6.16*)
+MODULE PCLink1;  (*NW 25.7.2013  for Oberon on RISC*)
   IMPORT SYSTEM, Files, Texts, Oberon;
   
   CONST data = -56; stat = -52;

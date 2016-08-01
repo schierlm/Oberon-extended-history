@@ -1,4 +1,4 @@
-MODULE Blink;   (*NW 30.5.13 / AP 13.6.16*)
+MODULE Blink;   (*NW 30.5.2013*)
   IMPORT SYSTEM, Oberon;
   VAR z: INTEGER;
     T: Oberon.Task;
@@ -17,4 +17,3 @@ MODULE Blink;   (*NW 30.5.13 / AP 13.6.16*)
 
 BEGIN z := 0; T := Oberon.NewTask(Tick, 500)
 END Blink.
-

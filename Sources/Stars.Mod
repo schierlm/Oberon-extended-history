@@ -1,7 +1,7 @@
-MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 13.6.16*)
+MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 23.6.16*)
   IMPORT SYSTEM, Display, Viewers, Texts, Oberon, MenuViewers, TextFrames;
 
-  CONST Menu = "Stars.Close System.Copy System.Grow Stars.Step Stars.Run Stars.Stop   | System.Clone";
+  CONST Menu = "Stars.Close System.Copy System.Grow Stars.Step Stars.Run Stars.Stop | System.Expand System.Clone";
     N = 6;  (*nof stars*)
     w = 16;   (*width of star*)
     interval = 200;  (*millisec*)

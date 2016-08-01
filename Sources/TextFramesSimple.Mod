@@ -1,8 +1,8 @@
-MODULE TextFrames; (*JG 8.10.90 / NW 10.5.2013 / AP 13.6.2016 - simple continuous line scrolling for Experimental Oberon*)
+MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 14.6.16 - simple continuous line scrolling for Experimental Oberon*)
   IMPORT Modules, Input, Display, Fonts, Texts, Viewers, Oberon;
 
   CONST replace* = 0; insert* = 1; delete* = 2; unmark* = 3; (*message id*)
-    BS = 8X; TAB = 9X; CR = 0DX; DEL = 7FX; FrameColor = 1;   
+    BS = 8X; TAB = 9X; CR = 0DX; DEL = 7FX;
 
   TYPE Line = POINTER TO LineDesc;
     LineDesc = RECORD
@@ -157,7 +157,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 10.5.2013 / AP 13.6.2016 - simple continuou
   BEGIN (*~F.hasMark*)
     Display.ReplConst(F.col, F.X, F.Y, F.W, F.H, Display.replace);
     IF F.left >= barW THEN
-      Display.ReplConst(FrameColor, F.X + barW - 1, F.Y, 1, F.H, Display.invert)
+      Display.ReplConst(Display.white, F.X + barW - 1, F.Y, 1, F.H, Display.invert)
     END;
     Validate(F.text, F.org);
     botY := F.Y + F.bot + dsr;
@@ -182,7 +182,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 10.5.2013 / AP 13.6.2016 - simple continuou
   BEGIN (*~F.hasMark*)
     Display.ReplConst(F.col, F.X, newY, F.W, F.Y - newY, Display.replace);
     IF F.left >= barW THEN
-      Display.ReplConst(FrameColor, F.X + barW - 1, newY, 1, F.Y - newY, Display.invert)
+      Display.ReplConst(Display.white, F.X + barW - 1, newY, 1, F.Y - newY, Display.invert)
     END;
     F.H := F.H + F.Y - newY; F.Y := newY;
     IF F.trailer.next = F.trailer THEN Validate(F.text, F.org) END;
@@ -826,7 +826,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 10.5.2013 / AP 13.6.2016 - simple continuou
           ELSIF keysum = {0, 1} THEN  (*MR, MM: copy to caret*)
             Oberon.GetSelection(text, beg, end, time);
             M.text := text; M.beg := beg; M.end := end;
-            Viewers.FocusViewer.handle(Viewers.FocusViewer, M)
+            Viewers.CurDisplay.focusViewer.handle(Viewers.CurDisplay.focusViewer, M)
           END
         END
       ELSIF 1 IN Keys THEN  (*MM: call*)

@@ -1,7 +1,7 @@
-MODULE Checkers;  (*NW 4.10.90 / 10.3.13 / AP 13.6.16*)
+MODULE Checkers;  (*NW 4.10.90 / 10.3.13 / AP 23.6.16*)
   IMPORT SYSTEM, Display, Viewers, Oberon, MenuViewers, TextFrames;
 
-  CONST Menu = "System.Close System.Copy System.Grow   | System.Clone";
+  CONST Menu = "System.Close System.Copy System.Grow | System.Expand System.Clone";
 
   TYPE Viewer = POINTER TO ViewerDesc;
 

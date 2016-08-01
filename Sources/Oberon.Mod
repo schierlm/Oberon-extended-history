@@ -1,14 +1,14 @@
-MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 13.6.16*)
+MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.12.90 / 23.6.16*)
   IMPORT SYSTEM, Kernel, Files, Modules, Input, Display, Viewers, Fonts, Texts;
 
-  CONST off = 0; idle = 1; active = 2;   (*task states*)
+  CONST off = 0; idle = 1; active = 2; (*task states*)
     BasicCycle = 20; ESC = 1BX; SETSTAR = 1AX;
 
   TYPE Painter* = PROCEDURE (x, y: INTEGER);
     Marker* = RECORD Fade*, Draw*: Painter END;
 
     Cursor* = RECORD
-       marker*: Marker; on*: BOOLEAN; X*, Y*: INTEGER
+      marker*: Marker; on*: BOOLEAN; X*, Y*: INTEGER
     END;
 
     DisplayArea* = POINTER TO DisplayDesc;
@@ -50,7 +50,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 13.6
 
     NofTasks*: INTEGER;
     CurTask: Task;
-    ActCnt: INTEGER;  (*action count for GC*)
+    ActCnt: INTEGER; (*action count for GC*)
     Mod: Modules.Module;
 
   (*user identification*)
@@ -187,29 +187,9 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 13.6
   BEGIN Log := T
   END OpenLog;
 
-  PROCEDURE WriteDisplayLog* (D: DisplayArea; W: Texts.Writer);
-  BEGIN Texts.Append(D.log, W.buf)
-  END WriteDisplayLog;
-
-  PROCEDURE WriteLog* (W: Texts.Writer);
-  BEGIN WriteDisplayLog(Viewers.CurDisplay(DisplayArea), W)
-  END WriteLog;
-
-  PROCEDURE GetDisplaySelection* (D: DisplayArea; VAR text: Texts.Text; VAR beg, end, time: LONGINT); (*from specified display*)
-    VAR M: SelectionMsg;
-  BEGIN M.time := -1; Viewers.BroadcastDisplay(D, M); time := M.time;
-    IF time >= 0 THEN text := M.text; beg := M.beg; end := M.end END
-  END GetDisplaySelection;
-
-  PROCEDURE GetCurrentSelection* (VAR text: Texts.Text; VAR beg, end, time: LONGINT); (*from current display*)
+  PROCEDURE GetSelection* (VAR text: Texts.Text; VAR beg, end, time: LONGINT); (*from current display*)
     VAR M: SelectionMsg;
   BEGIN M.time := -1; Viewers.Broadcast(M); time := M.time;
-    IF time >= 0 THEN text := M.text; beg := M.beg; end := M.end END
-  END GetCurrentSelection;
-
-  PROCEDURE GetSelection* (VAR text: Texts.Text; VAR beg, end, time: LONGINT); (*from all displays*)
-    VAR M: SelectionMsg;
-  BEGIN M.time := -1; Viewers.BroadcastAll(M); time := M.time;
     IF time >= 0 THEN text := M.text; beg := M.beg; end := M.end END
   END GetSelection;
 
@@ -245,9 +225,14 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 13.6
 
   (*standard Oberon display with user track and system track, and filler viewer*)
 
-  PROCEDURE OpenTrack* (D: Viewers.Display; W, H: INTEGER);
+  PROCEDURE NewTrack* (D: Viewers.Display; W, H: INTEGER); (*add new track to the right*)
     VAR Filler: Viewers.Viewer;
   BEGIN NEW(Filler); Filler.handle := HandleFiller; Viewers.InitTrack(D, W, H, Filler)
+  END NewTrack;
+
+  PROCEDURE OpenTrack* (D: Viewers.Display; X, W: INTEGER); (*create overlay track at X*)
+    VAR Filler: Viewers.Viewer;
+  BEGIN NEW(Filler); Filler.handle := HandleFiller; Viewers.OpenTrack(D, X, W, Filler)
   END OpenTrack;
 
   PROCEDURE UserTrack* (X: INTEGER): INTEGER;
@@ -259,8 +244,9 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 13.6
   END SystemTrack;
 
   PROCEDURE UY (X: INTEGER): INTEGER;
-    VAR y: INTEGER; fil, bot, max: Viewers.Viewer;
-  BEGIN Viewers.Locate(Viewers.CurDisplay, X, 0, fil, bot, max);
+    VAR y: INTEGER;
+      fil, bot, alt, max: Viewers.Viewer;
+  BEGIN Viewers.Locate(Viewers.CurDisplay, X, 0, fil, bot, alt, max);
     IF fil.H >= DH DIV 8 THEN y := DH ELSE y := max.Y + max.H DIV 2 END ;
     RETURN y
   END UY;
@@ -273,9 +259,10 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 13.6
   END AllocateUserViewer;
 
   PROCEDURE SY (X: INTEGER): INTEGER;
-    VAR H0, H1, H2, H3, y: INTEGER; fil, bot, max: Viewers.Viewer;
+    VAR H0, H1, H2, H3, y: INTEGER;
+      fil, bot, alt, max: Viewers.Viewer;
   BEGIN H3 := DH - DH DIV 3; H2 := H3 - H3 DIV 2; H1 := DH DIV 5; H0 := DH DIV 10;
-    Viewers.Locate(Viewers.CurDisplay, X, DH, fil, bot, max);
+    Viewers.Locate(Viewers.CurDisplay, X, DH, fil, bot, alt, max);
     IF fil.H >= DH DIV 8 THEN y := DH
     ELSIF max.H >= DH - H0 THEN y := max.Y + H3
     ELSIF max.H >= H3 - H0 THEN y := max.Y + H2
@@ -311,7 +298,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 13.6
         j := 0; ch := name[i]; INC(i);
         WHILE ch # 0X DO Cname[j] := ch; INC(j); ch := name[i]; INC(i) END ;
         Cname[j] := 0X;
-        P := Modules.ThisCommand(mod, Cname); res := res;
+        P := Modules.ThisCommand(mod, Cname); res := Modules.res;
         IF Modules.res = 0 THEN P END
       END
     ELSE res := 5
@@ -363,7 +350,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 13.6
 
   PROCEDURE Loop*;
     VAR V: Viewers.Viewer; M: Viewers.InputMsg; N: Viewers.ControlMsg;
-       prevX, prevY, X, Y, t: INTEGER; keys: SET; ch: CHAR;
+      prevX, prevY, X, Y, t: INTEGER; keys: SET; ch: CHAR;
   BEGIN
     REPEAT
       Input.Mouse(keys, X, Y);
@@ -409,4 +396,3 @@ BEGIN User[0] := 0X; DW := Display.Width; DH := Display.Height; CL := DW;
   ActCnt := 0; CurTask := NewTask(GC, 1000); Install(CurTask);
   Modules.Load("System", Mod); Mod := NIL; Loop
 END Oberon.
-

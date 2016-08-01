@@ -1,4 +1,4 @@
-MODULE Clipboard; (*AP 13.6.16*)
+MODULE Clipboard;
   IMPORT SYSTEM, Texts, Viewers, Oberon, TextFrames;
 
   CONST control = -24; data = -20;

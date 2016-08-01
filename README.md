@@ -7,45 +7,56 @@ To access the **reduced** version of Experimental Oberon (which **is** backward 
 
 ------------------------------------------------------
 
+**DEMO VIDEOS** (if you see an error message "Sorry about that, but we can’t show files that are this big right now" or similar, click on the "Raw" button on the page showing the error message to download the file to your computer)
+
 **Demo video 1:** [**DemoMultipleVirtualDisplays.mov**](Documentation/DemoMultipleVirtualDisplays.mov)
 
 **Demo video 2:** [**DemoFractionalLineScrollVariableLineSpace.mov**](Documentation/DemoFractionalLineScrollVariableLineSpace.mov)
 
-**Compressed archive of the S3RISCinstall directory (for emulator):** [**S3RISCinstall.tar.gz**](Documentation/S3RISCinstall.tar.gz)
+**Demo video 3:** [**DemoCloningViewersIntoNewVirtualDisplays.mov**](Documentation/DemoCloningViewersIntoNewVirtualDisplays.mov)
 
-Click on the "Raw" button to download the file to your computer if Github doesn't let you display the videos in the browser.
+------------------------------------------------------
+
+**COMPRESSED ARCHIVE** of Experimental Oberon for the Oberon emulator (if you see an error message "Sorry about that, but we can’t show files that are this big right now" or similar, click on the "Raw" button on the page showing the error message to download the file to your computer)
+
+**Compressed archive of the S3RISCinstall directory (for emulator):** [**S3RISCinstall.tar.gz**](Documentation/S3RISCinstall.tar.gz)
 
 ------------------------------------------------------
 
 # Instructions for converting an existing Original Oberon system to Experimental Oberon (full)
 
-**PREREQUISITES**: A working Original Oberon operating system and compiler, current as of June 11, 2016 or later (see projectoberon.com). If you run an older version of Original Oberon or the compiler, please upgrade to the latest version first.
+**PREREQUISITES**: A working Original Oberon operating system and compiler, current as of July 5, 2016 or later (see projectoberon.com). If you run an older version of Original Oberon or the compiler, please upgrade to the latest version first.
 
 **STEP 1**: Download the following files from the [**Sources**](Sources/) directory of this repository to your Oberon system (these are the files that have been added or have changed relative to Oberon 2013):
 
-     Modules.Mod
+
      Display.Mod
      Viewers.Mod
      Oberon.Mod
      MenuViewers.Mod
      TextFrames.Mod
      System.Mod
-     ORG.Mod              (!)
      Edit.Mod
+     ORG.Mod              (!)
      Tools.Mod
-     PCLink1.Mod
+     GraphicFrames.Mod
+     Draw.Mod
      Linker.Mod
      Builder.Mod
      BootLoad.Mod
-     Draw.Mod
-     Clipboard.Mod
-     System.Tool          (optional)
+     Clipboard.Mod        (optional, from https://github.com/pdewacht/oberon-risc-emu)
+     System.Tool          (optional, recommended)
      Times24.Scn.Fnt      (optional)
+     Sierpinksi.Mod       (optional)
+     Hilbert.Mod          (optional)
+     Stars.Mod            (optional)
+     Checkers.Mod         (optional)
 
 If you want, you can download additional versions of module *TextFrames* (all compatible with Experimental Oberon):
 
-     TextFramesOrig.Mod              # The Original Oberon version of TextFrames (it was just slightly adapted for Experimental Oberon)
-     TextFramesSimple.Mod            # Adds *simple* continuous line scrolling (only full lines are displayed, no fractional lines)
+     TextFramesOrig.Mod              # The Original Oberon version of TextFrames (slightly adapted for Experimental Oberon)
+     TextFramesSimple.Mod            # Adds *simple* continuous line scrolling (only full but no fractional lines displayed)
+     TextFramesAbsoluteMargins.Mod   # Uses absolute margins and coordinates of visible area (X1, Y1, x, y, w, h, x1, y1)
 
 After completing the steps described below (steps 2 - 10), you can switch between the various versions of *TextFrames* by simply recompiling the version that you want (there is *no* need to edit any files, just run ORP.Compile *filename* and it will create a new object file *TextFrames.rsc* and possibly a new *TextFrames.smb*) and all the client modules that depend on *TextFrames*, e.g. modules *System* and *Edit*. See [**Sources/System.Tool**](Sources/System.Tool) for the correct compilation order.
 
@@ -56,6 +67,7 @@ After completing the steps described below (steps 2 - 10), you can switch betwee
      Kernel.Mod
      FileDir.Mod
      Files.Mod
+     Modules.Mod
      Input.Mod
      Fonts.Mod
      Texts.Mod
@@ -64,13 +76,15 @@ After completing the steps described below (steps 2 - 10), you can switch betwee
      ORP.Mod
      ORTool.Mod
      Graphics.Mod
-     GraphicFrames.Mod
      GraphTool.Mod
+     PCLink1.Mod          (optional, needed if you use an Oberon emulator on a host system)
 
 **Note**: If you run Oberon in an emulator on a host system (e.g., using **https://github.com/pdewacht/oberon-risc-emu**), first download the files listed in steps 1 and 2 to your host system (into directory *oberon-risc-emu*), start the Oberon emulator on your host system, click on the *PCLink1.Run* link in the *System.Tool* viewer within Oberon, and execute the following command on the command shell of your host system (example shown for Linux or MacOS):
 
      cd oberon-risc-emu
-     for x in System.Tool Times24.Scn.Fnt *.Mod ; do ./pcreceive.sh $x ; sleep 1 ; done
+     for x in *.Mod ; do ./pcreceive.sh $x ; sleep 1 ; done
+     ./pcreceive.sh System.Tool
+     ./pcreceive.sh Times24.Scn.Fnt
 
 ------------------------------------------------------
 
