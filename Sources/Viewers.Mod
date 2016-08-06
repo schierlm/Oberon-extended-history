@@ -235,7 +235,7 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.90 / 27.6.16*)
     END
   END Append;
 
-  PROCEDURE InitFiller (X, Y, W, H, minH: INTEGER; Filler: Viewer); (*except parent & dsc*)
+  PROCEDURE InitFiller (X, Y, W, H, minH: INTEGER; Filler: Viewer); (*parent & dsc excepted*)
   BEGIN Filler.X := X; Filler.Y := Y; Filler.W := W; Filler.H := H; Filler.minH := minH;
     Filler.state := 1; Filler.next := Filler; Filler.prev := Filler
   END InitFiller;
