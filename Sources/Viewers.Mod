@@ -1,4 +1,4 @@
-MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.90 / 27.6.16*)
+MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.90 / 12.12.16*)
   CONST restore* = 0; modify* = 1; suspend* = 2; consume* = 3; track* = 4;
     defocus* = 5; neutralize* = 6; mark* = 7; inf = 65535; DnLength* = 24;
 
@@ -8,33 +8,34 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.90 / 27.6.16*)
     ViewerDesc* = RECORD next*, dsc*, parent, prev: Viewer;
       X*, Y*, W*, H*, minH*: INTEGER;
       handle*: Handler;
-      state*: INTEGER                       (*>1: displayed; 1: filler; 0: closed; -1: track; <-1: suspended*)
+      state*: INTEGER                    (*>1: displayed; 1: filler; 0: closed; -1: track; <-1: suspended*)
     END;
 
     Track = POINTER TO TrackDesc;
     TrackDesc = RECORD (ViewerDesc) under: Viewer END;
 
-    Display* = POINTER TO DisplayDesc;      (*logical display area*)
+    Display* = POINTER TO DisplayDesc;   (*logical display area*)
     DisplayDesc* = RECORD (ViewerDesc)
       curW*, id*: INTEGER;
       name*: ARRAY DnLength OF CHAR;
-      focusViewer*, backup: Viewer
+      focusViewer*,
+      backup: Viewer (*last closed viewer*)
     END;
 
     ViewerMsg* = RECORD (Msg)
-      id*: INTEGER;                         (*restore, modify, suspend*)
+      id*: INTEGER;                      (*restore, modify, suspend*)
       X*, Y*, W*, H*: INTEGER;
       state*: INTEGER
     END;
 
     InputMsg* = RECORD (Msg)
-      id*, X*, Y*: INTEGER;                 (*consume, track*)
+      id*, X*, Y*: INTEGER;              (*consume, track*)
       keys*: SET;
       ch*: CHAR
     END;
 
     ControlMsg* = RECORD (Msg)
-      id*, X*, Y*: INTEGER                  (*defocus, neutralize, mark*)
+      id*, X*, Y*: INTEGER               (*defocus, neutralize, mark*)
     END;
 
     CopyMsg* = RECORD (Msg)
@@ -202,6 +203,10 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.90 / 27.6.16*)
   BEGIN V := D.backup
   END Recall;
 
+  PROCEDURE Flush* (D: Display); (*last closed viewer*)
+  BEGIN D.backup := NIL
+  END Flush;
+
   PROCEDURE Locate* (D: Display; X, H: INTEGER; VAR fil, bot, alt, max: Viewer);
     VAR T, V: Viewer;
   BEGIN
@@ -225,7 +230,7 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.90 / 27.6.16*)
     END
   END Locate;
 
-  PROCEDURE Append* (V, V1: Viewer); (*append V1 to dsc list of V*)
+  PROCEDURE Install* (V, V1: Viewer); (*install the viewer V1 as a sub viewer into V*)
     VAR v: Viewer;
   BEGIN V1.parent := V; V1.next := NIL;
     IF V.dsc = NIL THEN V.dsc := V1
@@ -233,7 +238,7 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.90 / 27.6.16*)
       WHILE v.next # NIL DO v := v.next END;
       v.next := V1
     END
-  END Append;
+  END Install;
 
   PROCEDURE InitFiller (X, Y, W, H, minH: INTEGER; Filler: Viewer); (*parent & dsc excepted*)
   BEGIN Filler.X := X; Filler.Y := Y; Filler.W := W; Filler.H := H; Filler.minH := minH;

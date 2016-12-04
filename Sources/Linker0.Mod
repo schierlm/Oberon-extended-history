@@ -1,17 +1,45 @@
-MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 24.10.16*)
+MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 1.11.16 - Original Oberon version*)
+ (*
+  * Linker0.Mod - special version of the linker that is used only to bootstrap Experimental Oberon
+  *
+  * It is compiled and run under the "old" Original Oberon, but already uses (parts of) the "new" module
+  * definition of module Modules (Modules0.Mod), in particular the new definition of type ModDesc.
+  *
+  * Note that one cannot simply first compile the modified version of module Modules (Modules0.Mod) and then
+  * compile and run Linker0.Mod, since this would change the module key of module Modules itself; however,
+  * the linker that is used for bootstrapping purposes (Linker0) still needs to be able to be run under
+  * the unmodified Original Oberon system, i.e. using the original version of module Modules (Modules.Mod).
+  *
+  * This is why the type definitions of module Modules0.Mod are simply copied here - to remove any dependencies
+  * on the new version of module Modules (Modules0.Mod).
+  *
+  * See the README file of Experimental Oberon for the correct compilation and linking order.
+  *
+  *)
   IMPORT SYSTEM, Files, Modules, Kernel, Texts, Oberon;
   CONST versionkey = 1X; MT = 12; DescSize = 88;
 
-  VAR binroot, M: Modules.Module;
+  TYPE Module* = POINTER TO ModDesc;
+    Command* = PROCEDURE;
+    ModuleName* = ARRAY 32 OF CHAR;
+
+    ModDesc* = RECORD (*copied here from Modules0 so we don't depend on the new symbol filee of module Modules*)
+        name*: ModuleName;
+        next*: Module;
+        key*, num*, size*, refcnt*: INTEGER;
+        data*, var*, str*, code*, imp*, cmd*, ent*, ptr*, pvar*: INTEGER  (*addresses*)
+      END ;
+
+  VAR binroot, M: Module;
     binMTOrg, binStart, binAllocPtr, res*: INTEGER;
-    importing*, imported*: Modules.ModuleName;
+    importing*, imported*: ModuleName;
     limit: INTEGER;
     W: Texts.Writer;
-    Mlist: ARRAY 16 OF Modules.ModuleName;
+    Mlist: ARRAY 16 OF ModuleName;
  
    PROCEDURE ThisFile (name: ARRAY OF CHAR): Files.File;
     VAR i: INTEGER;
-      filename: Modules.ModuleName;
+      filename: ModuleName;
   BEGIN i := 0;
     WHILE name[i] # 0X DO filename[i] := name[i]; INC(i) END ;
     filename[i] := "."; filename[i+1] := "r"; filename[i+2] := "s"; filename[i+3] := "c"; filename[i+4] := 0X;
@@ -20,7 +48,7 @@ MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 
 
   PROCEDURE ThisBinFile (name: ARRAY OF CHAR): Files.File;
     VAR i: INTEGER;
-      filename: Modules.ModuleName;
+      filename: ModuleName;
   BEGIN i := 0;
     WHILE name[i] # 0X DO filename[i] := name[i]; INC(i) END ;
     filename[i] := "."; filename[i+1] := "b"; filename[i+2] := "i"; filename[i+3] := "n"; filename[i+4] := 0X;
@@ -37,17 +65,17 @@ MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 
   BEGIN res := n; importing := name
   END error;
 
-  PROCEDURE LinkOne (name: ARRAY OF CHAR; VAR newmod: Modules.Module);
-    VAR mod, impmod: Modules.Module;
+  PROCEDURE LinkOne (name: ARRAY OF CHAR; VAR newmod: Module);
+    VAR mod, impmod: Module;
       i, n, key, impkey, mno, nofimps, size: INTEGER;
       p, u, v, w: INTEGER;  (*addresses*)
       ch: CHAR;
-      body: Modules.Command;
+      body: Command;
       fixorgP, fixorgD, fixorgT: INTEGER;
       disp, adr, imgadr, inst, pno, vno, dest, offset: INTEGER;
-      name1, impname: Modules.ModuleName;
+      name1, impname: ModuleName;
       F: Files.File; R: Files.Rider;
-      import: ARRAY 16 OF Modules.Module;
+      import: ARRAY 16 OF Module;
   BEGIN
     mod := binroot; res := 0; nofimps := 0;
     WHILE (mod # NIL) & (name # mod.name) DO mod := mod.next END ;
@@ -83,7 +111,7 @@ MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 
         IF binAllocPtr + size < limit THEN (*allocate*)
             p := binAllocPtr; i := p;
             WHILE i < ((p + size + 100H) DIV 20H * 20H)  DO SYSTEM.PUT(i, 0); INC(i, 4) END;
-            mod := SYSTEM.VAL(Modules.Module, p);
+            mod := SYSTEM.VAL(Module, p);
             SYSTEM.PUT(SYSTEM.ADR(binAllocPtr), (p + size + 100H) DIV 20H * 20H); 
             mod.size := binAllocPtr - p; 
             IF binroot # NIL THEN  mod.num := binroot.num + 1 ELSE mod.num := 1 END;
@@ -100,10 +128,8 @@ MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 
         SYSTEM.PUT(mod.num * 4 + binMTOrg, p);  (*module table entry*)
         Files.ReadInt(R, n);
         WHILE n > 0 DO Files.ReadInt(R, w);  SYSTEM.PUT(p, w);  INC(p, 4); DEC(n, 4) END; (*type descriptors*)
-        mod.var := p;  (*variable space*)
         Files.ReadInt(R, n);
         WHILE n > 0 DO SYSTEM.PUT(p, 0); INC(p, 4); DEC(n, 4) END ;  (*variable space*)
-        mod.str := p;  (*strings*)
         Files.ReadInt(R, n);
         WHILE n > 0 DO Files.Read(R, ch); SYSTEM.PUT(p, ch); INC(p); DEC(n) END ;   (*strings*)
         mod.code := p;  (*program*)
@@ -129,12 +155,8 @@ MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 
         Files.ReadInt(R, w);
         WHILE w >= 0 DO SYSTEM.PUT(p, mod.data + w - binStart); INC(p, 4); Files.ReadInt(R, w) END ;
         SYSTEM.PUT(p, 0); INC(p, 4);
-        mod.pvar := p; (*procedure references*)
-        Files.ReadInt(R, w);
-        WHILE w >= 0 DO SYSTEM.PUT(p, mod.data + w - binStart); INC(p, 4); Files.ReadInt(R, w) END ;
-        SYSTEM.PUT(p, 0); INC(p, 4);
         Files.ReadInt(R, fixorgP); Files.ReadInt(R, fixorgD); Files.ReadInt(R, fixorgT);
-        Files.ReadInt(R, w); body := SYSTEM.VAL(Modules.Command, mod.code + w - binStart);
+        Files.ReadInt(R, w); body := SYSTEM.VAL(Command, mod.code + w - binStart);
         Files.Read(R, ch);
         IF ch # "O" THEN (*corrupted file*) mod := NIL; error(4, name) END
       END ;
@@ -198,8 +220,8 @@ MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 
     VAR T: Texts.Text;
       S: Texts.Scanner;
       F: Files.File;  R: Files.Rider;
-      M, p : Modules.Module;
-      Lname : Modules.ModuleName;
+      M, p : Module;
+      Lname : ModuleName;
       i,v : INTEGER;
   BEGIN 
     binStart := Modules.AllocPtr; binMTOrg := binStart + 32; binroot := NIL; res := 0;
@@ -221,7 +243,7 @@ MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 
           LinkOne(Lname, M);
           SYSTEM.PUT(binStart + 20,SYSTEM.VAL(INTEGER,binroot) - binStart );
           SYSTEM.PUT(binStart + 252, 12345678H);   (*a fingerprint*)
-          p := SYSTEM.VAL(Modules.Module,binroot);
+          p := SYSTEM.VAL(Module,binroot);
           F := ThisBinFile(p.name);
           WHILE p # NIL DO  (*fix up module chain of pointers*)   Texts.WriteString(W, "    ");
             Texts.WriteString(W, p.name); Texts.WriteString(W, " at "); Texts.WriteHex(W, p.data);
@@ -229,7 +251,7 @@ MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 
             Texts.WriteHex(W, p.num);  Texts.WriteLn(W);
             M := p; p := p.next;
             IF M.next # NIL THEN
-              M.next := SYSTEM.VAL(Modules.Module, SYSTEM.VAL(INTEGER, M.next) - binStart)
+              M.next := SYSTEM.VAL(Module, SYSTEM.VAL(INTEGER, M.next) - binStart)
             END;
             M.data := M.data - binStart;
             M.code := M.code - binStart;
@@ -259,6 +281,6 @@ MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 
   END Link;
 
 BEGIN 
-  Texts.OpenWriter(W); Texts.WriteString(W, "OR Linker CP 22.05.14 / AP 1.11.16");
+  Texts.OpenWriter(W); Texts.WriteString(W, "OR Linker CP 22.05.14 / AP 1.1.16");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
 END Linker.

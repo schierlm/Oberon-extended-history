@@ -1,5 +1,5 @@
-MODULE Hilbert;  (*NW 8.1.13 for RISC / AP 23.6.16*)
-  IMPORT Display, Viewers, Texts, Oberon, MenuViewers, TextFrames;
+MODULE Hilbert;  (*NW 8.1.13 for RISC / AP 12.12.16*)
+  IMPORT Raster, Viewers, Texts, Oberon, MenuViewers, TextFrames;
 
   CONST Menu = "System.Close System.Copy System.Grow | System.Expand System.Clone";
 
@@ -7,19 +7,19 @@ MODULE Hilbert;  (*NW 8.1.13 for RISC / AP 23.6.16*)
     A, B, C, D: PROCEDURE (i: INTEGER);
 
   PROCEDURE E;
-  BEGIN Display.ReplConst(Display.white, x, y, d, 1, Display.paint); INC(x, d)
+  BEGIN Raster.ReplConst(Raster.white, x, y, d, 1, Raster.paint); INC(x, d)
   END E;
 
   PROCEDURE N;
-  BEGIN Display.ReplConst(Display.white, x, y, 1, d, Display.paint); INC(y, d)
+  BEGIN Raster.ReplConst(Raster.white, x, y, 1, d, Raster.paint); INC(y, d)
   END N;
 
   PROCEDURE W;
-  BEGIN DEC(x, d); Display.ReplConst(Display.white, x, y, d, 1, Display.paint)
+  BEGIN DEC(x, d); Raster.ReplConst(Raster.white, x, y, d, 1, Raster.paint)
   END W;
 
   PROCEDURE S;
-  BEGIN DEC(y, d); Display.ReplConst(Display.white, x, y, 1, d, Display.paint)
+  BEGIN DEC(y, d); Raster.ReplConst(Raster.white, x, y, 1, d, Raster.paint)
   END S;
 
   PROCEDURE HA(i: INTEGER);
@@ -47,7 +47,7 @@ MODULE Hilbert;  (*NW 8.1.13 for RISC / AP 23.6.16*)
   BEGIN k := 0; d := 8;
     IF F.W < F.H THEN w := F.W ELSE w := F.H END ;
     WHILE d*2 < w DO d := d*2; INC(k) END ;
-    Display.ReplConst(Display.black, F.X, F.Y, F.W, F.H, Display.replace);
+    Raster.ReplConst(Raster.black, F.X, F.Y, F.W, F.H, Raster.replace);
     x0 := F.W DIV 2; y0 := F.H DIV 2; n := 0;
     WHILE n < k DO
       d := d DIV 2; INC(x0, d DIV 2); INC(y0, d DIV 2);

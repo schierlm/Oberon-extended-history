@@ -1,5 +1,5 @@
-MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 14.7.16*)
-  IMPORT Modules, Input, Display, Fonts, Texts, Viewers, Oberon;
+MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 12.12.16*)
+  IMPORT Modules, Input, Raster, Fonts, Texts, Viewers, Oberon;
 
   CONST replace* = 0; insert* = 1; delete* = 2; unmark* = 3; (*message ids*)
     BS = 8X; TAB = 9X; CR = 0DX; DEL = 7FX; inf = 32767;
@@ -83,8 +83,8 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 14.7.16*)
       IF Y < botY THEN H := H - botY + Y; Y := botY END;
       IF Y + H > topY THEN H := topY - Y END;
       IF H > 0 THEN
-        IF X + W <= F.X + F.W THEN Display.ReplConst(col, X, Y, W, H, mode)
-        ELSIF X < F.X + F.W THEN Display.ReplConst(col, X, Y, F.X + F.W - X, H, mode)
+        IF X + W <= F.X + F.W THEN Raster.ReplConst(col, X, Y, W, H, mode)
+        ELSIF X < F.X + F.W THEN Raster.ReplConst(col, X, Y, F.X + F.W - X, H, mode)
         END
       END
     END
@@ -92,29 +92,29 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 14.7.16*)
 
   PROCEDURE FlipSM(X, Y: INTEGER);
     VAR DW, DH, CL: INTEGER;
-  BEGIN DW := Display.Width; DH := Display.Height; CL := DW;
+  BEGIN DW := Raster.Width; DH := Raster.Height; CL := DW;
     IF X < CL THEN
       IF X < 3 THEN X := 3 ELSIF X > DW - 4 THEN X := DW - 4 END
     ELSE
       IF X < CL + 3 THEN X := CL + 4 ELSIF X > CL + DW - 4 THEN X := CL + DW - 4 END
     END;
     IF Y < 6 THEN Y := 6 ELSIF Y > DH - 6 THEN Y := DH - 6 END;
-    Display.CopyPattern(Display.white, Display.updown, X-4, Y-4, Display.invert)
+    Raster.CopyPattern(Raster.white, Raster.updown, X-4, Y-4, Raster.invert)
   END FlipSM;
 
   PROCEDURE UpdateMark (F: Frame); (*in scroll bar*)
     VAR oldH: INTEGER;
   BEGIN oldH := F.markH; F.markH := F.org * F.H DIV (F.text.len + 1);
     IF F.hasMark & (F.left >= barW) & (F.markH # oldH) THEN
-      Display.ReplConst(Display.white, F.X + 1, F.Y + F.H - 1 - oldH, markW, 1, Display.invert);
-      Display.ReplConst(Display.white, F.X + 1, F.Y + F.H - 1 - F.markH, markW, 1, Display.invert)
+      Raster.ReplConst(Raster.white, F.X + 1, F.Y + F.H - 1 - oldH, markW, 1, Raster.invert);
+      Raster.ReplConst(Raster.white, F.X + 1, F.Y + F.H - 1 - F.markH, markW, 1, Raster.invert)
     END
   END UpdateMark;
 
   PROCEDURE Mark* (F: Frame; on: BOOLEAN); (*in scroll bar*)
   BEGIN
     IF (F.H > 0) & (F.left >= barW) & ((F.hasMark & ~on) OR (~F.hasMark & on)) THEN
-      Display.ReplConst(Display.white, F.X + 1, F.Y + F.H - 1 - F.markH, markW, 1, Display.invert)
+      Raster.ReplConst(Raster.white, F.X + 1, F.Y + F.H - 1 - F.markH, markW, 1, Raster.invert)
     END;
     F.hasMark := on
   END Mark;
@@ -122,8 +122,8 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 14.7.16*)
   PROCEDURE SetChangeMark (F: Frame; on: BOOLEAN); (*in corner*)
   BEGIN
     IF F.H > menuH THEN
-      IF on THEN Display.CopyPattern(Display.white, Display.block, F.X+F.W-12, F.Y+F.H-12, Display.paint)
-      ELSE Display.ReplConst(F.col, F.X+F.W-12, F.Y+F.H-12, 8, 8, Display.replace)
+      IF on THEN Raster.CopyPattern(Raster.white, Raster.block, F.X+F.W-12, F.Y+F.H-12, Raster.paint)
+      ELSE Raster.ReplConst(F.col, F.X+F.W-12, F.Y+F.H-12, 8, 8, Raster.replace)
       END
     END
   END SetChangeMark;
@@ -158,7 +158,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 14.7.16*)
       IF (X + x + w <= NX) & (h # 0) THEN y0 := Y + y;
         IF y0 + h <= topY THEN t0 := 0 ELSIF y0 >= topY THEN t0 := h ELSE t0 := y0 + h - topY END;
         IF y0 >= botY THEN b0 := 0 ELSIF y0 + h <= botY THEN b0 := h ELSE b0 := botY - y0 END;
-        IF t0 + b0 < h THEN Display.CopyPattern1(R.col, patadr, X + x, y0, t0, b0, Display.invert) END
+        IF t0 + b0 < h THEN Raster.CopyPattern1(R.col, patadr, X + x, y0, t0, b0, Raster.invert) END
       END;
       X := X + dx; INC(len); Texts.Read(R, nextCh)
     END;
@@ -182,9 +182,9 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 14.7.16*)
   PROCEDURE Restore* (F: Frame);
     VAR R: Texts.Reader; L, l: Line;
       org: LONGINT; curY, topY, botY: INTEGER;
-  BEGIN Display.ReplConst(F.col, F.X, F.Y, F.W, F.H, Display.replace);
+  BEGIN Raster.ReplConst(F.col, F.X, F.Y, F.W, F.H, Raster.replace);
     IF F.left >= barW THEN
-      Display.ReplConst(Display.white, F.X + barW - 1, F.Y, 1, F.H, Display.invert)
+      Raster.ReplConst(Raster.white, F.X + barW - 1, F.Y, 1, F.H, Raster.invert)
     END;
     Validate(F.text, F.org);
     topY := F.Y + F.H - F.top; botY := F.Y + F.bot; L := F.trailer;
@@ -209,9 +209,9 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 14.7.16*)
   PROCEDURE Extend* (F: Frame; newY: INTEGER);
     VAR R: Texts.Reader; L, l: Line;
       org: LONGINT; curY, topY, botY, botY0: INTEGER;
-  BEGIN Display.ReplConst(F.col, F.X, newY, F.W, F.Y - newY, Display.replace);
+  BEGIN Raster.ReplConst(F.col, F.X, newY, F.W, F.Y - newY, Raster.replace);
     IF F.left >= barW THEN
-      Display.ReplConst(Display.white, F.X + barW - 1, newY, 1, F.Y - newY, Display.invert)
+      Raster.ReplConst(Raster.white, F.X + barW - 1, newY, 1, F.Y - newY, Raster.invert)
     END;
     topY := F.Y + F.H - F.top; botY0 := F.Y + F.bot;
     F.H := F.H + F.Y - newY; F.Y := newY; botY := F.Y + F.bot;
@@ -249,9 +249,9 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 14.7.16*)
     END;
     LastLine(F, L);
     IF F.H >= F.top + F.bot THEN
-      Display.ReplConst(F.col, F.X + F.left, F.Y, F.W - F.left, F.bot, Display.replace)
+      Raster.ReplConst(F.col, F.X + F.left, F.Y, F.W - F.left, F.bot, Raster.replace)
     ELSIF F.H > F.top THEN
-      Display.ReplConst(F.col, F.X + F.left, F.Y, F.W - F.left, F.H - F.top, Display.replace)
+      Raster.ReplConst(F.col, F.X + F.left, F.Y, F.W - F.left, F.H - F.top, Raster.replace)
     END;
     F.markH := F.org * F.H DIV (F.text.len + 1); Mark(F, TRUE)
   END Reduce;
@@ -269,8 +269,8 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 14.7.16*)
     END;
     LastLine(F, L);
     y := Max(curY, botY); h := Y1 - y;
-    IF h > 0 THEN Display.CopyBlock(F.X + F.left, topY - h, F.W - F.left, h, F.X + F.left, y, 0) END;
-    ReplConst(F.col, F, F.X + F.left, Y1, F.W - F.left, topY - Y1, Display.replace);
+    IF h > 0 THEN Raster.CopyBlock(F.X + F.left, topY - h, F.W - F.left, h, F.X + F.left, y, 0) END;
+    ReplConst(F.col, F, F.X + F.left, Y1, F.W - F.left, topY - Y1, Raster.replace);
     L := F.trailer; L0 := L.next; curY := topY + voff;
     Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
     WHILE ~L.eot & (curY > Y0) DO
@@ -296,8 +296,8 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 14.7.16*)
       org := org + L.len; curY := curY - L.lsp; L := L.next
     END;
     y := Max(curY - L.lsp, botY); Y1 := Min(y + dY, topY); h := Y0 - y - F.voff;
-    IF h > 0 THEN Display.CopyBlock(F.X + F.left, y, F.W - F.left, h, F.X + F.left, Y1, 0) END;
-    ReplConst(F.col, F, F.X + F.left, y, F.W - F.left, Y1 - y, Display.replace);
+    IF h > 0 THEN Raster.CopyBlock(F.X + F.left, y, F.W - F.left, h, F.X + F.left, Y1, 0) END;
+    ReplConst(F.col, F, F.X + F.left, y, F.W - F.left, Y1 - y, Raster.replace);
     org := org + L.len; curY := curY - L.lsp + dY;
     IF curY - dY < botY THEN Texts.OpenReader(R, F.text, org - L.len); Texts.Read(R, nextCh);
       DisplayLine(F, L, R, F.X + F.left, curY + L.dsr, Y1, botY, 0) (*old fractional bottom line*)
@@ -477,8 +477,8 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 14.7.16*)
   PROCEDURE FlipCaret (F: Frame);
   BEGIN
     IF (F.carloc.x < F.W) & (F.carloc.y >= 10) & (F.carloc.x + 12 < F.W) THEN
-      Display.CopyPattern(Display.white, Display.hook,
-          F.X + F.carloc.x, F.Y + F.carloc.y - 10, Display.invert)
+      Raster.CopyPattern(Raster.white, Raster.hook,
+          F.X + F.carloc.x, F.Y + F.carloc.y - 10, Raster.invert)
     END
   END FlipCaret;
 
@@ -516,16 +516,16 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 14.7.16*)
       IF L # F.trailer THEN
         IF beg.org < F.org THEN beg0.org := F.org; beg0.x := F.left ELSE beg0 := beg END;
         IF beg0.org = end.org THEN
-          ReplConst(Display.white, F, F.X + beg0.x, Y, end.x - beg0.x, L.lsp, Display.invert)
+          ReplConst(Raster.white, F, F.X + beg0.x, Y, end.x - beg0.x, L.lsp, Raster.invert)
         ELSE
-          ReplConst(Display.white, F, F.X + beg0.x, Y, F.left + L.wid - beg0.x, L.lsp, Display.invert);
+          ReplConst(Raster.white, F, F.X + beg0.x, Y, F.left + L.wid - beg0.x, L.lsp, Raster.invert);
           org := org + L.len; L := L.next; Y := Y - L.lsp;
           WHILE (L # F.trailer) & (org < end.org) DO
-            ReplConst(Display.white, F, F.X + F.left, Y, L.wid, L.lsp, Display.invert);
+            ReplConst(Raster.white, F, F.X + F.left, Y, L.wid, L.lsp, Raster.invert);
             org := org + L.len; L := L.next; Y := Y - L.lsp
           END;
           IF (L # F.trailer) & (org = end.org) THEN
-            ReplConst(Display.white, F, F.X + F.left, Y, end.x - F.left, L.lsp, Display.invert)
+            ReplConst(Raster.white, F, F.X + F.left, Y, end.x - F.left, L.lsp, Raster.invert)
           END
         END
       END
@@ -597,19 +597,19 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 14.7.16*)
   BEGIN
     IF F.trailer.next # F.trailer THEN
       LocateLine(F, Y - F.Y, old);
-      ReplConst(Display.white, F, F.X + F.left, F.Y + old.y - old.lin.dsr, old.lin.wid, 2, Display.invert);
+      ReplConst(Raster.white, F, F.X + F.left, F.Y + old.y - old.lin.dsr, old.lin.wid, 2, Raster.invert);
       keysum := {};
       REPEAT Input.Mouse(keys, X, Y);
         keysum := keysum + keys;
         Oberon.DrawMouse(ScrollMarker, X, Y);
         LocateLine(F, Y - F.Y, new);
         IF new.org # old.org THEN
-          ReplConst(Display.white, F, F.X + F.left, F.Y + old.y - old.lin.dsr, old.lin.wid, 2, Display.invert);
-          ReplConst(Display.white, F, F.X + F.left, F.Y + new.y - new.lin.dsr, new.lin.wid, 2, Display.invert);
+          ReplConst(Raster.white, F, F.X + F.left, F.Y + old.y - old.lin.dsr, old.lin.wid, 2, Raster.invert);
+          ReplConst(Raster.white, F, F.X + F.left, F.Y + new.y - new.lin.dsr, new.lin.wid, 2, Raster.invert);
           old := new
         END
        UNTIL keys = {};
-       ReplConst(Display.white, F, F.X + F.left, F.Y + new.y - new.lin.dsr, new.lin.wid, 2, Display.invert);
+       ReplConst(Raster.white, F, F.X + F.left, F.Y + new.y - new.lin.dsr, new.lin.wid, 2, Raster.invert);
        org := new.org
     ELSE org := 0
     END
@@ -620,19 +620,19 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 14.7.16*)
   BEGIN
     IF F.trailer.next # F.trailer THEN
       LocateString(F, X - F.X, Y - F.Y, old);
-      ReplConst(Display.white, F, F.X + old.x, F.Y + old.y - old.lin.dsr, old.dx, 2, Display.invert);
+      ReplConst(Raster.white, F, F.X + old.x, F.Y + old.y - old.lin.dsr, old.dx, 2, Raster.invert);
       keysum := {};
       REPEAT
         Input.Mouse(keys, X, Y); keysum := keysum + keys;
         Oberon.DrawMouseArrow(X, Y);
         LocateString(F, X - F.X, Y - F.Y, new);
         IF new.pos # old.pos THEN
-          ReplConst(Display.white, F, F.X + old.x, F.Y + old.y - old.lin.dsr, old.dx, 2, Display.invert);
-          ReplConst(Display.white, F, F.X + new.x, F.Y + new.y - new.lin.dsr, new.dx, 2, Display.invert);
+          ReplConst(Raster.white, F, F.X + old.x, F.Y + old.y - old.lin.dsr, old.dx, 2, Raster.invert);
+          ReplConst(Raster.white, F, F.X + new.x, F.Y + new.y - new.lin.dsr, new.dx, 2, Raster.invert);
           old := new
         END
       UNTIL keys = {};
-      ReplConst(Display.white, F, F.X + new.x, F.Y + new.y - new.lin.dsr, new.dx, 2, Display.invert);
+      ReplConst(Raster.white, F, F.X + new.x, F.Y + new.y - new.lin.dsr, new.dx, 2, Raster.invert);
       pos := new.pos
     ELSE pos := 0
     END
@@ -655,12 +655,12 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 14.7.16*)
         WHILE (L # F.trailer) & (org <= end) & (dy = 0) DO
           dy := L.lsp; PrepareLine(L, R); dy := L.lsp - dy;
           Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
-          ReplConst(F.col, F, F.X + F.left, curY - L.lsp, F.W - F.left, L.lsp, Display.replace);
+          ReplConst(F.col, F, F.X + F.left, curY - L.lsp, F.W - F.left, L.lsp, Raster.replace);
           DisplayLine(F, L, R, F.X + F.left, curY - L.asr, topY, botY, 0);
           org := org + L.len; curY := curY - L.lsp; L0 := L; L := L.next
         END;
         IF ~L0.eot & (curY > botY) & (dy # 0) THEN
-          ReplConst(F.col, F, F.X + F.left, botY, F.W - F.left, curY - botY, Display.replace);
+          ReplConst(F.col, F, F.X + F.left, botY, F.W - F.left, curY - botY, Raster.replace);
           LastLine(F, L0);
           WHILE ~L0.eot & (curY > botY) DO
             NewLine(F, l);
@@ -690,19 +690,19 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 14.7.16*)
         Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
         dy := L.lsp; PrepareLine(L, R); dy := L.lsp - dy;
         Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
-        ReplConst(F.col, F, F.X + F.left, curY - L.lsp, F.W - F.left, L.lsp, Display.replace);
+        ReplConst(F.col, F, F.X + F.left, curY - L.lsp, F.W - F.left, L.lsp, Raster.replace);
         DisplayLine(F, L, R, F.X + F.left, curY - L.asr, topY, botY, 0);
         org := org + L.len; curY := curY - L.lsp; L0 := L.next;
         WHILE (org <= end) & (curY > botY) DO
           NewLine(F, l);
           PrepareLine(l, R);
           Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
-          ReplConst(F.col, F, F.X + F.left, curY - l.lsp, F.W - F.left, l.lsp, Display.replace);
+          ReplConst(F.col, F, F.X + F.left, curY - l.lsp, F.W - F.left, l.lsp, Raster.replace);
           DisplayLine(F, l, R, F.X + F.left, curY - l.asr, topY, botY, 0);
           L.next := l; L := l; org := org + L.len; curY := curY - L.lsp
         END;
         IF (dy # 0) OR (L0 # L.next) THEN
-          ReplConst(F.col, F, F.X + F.left, botY, F.W - F.left, curY - botY, Display.replace);
+          ReplConst(F.col, F, F.X + F.left, botY, F.W - F.left, curY - botY, Raster.replace);
           WHILE ~L.eot & (curY > botY) DO
             NewLine(F, l);
             PrepareLine(l, R);
@@ -740,7 +740,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 14.7.16*)
         Texts.OpenReader(R, F.text, org0); Texts.Read(R, nextCh);
         dy := L0.lsp; PrepareLine(L0, R); dy := L0.lsp - dy;
         Texts.OpenReader(R, F.text, org0); Texts.Read(R, nextCh);
-        ReplConst(F.col, F, F.X + F.left, Y0 - L0.lsp, F.W - F.left, L0.lsp, Display.replace);
+        ReplConst(F.col, F, F.X + F.left, Y0 - L0.lsp, F.W - F.left, L0.lsp, Raster.replace);
         DisplayLine(F, L0, R, F.X + F.left, Y0 - L0.asr, topY, botY, 0);
         IF (dy # 0) OR (l # L0) THEN
           IF l # L0 THEN l.next := F.pool; F.pool := L0.next; L0.next := L END;
@@ -750,19 +750,19 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 14.7.16*)
           END;
           IF curY < botY THEN
             IF Y1 > botY THEN
-              Display.CopyBlock(F.X + F.left, botY,
+              Raster.CopyBlock(F.X + F.left, botY,
                   F.W - F.left, Y1 - botY, F.X + F.left, botY + Y0 - Y1, 0)
             END;
             dy := L.lsp - (botY - curY); curY := curY + Y0 - Y1 + L.lsp;
-            ReplConst(F.col, F, F.X + F.left, botY, F.W - F.left, curY - dy - botY, Display.replace);
+            ReplConst(F.col, F, F.X + F.left, botY, F.W - F.left, curY - dy - botY, Raster.replace);
             Texts.OpenReader(R, F.text, org - L.len); Texts.Read(R, nextCh);
             DisplayLine(F, L, R, F.X + F.left, curY - L.asr, curY - dy, botY, 0);
             curY := curY - L.lsp
           ELSE
-            Display.CopyBlock(F.X + F.left, curY,
+            Raster.CopyBlock(F.X + F.left, curY,
                 F.W - F.left, Y1 - curY, F.X + F.left, curY + Y0 - Y1, 0);
             curY := curY + Y0 - Y1;
-            ReplConst(F.col, F, F.X + F.left, botY, F.W - F.left, curY - botY, Display.replace)
+            ReplConst(F.col, F, F.X + F.left, botY, F.W - F.left, curY - botY, Raster.replace)
           END;
           Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
           WHILE ~L.eot & (curY > botY) DO
@@ -860,12 +860,12 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 14.7.16*)
     IF id = Viewers.restore THEN Restore(F)
     ELSIF id = Viewers.modify THEN
       IF H > F.H THEN (*extend*)
-        IF dY # 0 THEN Display.CopyBlock(F.X, F.Y, F.W, F.H, F.X, F.Y + dY, 0); F.Y := F.Y + dY END;
+        IF dY # 0 THEN Raster.CopyBlock(F.X, F.Y, F.W, F.H, F.X, F.Y + dY, 0); F.Y := F.Y + dY END;
         Extend(F, Y)
       ELSIF H < F.H THEN (*reduce*)
         Reduce(F, F.Y + F.H - H);
-        IF dY # 0 THEN Display.CopyBlock(F.X, F.Y, F.W, F.H, F.X, Y, 0); F.Y := Y END
-      ELSIF dY # 0 THEN (*move*) Display.CopyBlock(F.X, F.Y, F.W, F.H, F.X, Y, 0); F.Y := Y
+        IF dY # 0 THEN Raster.CopyBlock(F.X, F.Y, F.W, F.H, F.X, Y, 0); F.Y := Y END
+      ELSIF dY # 0 THEN (*move*) Raster.CopyBlock(F.X, F.Y, F.W, F.H, F.X, Y, 0); F.Y := Y
       END
     END;
     IF F.H > 0 THEN Mark(F, TRUE); SetChangeMark(F, F.text.changed) END;
@@ -1062,13 +1062,13 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 14.7.16*)
   PROCEDURE NewMenu* (name, commands: ARRAY OF CHAR): Frame;
     VAR F: Frame; T: Texts.Text;
   BEGIN NEW(F); T := Menu(name, commands);
-    Open(F, Handle, T, 0, Display.white, left DIV 4, 0, 0, 0, lsp); RETURN F
+    Open(F, Handle, T, 0, Raster.white, left DIV 4, 0, 0, 0, lsp); RETURN F
   END NewMenu;
 
   PROCEDURE NewText* (text: Texts.Text; pos: LONGINT): Frame;
     VAR F: Frame;
   BEGIN NEW(F);
-    Open(F, Handle, text, pos, Display.black, left, right, top, bot, lsp); RETURN F
+    Open(F, Handle, text, pos, Raster.black, left, right, top, bot, lsp); RETURN F
   END NewText;
 
 BEGIN NEW(TBuf); NEW(DelBuf);

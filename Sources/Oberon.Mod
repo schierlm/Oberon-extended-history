@@ -1,5 +1,5 @@
-MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.12.90 / 23.6.16*)
-  IMPORT SYSTEM, Kernel, Files, Modules, Input, Display, Viewers, Fonts, Texts;
+MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.12.90 / 12.12.16*)
+  IMPORT SYSTEM, Kernel, Files, Modules, Input, Raster, Viewers, Fonts, Texts;
 
   CONST off = 0; idle = 1; active = 2; (*task states*)
     BasicCycle = 20; ESC = 1BX; SETSTAR = 1AX;
@@ -11,7 +11,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.1
       marker*: Marker; on*: BOOLEAN; X*, Y*: INTEGER
     END;
 
-    DisplayArea* = POINTER TO DisplayDesc;
+    Display* = POINTER TO DisplayDesc;
     DisplayDesc* = RECORD (Viewers.DisplayDesc)
       log*: Texts.Text
     END;
@@ -93,7 +93,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.1
       IF X > CL + DW - 15 THEN X := CL + DW - 15 END
     END;
     IF Y < 14 THEN Y := 14 ELSIF Y > DH THEN Y := DH END;
-    Display.CopyPattern(Display.white, Display.arrow, X, Y - 14, Display.invert)
+    Raster.CopyPattern(Raster.white, Raster.arrow, X, Y - 14, Raster.invert)
   END FlipArrow;
      
   PROCEDURE FlipStar (X, Y: INTEGER);
@@ -104,7 +104,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.1
       IF X < CL + 7 THEN X := CL + 7 ELSIF X > CL + DW - 8 THEN X := CL + DW - 8 END
     END ;
     IF Y < 7 THEN Y := 7 ELSIF Y > DH - 8 THEN Y := DH - 8 END;
-    Display.CopyPattern(Display.white, Display.star, X - 7, Y - 7, Display.invert)
+    Raster.CopyPattern(Raster.white, Raster.star, X - 7, Y - 7, Raster.invert)
   END FlipStar;
 
   PROCEDURE OpenCursor(VAR c: Cursor);
@@ -179,7 +179,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.1
 
   (*logs and text selections*)
 
-  PROCEDURE OpenDisplayLog* (D: DisplayArea; T: Texts.Text);
+  PROCEDURE OpenDisplayLog* (D: Display; T: Texts.Text);
   BEGIN D.log := T
   END OpenDisplayLog;
 
@@ -203,10 +203,10 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.1
     Viewers.ViewerMsg:
       IF (M.id = Viewers.restore) & (V.W > 0) & (V.H > 0) THEN
         RemoveMarks(V.X, V.Y, V.W, V.H);
-        Display.ReplConst(Display.black, V.X, V.Y, V.W, V.H, Display.replace)
+        Raster.ReplConst(Raster.black, V.X, V.Y, V.W, V.H, Raster.replace)
       ELSIF (M.id = Viewers.modify) & (M.Y < V.Y) THEN
         RemoveMarks(V.X, M.Y, V.W, V.Y - M.Y);
-        Display.ReplConst(Display.black, V.X, M.Y, V.W, V.Y - M.Y, Display.replace)
+        Raster.ReplConst(Raster.black, V.X, M.Y, V.W, V.Y - M.Y, Raster.replace)
       END
     END
   END HandleFiller;
@@ -319,6 +319,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.1
       LED(23H);
       Files.RestoreList; LED(27H);
       Kernel.Scan; LED(20H);
+      Modules.Collect;
       ActCnt := BasicCycle
     END
   END GC;
@@ -387,12 +388,13 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.1
     SYSTEM.LDREG(14, Kernel.stackOrg); (*reset stack pointer*) Loop
   END Reset;
 
-BEGIN User[0] := 0X; DW := Display.Width; DH := Display.Height; CL := DW;
+BEGIN User[0] := 0X; DW := Raster.Width; DH := Raster.Height; CL := DW;
   Arrow.Fade := FlipArrow; Arrow.Draw := FlipArrow;
   Star.Fade := FlipStar; Star.Draw := FlipStar;
   OpenCursor(Mouse); OpenCursor(Pointer);
 
-  CurFnt := Fonts.Default; CurCol := Display.white; CurOff := 0;
+  CurFnt := Fonts.Default; CurCol := Raster.white; CurOff := 0;
   ActCnt := 0; CurTask := NewTask(GC, 1000); Install(CurTask);
   Modules.Load("System", Mod); Mod := NIL; Loop
 END Oberon.
+

@@ -1,4 +1,4 @@
-MODULE ORTool;  (*NW 18.2.2013*)
+MODULE ORTool;  (*NW 18.2.2013 / AP 14.10.16*)
   IMPORT SYSTEM, Files, Texts, Oberon, ORB;
   VAR W: Texts.Writer;
     Form: INTEGER;  (*result of ReadType*)
@@ -206,12 +206,16 @@ MODULE ORTool;  (*NW 18.2.2013*)
         WHILE adr # -1 DO Texts.WriteInt(W, adr, 6); Files.ReadInt(R, adr) END ;
         Texts.WriteLn(W);
       (* Sync(R); *)
+        Texts.WriteString(W, "procedure variables"); Texts.WriteLn(W); Files.ReadInt(R, adr);
+        WHILE adr # -1 DO Texts.WriteInt(W, adr, 6); Files.ReadInt(R, adr) END ;
+        Texts.WriteLn(W);
+      (* Sync(R); *)
         Files.ReadInt(R, data); Texts.WriteString(W, "fixP = "); Texts.WriteInt(W, data, 8); Texts.WriteLn(W);
         Files.ReadInt(R, data); Texts.WriteString(W, "fixD = "); Texts.WriteInt(W, data, 8); Texts.WriteLn(W);
         Files.ReadInt(R, data); Texts.WriteString(W, "fixT = "); Texts.WriteInt(W, data, 8); Texts.WriteLn(W);
         Files.ReadInt(R, data); Texts.WriteString(W, "entry = "); Texts.WriteInt(W, data, 8); Texts.WriteLn(W);
         Files.Read(R, ch);
-        IF ch # "O" THEN Texts.WriteString(W, "format eror"); Texts.WriteLn(W) END
+        IF ch # "O" THEN Texts.WriteString(W, "format error"); Texts.WriteLn(W) END
       (* Sync(R); *)
       ELSE Texts.WriteString(W, " not found"); Texts.WriteLn(W)
       END ;

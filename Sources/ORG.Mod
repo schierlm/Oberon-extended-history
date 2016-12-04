@@ -1,4 +1,4 @@
-MODULE ORG; (* NW  18.4.2016  / AP 7.7.16 code generator in Oberon-07 for RISC*)
+MODULE ORG; (* NW  18.4.2016 / 17.9.2016 / AP 10.10.2016  code generator in Oberon-07 for RISC*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser OSAP; result in array "code".
@@ -7,7 +7,7 @@ MODULE ORG; (* NW  18.4.2016  / AP 7.7.16 code generator in Oberon-07 for RISC*)
   CONST WordSize* = 4;
     StkOrg0 = -64; VarOrg0 = 0;  (*for RISC-0 only*)
     MT = 12; SB = 13; SP = 14; LNK = 15;   (*dedicated registers*)
-    maxCode = 12000; maxStrx = 2400; maxTD = 120; C24 = 1000000H;
+    maxCode = 12000; maxStrx = 2400; maxTD = 240; C24 = 1000000H;
     Reg = 10; RegI = 11; Cond = 12;  (*internal item modes*)
 
   (*frequently used opcodes*)  U = 2000H; V = 1000H;
@@ -325,18 +325,18 @@ MODULE ORG; (* NW  18.4.2016  / AP 7.7.16 code generator in Oberon-07 for RISC*)
     END
   END Q;
 
-  PROCEDURE FindPtrFlds(typ: ORB.Type; off: LONGINT; VAR dcw: LONGINT);
+  PROCEDURE FindFlds(ftyp: INTEGER; typ: ORB.Type; off: LONGINT; VAR dcw: LONGINT);
     VAR fld: ORB.Object; i, s: LONGINT;
-  BEGIN
-    IF (typ.form = ORB.Pointer) OR (typ.form = ORB.NilTyp) THEN data[dcw] := off; INC(dcw)
+  BEGIN (*ftyp in {ORB.Pointer, ORB.Proc} -> find either pointer fields or procedure variable fields*)
+    IF (typ.form = ftyp) OR ((ftyp = ORB.Pointer) & (typ.form = ORB.NilTyp)) THEN data[dcw] := off; INC(dcw)
     ELSIF typ.form = ORB.Record THEN
       fld := typ.dsc;
-      WHILE fld # NIL DO FindPtrFlds(fld.type, fld.val + off, dcw); fld := fld.next END
+      WHILE fld # NIL DO FindFlds(ftyp, fld.type, fld.val + off, dcw); fld := fld.next END
     ELSIF typ.form = ORB.Array THEN
       s := typ.base.size;
-      FOR i := 0 TO typ.len-1 DO FindPtrFlds(typ.base, i*s + off, dcw) END
+      FOR i := 0 TO typ.len-1 DO FindFlds(ftyp, typ.base, i*s + off, dcw) END
     END
-  END FindPtrFlds;
+  END FindFlds;
 
   PROCEDURE BuildTD*(T: ORB.Type; VAR dc: LONGINT);
     VAR dcw, k, s: LONGINT;  (*dcw = word address*)
@@ -350,7 +350,8 @@ MODULE ORG; (* NW  18.4.2016  / AP 7.7.16 code generator in Oberon-07 for RISC*)
     ELSE Q(T, dcw);
       WHILE k < 3 DO data[dcw] := -1; INC(dcw); INC(k) END
     END ;
-    FindPtrFlds(T, 0, dcw); data[dcw] := -1; INC(dcw); tdx := dcw; dc := dcw*4;
+    FindFlds(ORB.Pointer, T, 0, dcw); data[dcw] := -1; INC(dcw);
+    FindFlds(ORB.Proc, T, 0, dcw); data[dcw] := -1; INC(dcw); tdx := dcw; dc := dcw*4;
     IF tdx >= maxTD THEN ORS.Mark("too many record types"); tdx := 0 END
   END BuildTD;
 
@@ -654,7 +655,7 @@ MODULE ORG; (* NW  18.4.2016  / AP 7.7.16 code generator in Oberon-07 for RISC*)
    BEGIN loadAdr(x); len := x.type.len;
     IF len >= 0 THEN
       IF len <  y.b THEN ORS.Mark("string too long") END
-    ELSIF check THEN Put2(Ldr, RH, SP, x.a+4);  (*open array len, frame = 0hk*)
+    ELSIF check THEN Put2(Ldr, RH, SP, x.a+4);  (*open array len, frame = 0*)
       Put1(Cmp,RH, RH, y.b); Trap(LT, 3)
     END ;
     loadStringAdr(y);
@@ -793,10 +794,12 @@ MODULE ORG; (* NW  18.4.2016  / AP 7.7.16 code generator in Oberon-07 for RISC*)
     VAR a, r: LONGINT;
   BEGIN invalSB; frame := 0;
     IF ~int THEN (*procedure prolog*)
+      IF locblksize >= 10000H THEN ORS.Mark("too many locals") END ;
       a := 4; r := 0;
       Put1(Sub, SP, SP, locblksize); Put2(Str, LNK, SP, 0);
       WHILE a < parblksize DO Put2(Str, r, SP, a); INC(r); INC(a, 4) END
     ELSE (*interrupt procedure*)
+      IF locblksize > 0H THEN ORS.Mark("locals not allowed") END ;
       Put1(Sub, SP, SP, 12); Put2(Str, 0, SP, 0); Put2(Str, 1, SP, 4); Put2(Str, SB, SP, 8)
       (*R0, R1, SB saved on stack*)
     END
@@ -1012,53 +1015,54 @@ MODULE ORG; (* NW  18.4.2016  / AP 7.7.16 code generator in Oberon-07 for RISC*)
     END
   END Header;
 
-  PROCEDURE NofPtrs(typ: ORB.Type): LONGINT;
+  PROCEDURE NofRefs(ftyp: INTEGER; typ: ORB.Type): LONGINT;
     VAR fld: ORB.Object; n: LONGINT;
-  BEGIN
-    IF (typ.form = ORB.Pointer) OR (typ.form = ORB.NilTyp) THEN n := 1
+  BEGIN (*ftyp in {ORB.Pointer, ORB.Proc} -> count either pointers or procedure variables*)
+    IF (typ.form = ftyp) OR ((ftyp = ORB.Pointer) & (typ.form = ORB.NilTyp)) THEN n := 1
     ELSIF typ.form = ORB.Record THEN
       fld := typ.dsc; n := 0;
-      WHILE fld # NIL DO n := NofPtrs(fld.type) + n; fld := fld.next END
-    ELSIF typ.form = ORB.Array THEN n := NofPtrs(typ.base) * typ.len
+      WHILE fld # NIL DO n := NofRefs(ftyp, fld.type) + n; fld := fld.next END
+    ELSIF typ.form = ORB.Array THEN n := NofRefs(ftyp, typ.base) * typ.len
     ELSE n := 0
     END ;
     RETURN n
-  END NofPtrs;
+  END NofRefs;
 
-  PROCEDURE FindPtrs(VAR R: Files.Rider; typ: ORB.Type; adr: LONGINT);
+  PROCEDURE FindRefs(VAR R: Files.Rider; ftyp: INTEGER; typ: ORB.Type; adr: LONGINT);
     VAR fld: ORB.Object; i, s: LONGINT;
-  BEGIN
-    IF (typ.form = ORB.Pointer) OR (typ.form = ORB.NilTyp) THEN Files.WriteInt(R, adr)
+  BEGIN (*ftyp in {ORB.Pointer, ORB.Proc} -> find either pointers or procedure variables*)
+    IF (typ.form = ftyp) OR ((ftyp = ORB.Pointer) & (typ.form = ORB.NilTyp)) THEN Files.WriteInt(R, adr)
     ELSIF typ.form = ORB.Record THEN
       fld := typ.dsc;
-      WHILE fld # NIL DO FindPtrs(R, fld.type, fld.val + adr); fld := fld.next END
+      WHILE fld # NIL DO FindRefs(R, ftyp, fld.type, fld.val + adr); fld := fld.next END
     ELSIF typ.form = ORB.Array THEN
       s := typ.base.size;
-      FOR i := 0 TO typ.len-1 DO FindPtrs(R, typ.base, i*s + adr) END
+      FOR i := 0 TO typ.len-1 DO FindRefs(R, ftyp, typ.base, i*s + adr) END
     END
-  END FindPtrs;
+  END FindRefs;
 
   PROCEDURE Close*(VAR modid: ORS.Ident; key, nofent: LONGINT);
     VAR obj: ORB.Object;
-      i, comsize, nofimps, nofptrs, size: LONGINT;
+      i, comsize, nofimps, nofptrs, nofpvars, size: LONGINT;
       name: ORS.Ident;
       F: Files.File; R: Files.Rider;
   BEGIN  (*exit code*)
     IF version = 0 THEN Put1(Mov, 0, 0, 0); Put3(BR, 7, 0)  (*RISC-0*)
     ELSE Put2(Ldr, LNK, SP, 0); Put1(Add, SP, SP, 4); Put3(BR, 7, LNK)
     END ;
-    obj := ORB.topScope.next; nofimps := 0; comsize := 4; nofptrs := 0;
+    obj := ORB.topScope.next; nofimps := 0; comsize := 4; nofptrs := 0; nofpvars := 0; 
     WHILE obj # NIL DO
       IF (obj.class = ORB.Mod) & (obj.dsc # ORB.system) THEN INC(nofimps) (*count imports*)
       ELSIF (obj.exno # 0) & (obj.class = ORB.Const) & (obj.type.form = ORB.Proc)
           & (obj.type.nofpar = 0) & (obj.type.base = ORB.noType) THEN i := 0; (*count commands*)
         WHILE obj.name[i] # 0X DO INC(i) END ;
         i := (i+4) DIV 4 * 4; INC(comsize, i+4)
-      ELSIF obj.class = ORB.Var THEN INC(nofptrs, NofPtrs(obj.type))  (*count pointers*)
+      ELSIF obj.class = ORB.Var THEN INC(nofptrs, NofRefs(ORB.Pointer, obj.type)); (*count pointers*)
+        INC(nofpvars, NofRefs(ORB.Proc, obj.type)) (*count procedure variables*)
       END ;
       obj := obj.next
     END ;
-    size := varsize + strx + comsize + (pc + nofimps + nofent + nofptrs + 1)*4;  (*varsize includes type descriptors*)
+    size := varsize + strx + comsize + (pc + nofimps + nofent + nofptrs + nofpvars + 1)*4; (*varsize includes type descriptors*)
 
     ORB.MakeFileName(name, modid, ".rsc"); (*write code file*)
     F := Files.New(name); Files.Set(R, F, 0); Files.WriteString(R, modid); Files.WriteInt(R, key); Files.WriteByte(R, version);
@@ -1103,7 +1107,13 @@ MODULE ORG; (* NW  18.4.2016  / AP 7.7.16 code generator in Oberon-07 for RISC*)
     END ;
     obj := ORB.topScope.next;
     WHILE obj # NIL DO  (*pointer variables*)
-      IF obj.class = ORB.Var THEN FindPtrs(R, obj.type, obj.val) END ;
+      IF obj.class = ORB.Var THEN FindRefs(R, ORB.Pointer, obj.type, obj.val) END ;
+      obj := obj.next
+    END ;
+    Files.WriteInt(R, -1);
+    obj := ORB.topScope.next;
+    WHILE obj # NIL DO  (*procedure variables*)
+      IF obj.class = ORB.Var THEN FindRefs(R, ORB.Proc, obj.type, obj.val) END ;
       obj := obj.next
     END ;
     Files.WriteInt(R, -1);

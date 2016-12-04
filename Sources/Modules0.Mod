@@ -1,5 +1,16 @@
-MODULE Modules; (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 12.12.90 / 12.12.16*)
-  IMPORT SYSTEM, Kernel, Files;
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.11.16 - Original Oberon version*)
+ (*
+  * Modules0.Mod - special version of module Modules that is used only to bootstrap Experimental Oberon
+  *
+  * Specifies (part of) the "new" definition of module Modules, but continues to use the old Oberon
+  * object file format, so that it can still be executed under Original Oberon.
+  *
+  * It is compiled and linked under the old system using a special version of the linker (Linker0).
+  *
+  * See the README file of Experimental Oberon for the correct compilation and linking order.
+  *
+  *)
+  IMPORT SYSTEM, Files;
   CONST versionkey = 1X; MT = 12; DescSize = 88;
 
   TYPE Module* = POINTER TO ModDesc;
@@ -10,7 +21,7 @@ MODULE Modules; (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 12.12.90 
         name*: ModuleName;
         next*: Module;
         key*, num*, size*, refcnt*: INTEGER;
-        data*, var*, str*, code*, imp*, cmd*, ent*, ptr*, pvar*: INTEGER (*addresses*)
+        data*, var*, str*, code*, imp*, cmd*, ent*, ptr*, pvar*: INTEGER  (*addresses*)
       END ;
 
   VAR root*, M: Module;
@@ -31,7 +42,7 @@ MODULE Modules; (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 12.12.90 
   BEGIN res := n; importing := name
   END error;
 
-  PROCEDURE CheckName(s: ARRAY OF CHAR);
+  PROCEDURE Check(s: ARRAY OF CHAR);
     VAR i: INTEGER; ch: CHAR;
   BEGIN ch := s[0]; res := 1; i := 1;
     IF (ch >= "A") & (ch <= "Z") OR (ch >= "a") & (ch <= "z") THEN
@@ -40,7 +51,7 @@ MODULE Modules; (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 12.12.90 
         OR (ch >= "a") & (ch <= "z") OR (ch = ".")) OR (i = 32);
       IF (i < 32) & (ch = 0X) THEN res := 0 END
     END
-  END CheckName;
+  END Check;
 
   PROCEDURE Load*(name: ARRAY OF CHAR; VAR newmod: Module);
     (*search module in list; if not found, load module.
@@ -48,7 +59,7 @@ MODULE Modules; (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 12.12.90 
       res = 4: bad file version; res = 5: corrupted file; res = 7: no space*)
     VAR mod, impmod: Module;
       i, n, key, impkey, mno, nofimps, size: INTEGER;
-      p, u, v, w: INTEGER; (*addresses*)
+      p, u, v, w: INTEGER;  (*addresses*)
       ch: CHAR;
       body: Command;
       fixorgP, fixorgD, fixorgT: INTEGER;
@@ -59,13 +70,13 @@ MODULE Modules; (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 12.12.90 
   BEGIN mod := root; res := 0; nofimps := 0;
     WHILE (mod # NIL) & (name # mod.name) DO mod := mod.next END ;
     IF mod = NIL THEN (*load*)
-      CheckName(name);
+      Check(name);
       IF res = 0 THEN F := ThisFile(name) ELSE F := NIL END ;
       IF F # NIL THEN
         Files.Set(R, F, 0); Files.ReadString(R, name1); Files.ReadInt(R, key); Files.Read(R, ch);
         Files.ReadInt(R, size); importing := name1;
         IF ch = versionkey THEN
-          Files.ReadString(R, impname); (*imports*)
+          Files.ReadString(R, impname);   (*imports*)
           WHILE (impname[0] # 0X) & (res = 0) DO
             Files.ReadInt(R, impkey);
             Load(impname, impmod); import[nofimps] := impmod; importing := name1;
@@ -92,43 +103,37 @@ MODULE Modules; (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 12.12.90 
           END
         ELSE (*fill hole*) p := SYSTEM.VAL(INTEGER, mod)
         END
-      END ;
+      END ; 
       IF res = 0 THEN (*read file*)
         INC(p, DescSize); (*allocate descriptor*)
         mod.name := name; mod.key := key; mod.refcnt := 0;
-        mod.data := p; (*data*)
-        SYSTEM.PUT(mod.num * 4 + MTOrg, p); (*module table entry*)
+        mod.data := p;  (*data*)
+        SYSTEM.PUT(mod.num * 4 + MTOrg, p);  (*module table entry*)
         Files.ReadInt(R, n);
-        WHILE n > 0 DO Files.ReadInt(R, w); SYSTEM.PUT(p, w); INC(p, 4); DEC(n, 4) END ; (*type descriptors*)
-        mod.var := p; (*variable space*)
+        WHILE n > 0 DO Files.ReadInt(R, w); SYSTEM.PUT(p, w); INC(p, 4); DEC(n, 4) END ;  (*type descriptors*)
         Files.ReadInt(R, n);
-        WHILE n > 0 DO SYSTEM.PUT(p, 0); INC(p, 4); DEC(n, 4) END ;
-        mod.str := p; (*strings*)
+        WHILE n > 0 DO SYSTEM.PUT(p, 0); INC(p, 4); DEC(n, 4) END ;  (*variable space*)
         Files.ReadInt(R, n);
-        WHILE n > 0 DO Files.Read(R, ch); SYSTEM.PUT(p, ch); INC(p); DEC(n) END ;
-        mod.code := p; (*program*)
+        WHILE n > 0 DO Files.Read(R, ch); SYSTEM.PUT(p, ch); INC(p); DEC(n) END ;   (*strings*)
+        mod.code := p;  (*program*)
         Files.ReadInt(R, n);
-        WHILE n > 0 DO Files.ReadInt(R, w); SYSTEM.PUT(p, w); INC(p, 4); DEC(n) END ; (*program code*)
-        mod.imp := p; (*copy imports*)
+        WHILE n > 0 DO Files.ReadInt(R, w); SYSTEM.PUT(p, w); INC(p, 4); DEC(n) END ;  (*program code*)
+        mod.imp := p;  (*copy imports*)
         i := 0;
         WHILE i < nofimps DO
           SYSTEM.PUT(p, import[i]); INC(p, 4); INC(i)
         END ;
-        mod.cmd := p; (*commands*) Files.Read(R, ch);
+        mod.cmd := p;  (*commands*) Files.Read(R, ch);
         WHILE ch # 0X DO
           REPEAT SYSTEM.PUT(p, ch); INC(p); Files.Read(R, ch) UNTIL ch = 0X;
           REPEAT SYSTEM.PUT(p, 0X); INC(p) UNTIL p MOD 4 = 0;
           Files.ReadInt(R, n); SYSTEM.PUT(p, n); INC(p, 4); Files.Read(R, ch)
         END ;
         REPEAT SYSTEM.PUT(p, 0X); INC(p) UNTIL p MOD 4 = 0;
-        mod.ent := p; (*entries*)
+        mod.ent := p;  (*entries*)
         Files.ReadInt(R, n);
         WHILE n > 0 DO Files.ReadInt(R, w); SYSTEM.PUT(p, w); INC(p, 4); DEC(n) END ;
-        mod.ptr := p; (*pointer references*)
-        Files.ReadInt(R, w);
-        WHILE w >= 0 DO SYSTEM.PUT(p, mod.data + w); INC(p, 4); Files.ReadInt(R, w) END ;
-        SYSTEM.PUT(p, 0); INC(p, 4);
-        mod.pvar := p; (*procedure variable references*)
+        mod.ptr := p;  (*pointer references*)
         Files.ReadInt(R, w);
         WHILE w >= 0 DO SYSTEM.PUT(p, mod.data + w); INC(p, 4); Files.ReadInt(R, w) END ;
         SYSTEM.PUT(p, 0); INC(p, 4);
@@ -183,10 +188,10 @@ MODULE Modules; (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 12.12.90 
           END ;
           SYSTEM.PUT(adr, inst); adr := adr - disp*4
         END ;
-        body (*initialize module*)
+        body   (*initialize module*)
       ELSIF res = 3 THEN importing := name;
         WHILE nofimps > 0 DO DEC(nofimps); DEC(import[nofimps].refcnt) END
-      END
+      END 
     END ;
     newmod :=  mod
   END Load;
@@ -208,58 +213,18 @@ MODULE Modules; (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 12.12.90 
     RETURN SYSTEM.VAL(Command, w)
   END ThisCommand;
 
-  PROCEDURE Check*(mod: Module; VAR res: INTEGER); (*type and procedure references*)
-    VAR M: Module; pref, pvadr, r: LONGINT;
-  BEGIN (*mod # NIL*) M := root;
-    WHILE M # NIL DO
-      IF (M # mod) & (M.name[0] # 0X) THEN Kernel.Mark(M.ptr) END ;
-      M := M.next
-    END ;
-    Kernel.Check(mod.data, mod.var, mod.code, mod.imp, res); (*dynamic refs*)
-    IF res = 0 THEN M := root;
-      WHILE (M # NIL) & (res = 0) DO (*static refs*)
-        IF (M # mod) & (M.name[0] # 0X) THEN
-          pref := M.pvar; SYSTEM.GET(pref, pvadr);
-          WHILE pvadr # 0 DO (*procedure variables*) SYSTEM.GET(pvadr, r);
-            IF (mod.code <= r) & (r < mod.imp) THEN res := 3 END ;
-            INC(pref, 4); SYSTEM.GET(pref, pvadr)
-          END
-        END ;
-        M := M.next
-      END
-    END
-  END Check;
-
   PROCEDURE Free*(name: ARRAY OF CHAR);
-    (*unload module if no references exist in remaining modules, otherwise remove only from module list.
-      res = 0: no clients or references; res = 1: types in use in dynamic objects; res = 2: procedures
-      in use in dynamic objects; res = 3: procedures in use in static objects; res = 4: clients exist*)
     VAR mod, imp: Module; p, q: INTEGER;
   BEGIN mod := root; res := 0;
     WHILE (mod # NIL) & (mod.name # name) DO mod := mod.next END ;
     IF mod # NIL THEN
-      IF mod.refcnt = 0 THEN Check(mod, res);
-        IF res = 0 THEN (*unload*) mod.name[0] := 0X; p := mod.imp; q := mod.cmd;
-          WHILE p < q DO SYSTEM.GET(p, imp); DEC(imp.refcnt); INC(p, 4) END
-        ELSIF mod.name[0] < 80X THEN (*hide*) mod.name[0] := CHR(ORD(mod.name[0]) + 128)
-        END
-      ELSE res := 4
+      IF mod.refcnt = 0 THEN
+        mod.name[0] := 0X; p := mod.imp; q := mod.cmd;
+        WHILE p < q DO SYSTEM.GET(p, imp); DEC(imp.refcnt); INC(p, 4) END ;
+      ELSE res := 1
       END
     END
   END Free;
-
-  PROCEDURE Collect*; (*no longer referenced hidden modules*)
-    VAR mod, imp: Module; p, q, res: INTEGER;
-  BEGIN mod := root;
-    WHILE mod # NIL DO
-      IF (mod.refcnt = 0) & (mod.name[0] >= 80X) THEN Check(mod, res);
-        IF res = 0 THEN (*unload*) mod.name[0] := 0X; p := mod.imp; q := mod.cmd;
-          WHILE p < q DO SYSTEM.GET(p, imp); DEC(imp.refcnt); INC(p, 4) END
-        END
-      END ;
-      mod := mod.next
-    END
-  END Collect;
 
   PROCEDURE Init*;
   BEGIN Files.Init; MTOrg := SYSTEM.REG(MT);
@@ -267,5 +232,5 @@ MODULE Modules; (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 12.12.90 
   END Init;
 
 BEGIN Init; Load("Oberon", M);
-  LED(res); REPEAT UNTIL FALSE (*only if load fails*)
+    LED(res); REPEAT UNTIL FALSE  (*only if load fails*)
 END Modules.

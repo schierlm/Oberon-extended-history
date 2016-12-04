@@ -1,5 +1,5 @@
-MODULE Net; (*NW 3.7.88 / 25.8.91 / PR 7.8.13 / 9.12.13*)
-  IMPORT SYSTEM, SCC, Files, Viewers, Texts, TextFrames, MenuViewers, Oberon;
+MODULE Net; (*NW 3.7.88 / 25.8.91 / PR 7.8.13 / 9.12.13 / AP 12.12.16 BYTE -> CHAR*)
+  IMPORT SYSTEM, SCC, Files, Texts, Oberon;
 
   CONST PakSize = 512;
     (*T0 = 300; T1 = 1000; (*timeouts*)*)
@@ -19,7 +19,7 @@ MODULE Net; (*NW 3.7.88 / 25.8.91 / PR 7.8.13 / 9.12.13*)
   BEGIN head0.dadr := head1.sadr; partner := name
   END SetPartner;
 
-  PROCEDURE Send(t: BYTE; L: INTEGER; data: ARRAY OF BYTE);
+  PROCEDURE Send(t: BYTE; L: INTEGER; data: ARRAY OF CHAR);
   BEGIN head0.typ := t; head0.len := L; SCC.SendPacket(head0, data)
   END Send;
 
@@ -54,17 +54,16 @@ MODULE Net; (*NW 3.7.88 / 25.8.91 / PR 7.8.13 / 9.12.13*)
     END
   END FindPartner;
 
-  PROCEDURE AppendS(s: ARRAY OF CHAR; VAR d: ARRAY OF BYTE; VAR k: INTEGER);
+  PROCEDURE AppendS(s: ARRAY OF CHAR; VAR d: ARRAY OF CHAR; VAR k: INTEGER);
     VAR i: INTEGER; ch: CHAR;
   BEGIN i := 0;
-    REPEAT ch := s[i]; d[k] := ORD(ch); INC(i); INC(k) UNTIL ch = 0X
+    REPEAT ch := s[i]; d[k] := ch; INC(i); INC(k) UNTIL ch = 0X
   END AppendS;
 
-  PROCEDURE AppendW(s: LONGINT; VAR d: ARRAY OF BYTE;
-      n: INTEGER; VAR k: INTEGER);
+  PROCEDURE AppendW(s: LONGINT; VAR d: ARRAY OF CHAR; n: INTEGER; VAR k: INTEGER);
     VAR i: INTEGER;
   BEGIN i := 0;
-    REPEAT d[k] := s MOD 100H; s := s DIV 100H; INC(i); INC(k) UNTIL i = n
+    REPEAT d[k] := CHR(s MOD 100H); s := s DIV 100H; INC(i); INC(k) UNTIL i = n
   END AppendW;
 
   PROCEDURE PickS(VAR s: ARRAY OF CHAR);
@@ -84,11 +83,11 @@ MODULE Net; (*NW 3.7.88 / 25.8.91 / PR 7.8.13 / 9.12.13*)
       x: BYTE;
       len: LONGINT;
       R: Files.Rider;
-      buf: ARRAY PakSize OF BYTE;
+      buf: ARRAY PakSize OF CHAR;
   BEGIN Files.Set(R, F, 0); len := 0; seqno := 0;
     REPEAT k := 0;
       REPEAT Files.ReadByte(R, x);
-        IF ~R.eof THEN buf[k] := x; INC(k) END
+        IF ~R.eof THEN buf[k] := CHR(x); INC(k) END
       UNTIL R.eof OR (k = PakSize);
       REPEAT Send(seqno, k, buf); ReceiveHead(T1)
       UNTIL head1.typ # seqno + ACK;
@@ -149,8 +148,7 @@ MODULE Net; (*NW 3.7.88 / 25.8.91 / PR 7.8.13 / 9.12.13*)
     IF head1.valid THEN
       IF head1.typ = SND THEN
         PickS(Id); PickQ(pw); PickS(FileName);
-        Texts.WriteString(W, Id); Texts.Write(W, " ");
-Texts.WriteString(W, FileName);
+        Texts.WriteString(W, Id); Texts.Write(W, " "); Texts.WriteString(W, FileName);
         F := Files.Old(FileName);
         IF F # NIL THEN
           Texts.WriteString(W, " sending"); SetPartner(Id);
@@ -161,8 +159,7 @@ Texts.WriteString(W, FileName);
       ELSIF head1.typ = REC THEN
         PickS(Id); PickQ(pw); PickS(FileName);
         IF ~protected THEN
-          Texts.WriteString(W, Id); Texts.Write(W, " ");
-Texts.WriteString(W, FileName);
+          Texts.WriteString(W, Id); Texts.Write(W, " "); Texts.WriteString(W, FileName);
           F := Files.New(FileName);
           IF F # NIL THEN
             Texts.WriteString(W, " receiving"); SetPartner(Id);
@@ -175,8 +172,7 @@ Texts.WriteString(W, FileName);
         ELSE Send(NPR, 0, dmy)
         END
       ELSIF head1.typ = MSG THEN i := 0;
-        WHILE i < head1.len DO SCC.Receive(x); Texts.Write(W, CHR(x));
-INC(i) END ;
+        WHILE i < head1.len DO SCC.Receive(x); Texts.Write(W, CHR(x)); INC(i) END ;
         Send(ACK, 0, dmy); reply(0)
       ELSIF head1.typ = TRQ THEN
         i := 0; AppendW(Oberon.Clock(), Id, 4, i); Send(TIM, 4, Id)
@@ -184,12 +180,10 @@ INC(i) END ;
         clock := Oberon.Clock();
         IF ~protected & (Id[0] # 0X) & (ABS(pw - clock) > 10) THEN
           Oberon.SetClock(newclock);
-          Texts.WriteString(W, Id); Texts.WriteString(W, " changed
-System.Date");
+          Texts.WriteString(W, Id); Texts.WriteString(W, " changed System.Date");
           Texts.WriteClock(W, newclock); reply(0)
          END
-      ELSIF head1.typ = NRQ THEN
-        i := 0;
+      ELSIF head1.typ = NRQ THEN i := 0;
         REPEAT SCC.Receive(x); Id[i] := CHR(x); INC(i);
           IF i = 7 THEN Id[7] := 0X; x := 0 END
         UNTIL x = 0;
@@ -221,7 +215,7 @@ System.Date");
       end: LONGINT;
       S: Texts.Scanner;
       F: Files.File;
-      buf: ARRAY 64 OF BYTE;
+      buf: ARRAY 64 OF CHAR;
   BEGIN GetPar1(S);
     IF S.class = Texts.Name THEN
       FindPartner(S.s, k);
@@ -234,7 +228,7 @@ System.Date");
           IF S.nextCh = ":" THEN (*prefix*)
             Texts.Scan(S); Texts.Scan(S);
             IF S.class = Texts.Name THEN
-              buf[k-1] := ORD("."); AppendS(S.s, buf, k);
+              buf[k-1] := "."; AppendS(S.s, buf, k);
               Texts.Write(W, ":"); Texts.WriteString(W, S.s)
             END
           END ;
@@ -242,8 +236,7 @@ System.Date");
           IF F # NIL THEN
             Send(REC, k, buf); ReceiveHead(T0);
             IF head1.typ = ACK THEN
-              Texts.WriteString(W, " sending"); Texts.Append(Oberon.Log,
-W.buf);
+              Texts.WriteString(W, " sending"); Texts.Append(Oberon.Log, W.buf);
               SendData(F); reply(0)
             ELSIF head1.typ = NPR THEN reply(2); end := 0
             ELSIF head1.typ = NAK THEN reply(3); end := 0
@@ -263,7 +256,7 @@ W.buf);
       end: LONGINT;
       S: Texts.Scanner;
       F: Files.File;
-      buf: ARRAY 64 OF BYTE;
+      buf: ARRAY 64 OF CHAR;
   BEGIN GetPar1(S);
     IF S.class = Texts.Name THEN
       FindPartner(S.s, k);
@@ -271,19 +264,17 @@ W.buf);
         GetPar(S, end);
         WHILE (Texts.Pos(S) < end) & (S.class = Texts.Name) DO
           Texts.WriteString(W, S.s);
-          k := 0; AppendS(Oberon.User, buf, k); AppendW(Oberon.Password,
-buf, 4, k);
+          k := 0; AppendS(Oberon.User, buf, k); AppendW(Oberon.Password, buf, 4, k);
           AppendS(S.s, buf, k);
           IF S.nextCh = ":" THEN (*prefix*)
             Texts.Scan(S); Texts.Scan(S);
             IF S.class = Texts.Name THEN
-              buf[k-1] := ORD("."); AppendS(S.s, buf, k);
+              buf[k-1] := "."; AppendS(S.s, buf, k);
               Texts.Write(W, ":"); Texts.WriteString(W, S.s)
             END
           END ;
           Send(SND, k, buf);
-          Texts.WriteString(W, " receiving"); Texts.Append(Oberon.Log,
-W.buf);
+          Texts.WriteString(W, " receiving"); Texts.Append(Oberon.Log, W.buf);
           ReceiveHead(T1);
           IF head1.typ = 0 THEN
             F := Files.New(S.s);
@@ -306,14 +297,14 @@ W.buf);
   PROCEDURE SendMsg*;
     VAR i: INTEGER; ch: CHAR;
       S: Texts.Scanner;
-      msg: ARRAY 64 OF BYTE;
+      msg: ARRAY 64 OF CHAR;
   BEGIN GetPar1(S);
     IF S.class = Texts.Name THEN
       FindPartner(S.s, i);
       IF i = 0 THEN
         Texts.Read(S, ch);
         WHILE (ch >= " ") & (i < 64) DO
-          msg[i] := ORD(ch); INC(i); Texts.Read(S, ch)
+          msg[i] := ch; INC(i); Texts.Read(S, ch)
         END ;
         Send(MSG, i, msg); ReceiveHead(T0);
         IF head1.typ # ACK THEN reply(3) END
@@ -341,8 +332,7 @@ W.buf);
   PROCEDURE StartServer*;
   BEGIN protected := TRUE; partner[0] := 0X; SCC.Start(TRUE);
     Oberon.Remove(Server); Oberon.Install(Server);
-    Texts.WriteString(W, " Server started as "); Texts.WriteString(W,
-Oberon.User);
+    Texts.WriteString(W, " Server started as "); Texts.WriteString(W, Oberon.User);
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END StartServer;
 

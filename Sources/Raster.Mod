@@ -1,4 +1,4 @@
-MODULE Display;  (*NW 5.11.2013 / 3.7.2016 / AP 5.7.16*)
+MODULE Raster;  (*NW 5.11.2013 / 3.7.2016 / AP 12.12.16*)
   IMPORT SYSTEM;
 
   CONST black* = 0; white* = 1;  (*black = background*)
@@ -179,4 +179,4 @@ BEGIN Base := base; Width := 1024; Height := 768;
   block := SYSTEM.ADR($0808 FFFF C3C3 C3C3 FFFF$);
   cross := SYSTEM.ADR($0F0F 0140 0220 0410 0808 1004 2002 4001 0000 4001 2002 1004 0808 0410 0220 0140$);
   grey := SYSTEM.ADR($2002 0000 5555 5555 AAAA AAAA$)
-END Display.
+END Raster.

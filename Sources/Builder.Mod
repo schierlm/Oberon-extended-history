@@ -1,9 +1,3 @@
-(*  ORP.Compile @
-     Builder.WriteFile BootLoad.rsc 512 "D:/Verilog/RISC5/prom.mem" ~
-     Builder.ExtractBootROM BootLoad.rsc BootLoad.bin ~
-     Builder.CreateBootTrack Modules.bin ~
-     Builder.CreateBootTrack Oberon0.bin ~      *)
-
 MODULE Builder;   (*AP 1.12.15*)
   IMPORT Kernel, Files, Texts, Oberon;
 
@@ -35,7 +29,7 @@ MODULE Builder;   (*AP 1.12.15*)
     END
   END WriteBootTrack;
 
-  PROCEDURE CreateBootTrack*; (*WARNING: overwrites the local disk's boot area*)
+  PROCEDURE CreateBootTrack*; (*WARNING: overwrites the boot area of the local disk*)
     VAR S: Texts.Scanner; len, res: INTEGER;
   BEGIN
     Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
@@ -82,9 +76,9 @@ MODULE Builder;   (*AP 1.12.15*)
   END ExtractBootROM;
 
   PROCEDURE WriteFile*;
-  BEGIN (*to be implemented (creates Xilinx *.mem file)*)
+  BEGIN (*to be implemented - creates Xilinx *.mem file*)
   END WriteFile;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Builder  AP 1.12.2015");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Builder  AP 1.11.16");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
 END Builder.

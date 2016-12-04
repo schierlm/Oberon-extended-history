@@ -1,12 +1,11 @@
-MODULE SCC; (*NW 13.11.87 / 22.8.90 Ceres-2; nRF24L01+ version PR 21.7.13 / 23.12.13*)
+MODULE SCC; (*NW 13.11.87 / 22.8.90 Ceres-2; nRF24L01+ version PR 21.7.13 / 23.12.13 / AP 12.12.16 BYTE -> CHAR*)
   IMPORT SYSTEM, Kernel;
 
   CONST
     swi = -60; spiData = -48; spiCtrl = -44;
     netSelect = 1; spiFast = 2; netEnable = 3;
     HdrSize = 8; MaxPayload = 512; SubPacket = 32; Wait = 50; SendTries = 50;
-    MaxPacket = (HdrSize + MaxPayload + SubPacket-1) DIV SubPacket *
-SubPacket;
+    MaxPacket = (HdrSize + MaxPayload + SubPacket-1) DIV SubPacket * SubPacket;
 
   TYPE Header* =
     RECORD valid*: BOOLEAN;
@@ -81,8 +80,7 @@ SubPacket;
   END SubSnd;
 
   PROCEDURE Flush();
-  BEGIN StartCmd(0E1H); SPICtrl({}); StartCmd(0E2H); SPICtrl({})
-(*FLUSH_TX, FLUSH_RX*)
+  BEGIN StartCmd(0E1H); SPICtrl({}); StartCmd(0E2H); SPICtrl({}) (*FLUSH_TX, FLUSH_RX*)
   END Flush;
 
   PROCEDURE ResetRcv;
@@ -106,9 +104,8 @@ SubPacket;
     Flush(); Listen(TRUE); ResetRcv
   END Start;
 
-  PROCEDURE SendPacket*(VAR head: Header; dat: ARRAY OF BYTE);
-    VAR len, i, off: INTEGER; timeout: BOOLEAN; payload: ARRAY SubPacket
-OF BYTE;
+  PROCEDURE SendPacket*(VAR head: Header; dat: ARRAY OF CHAR);
+    VAR len, i, off: INTEGER; timeout: BOOLEAN; payload: ARRAY SubPacket OF CHAR;
   BEGIN (*let any receive ack finish before turning radio off*)
     i := Kernel.Time() + Wait;
     REPEAT SPICtrl({netEnable, netSelect}); SPI(0FFH); SPICtrl({netEnable}) (*NOP*)
@@ -119,11 +116,11 @@ OF BYTE;
     SYSTEM.COPY(SYSTEM.ADR(head), SYSTEM.ADR(payload), HdrSize DIV 4);
     i := HdrSize; off := 0; len := head.len;
     WHILE (len > 0) & (i < SubPacket) DO payload[i] := dat[off]; INC(i); INC(off); DEC(len) END;
-    WHILE i < SubPacket DO payload[i] := 0; INC(i) END;
+    WHILE i < SubPacket DO payload[i] := 0X; INC(i) END;
     SubSnd(SYSTEM.ADR(payload), timeout);
     WHILE ~timeout & (len # 0) DO i := 0; (*send the rest*)
       WHILE (len > 0) & (i < SubPacket) DO payload[i] := dat[off]; INC(i); INC(off); DEC(len) END;
-      WHILE i < SubPacket DO payload[i] := 0; INC(i) END;
+      WHILE i < SubPacket DO payload[i] := 0X; INC(i) END;
       SubSnd(SYSTEM.ADR(payload), timeout)
     END;
     Listen(TRUE)

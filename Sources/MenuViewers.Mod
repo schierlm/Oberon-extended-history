@@ -1,15 +1,15 @@
-MODULE MenuViewers; (*JG 26.8.90 / 16.9.93 / NW 10.3.13 / AP 12.12.90/ 27.6.16*)
-  IMPORT Input, Display, Viewers, Oberon;
+MODULE MenuViewers; (*JG 26.8.90 / 16.9.93 / NW 10.3.13 / AP 12.12.90 / 12.12.16*)
+  IMPORT Input, Raster, Viewers, Oberon;
 
   TYPE Viewer* = POINTER TO ViewerDesc;
     ViewerDesc* = RECORD (Viewers.ViewerDesc) menuH*: INTEGER END;
 
   PROCEDURE Draw (V: Viewer; Y, H, col: INTEGER);
   BEGIN
-    Display.ReplConst(col, V.X, Y, 1, H, Display.replace);
-    Display.ReplConst(col, V.X + V.W - 1, Y, 1, H, Display.replace);
-    Display.ReplConst(col, V.X + 1, Y, V.W - 2, 1, Display.replace);
-    Display.ReplConst(col, V.X + 1, Y + H - 1, V.W - 2, 1, Display.replace)
+    Raster.ReplConst(col, V.X, Y, 1, H, Raster.replace);
+    Raster.ReplConst(col, V.X + V.W - 1, Y, 1, H, Raster.replace);
+    Raster.ReplConst(col, V.X + 1, Y, V.W - 2, 1, Raster.replace);
+    Raster.ReplConst(col, V.X + 1, Y + H - 1, V.W - 2, 1, Raster.replace)
   END Draw;
 
   PROCEDURE Adjust (V: Viewers.Viewer; id, Y, H: INTEGER);
@@ -20,7 +20,7 @@ MODULE MenuViewers; (*JG 26.8.90 / 16.9.93 / NW 10.3.13 / AP 12.12.90/ 27.6.16*)
   PROCEDURE Restore (V: Viewer);
     VAR Menu, Main: Viewers.Viewer;
   BEGIN Menu := V.dsc; Main := V.dsc.next;
-    Oberon.RemoveMarks(V.X, V.Y, V.W, V.H); Draw(V, V.Y, V.H, Display.white);
+    Oberon.RemoveMarks(V.X, V.Y, V.W, V.H); Draw(V, V.Y, V.H, Raster.white);
     IF V.H > V.menuH + 1 THEN
       Main.X := V.X + 1; Main.Y := V.Y + 1; Main.W := V.W - 2; Main.H := V.H - V.menuH - 1;
       Menu.X := V.X + 1; Menu.Y := V.Y + V.H - V.menuH; Menu.W := V.W - 2; Menu.H := V.menuH - 1;
@@ -35,7 +35,7 @@ MODULE MenuViewers; (*JG 26.8.90 / 16.9.93 / NW 10.3.13 / AP 12.12.90/ 27.6.16*)
   PROCEDURE Modify (V: Viewer; Y, H: INTEGER);
     VAR Menu, Main: Viewers.Viewer;
   BEGIN Menu := V.dsc; Main := V.dsc.next;
-    Oberon.RemoveMarks(V.X, V.Y, V.W, V.H); Draw(V, V.Y, V.H, Display.black);
+    Oberon.RemoveMarks(V.X, V.Y, V.W, V.H); Draw(V, V.Y, V.H, Raster.black);
     IF H > V.menuH + 1 THEN
       IF Y + H > V.Y + V.H THEN
         Adjust(Menu, Viewers.modify, Y + H - V.menuH, V.menuH - 1);
@@ -51,7 +51,7 @@ MODULE MenuViewers; (*JG 26.8.90 / 16.9.93 / NW 10.3.13 / AP 12.12.90/ 27.6.16*)
       Adjust(Main, Viewers.modify, Y + H - V.menuH, 0);
       Adjust(Menu, Viewers.modify, Y + 1, H - 2)
     END;
-    Draw(V, Y, H, Display.white)
+    Draw(V, Y, H, Raster.white)
   END Modify;
 
   PROCEDURE Suspend (V: Viewer);
@@ -99,8 +99,8 @@ MODULE MenuViewers; (*JG 26.8.90 / 16.9.93 / NW 10.3.13 / AP 12.12.90/ 27.6.16*)
     VAR Menu, Main: Viewers.Viewer; M: Viewers.CopyMsg;
   BEGIN Menu := V.dsc; Main := V.dsc.next;
     NEW(V1); V1^ := V^; V1.state := 0; V1.dsc := NIL;
-    M.V := NIL; Menu.handle(Menu, M); Viewers.Append(V1, M.V);
-    M.V := NIL; Main.handle(Main, M); Viewers.Append(V1, M.V)
+    M.V := NIL; Menu.handle(Menu, M); Viewers.Install(V1, M.V);
+    M.V := NIL; Main.handle(Main, M); Viewers.Install(V1, M.V)
   END Copy;
 
   PROCEDURE Handle* (V: Viewers.Viewer; VAR M: Viewers.Msg);
@@ -146,7 +146,7 @@ MODULE MenuViewers; (*JG 26.8.90 / 16.9.93 / NW 10.3.13 / AP 12.12.90/ 27.6.16*)
   PROCEDURE New* (Menu, Main: Viewers.Viewer; menuH, X, Y: INTEGER): Viewer; 
     VAR V: Viewer;
   BEGIN NEW(V); V.handle := Handle; V.menuH := menuH; V.minH := menuH + 2;
-    Viewers.Append(V, Menu); (*V.dsc*) Viewers.Append(V, Main); (*V.dsc.next*)
+    Viewers.Install(V, Menu); (*V.dsc*) Viewers.Install(V, Main); (*V.dsc.next*)
     Viewers.Open(Viewers.CurDisplay, V, X, Y); Restore(V); RETURN V
   END New;
 
