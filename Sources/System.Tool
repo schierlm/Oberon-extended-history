@@ -1,25 +1,25 @@
 System.Open ^ System.Recall System.Flush System.Watch System.Collect
-Edit.Open ^  Edit.Recall
-Edit.ChangeFont Oberon8.Scn.Fnt           System.ShowDisplays
-Edit.ChangeFont Oberon10i.Scn.Fnt        System.OpenDisplay name
-Edit.ChangeFont Oberon16.Scn.Fnt         System.SetDisplayName 1 new
+Edit.Open ^  Edit.Recall                           System.ShowDisplays
+Edit.ChangeFont Oberon8.Scn.Fnt           System.OpenDisplay name
+Edit.ChangeFont Oberon10i.Scn.Fnt        System.SetDisplayName 1 new
+Edit.ChangeFont Oberon16.Scn.Fnt         System.SetDisplay 1
 Edit.ChangeFont Times24.Scn.Fnt            System.CloseDisplay 1
 
 System.Directory ^
   *.Mod  *.Bak  *.Tool  *.Text  *.Scn.Fnt  *.smb  *.rsc
 
 ORP.Compile @  ORP.Compile @/s  ORP.Compile ^/s ORP.Compile ~
-System.Free ~
+System.Free ~            # unload modules individually (by name or num)
+System.FreeGroup ~   # unload modules as a group (by name or num)
 System.Open Draw.Tool
 System.CopyFiles ~
-System.RenameFiles ~
-System.DeleteFiles ~
+System.RenameFiles ~         Stars.Open Stars.Run System.Free Stars~
+System.DeleteFiles ~           "13.ShowModules"  "*tars.Stop"
 
 System.ShowModules  System.ShowCommands ^  Modules.Collect
 
 PCLink1.Run
 Hilbert.Draw  Sierpinski.Draw  Blink.Run  Stars.Open
-
 Tools.Inspect 0
 Tools.Sector 1
 Tools.ShowFile 
@@ -29,8 +29,8 @@ Tools.Recall  Tools.Clear
 
 ORP.Compile Linker.Mod/s Builder.Mod/s ~
 ORP.Compile Kernel.Mod/s FileDir.Mod/s Files.Mod Modules.Mod/s ~
-Linker.Link Modules ~                             System.RunInit System ~
-Builder.CreateBootTrack  Modules.bin ~    System.Open Draw.Tool ~
+Linker.Link Modules ~              System.RunInit System ~
+Builder.Load Modules ~           System.Open Draw.Tool ~
 
 ORP.Compile Input.Mod Raster.Mod/s Viewers.Mod/s ~
 ORP.Compile Fonts.Mod Texts.Mod ~

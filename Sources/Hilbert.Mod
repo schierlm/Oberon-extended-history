@@ -1,4 +1,4 @@
-MODULE Hilbert;  (*NW 8.1.13 for RISC / AP 12.12.16*)
+MODULE Hilbert;  (*NW 8.1.13 for RISC / AP 5.1.17*)
   IMPORT Raster, Viewers, Texts, Oberon, MenuViewers, TextFrames;
 
   CONST Menu = "System.Close System.Copy System.Grow | System.Expand System.Clone";
@@ -42,7 +42,7 @@ MODULE Hilbert;  (*NW 8.1.13 for RISC / AP 12.12.16*)
     IF i > 0 THEN A(i-1); S; D(i-1); W; D(i-1); N; C(i-1) END
   END HD;
 
-  PROCEDURE DrawHilbert(F: Viewers.Viewer);
+  PROCEDURE DrawHilbert(F: Viewers.Frame);
     VAR k, n, w, x0, y0: INTEGER;
   BEGIN k := 0; d := 8;
     IF F.W < F.H THEN w := F.W ELSE w := F.H END ;
@@ -55,8 +55,8 @@ MODULE Hilbert;  (*NW 8.1.13 for RISC / AP 12.12.16*)
     END
   END DrawHilbert;
 
-  PROCEDURE Handler(F: Viewers.Viewer; VAR M: Viewers.Msg);
-    VAR F0: Viewers.Viewer;
+  PROCEDURE Handler(F: Viewers.Frame; VAR M: Viewers.FrameMsg);
+    VAR F0: Viewers.Frame;
   BEGIN
     IF M IS Viewers.InputMsg THEN
       IF M(Viewers.InputMsg).id = Viewers.track THEN
@@ -69,12 +69,12 @@ MODULE Hilbert;  (*NW 8.1.13 for RISC / AP 12.12.16*)
     ELSIF M IS Viewers.ControlMsg THEN
       IF M(Viewers.ControlMsg).id = Viewers.neutralize THEN Oberon.RemoveMarks(F.X, F.Y, F.W, F.H) END
     ELSIF M IS Viewers.CopyMsg THEN
-      NEW(F0); F0^ := F^; M(Viewers.CopyMsg).V := F0
+      NEW(F0); F0^ := F^; M(Viewers.CopyMsg).F := F0
     END
   END Handler;
 
-  PROCEDURE New(): Viewers.Viewer;
-    VAR F: Viewers.Viewer;
+  PROCEDURE New(): Viewers.Frame;
+    VAR F: Viewers.Frame;
   BEGIN NEW(F); F.handle := Handler; RETURN F
   END New;
 

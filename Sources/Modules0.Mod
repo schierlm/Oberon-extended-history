@@ -1,4 +1,4 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.11.16 - Original Oberon version*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 11.3.17 - Original Oberon version*)
  (*
   * Modules0.Mod - special version of module Modules that is used only to bootstrap Experimental Oberon
   *
@@ -11,7 +11,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.11.16 
   *
   *)
   IMPORT SYSTEM, Files;
-  CONST versionkey = 1X; MT = 12; DescSize = 88;
+  CONST versionkey = 1X; MT = 12; DescSize = 84;
 
   TYPE Module* = POINTER TO ModDesc;
     Command* = PROCEDURE;
@@ -21,7 +21,8 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.11.16 
         name*: ModuleName;
         next*: Module;
         key*, num*, size*, refcnt*: INTEGER;
-        data*, var*, str*, code*, imp*, cmd*, ent*, ptr*, pvar*: INTEGER  (*addresses*)
+        data*, code*, imp*, cmd*, ent*, ptr*, pvar*: INTEGER;  (*addresses*)
+        selected*, hidden*: BOOLEAN
       END ;
 
   VAR root*, M: Module;

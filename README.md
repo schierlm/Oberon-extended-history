@@ -1,19 +1,18 @@
 # Experimental Oberon (full version)
-This is the **full** version of Experimental Oberon. It is **not** backward compatible with the Original Oberon operating system (2013 Edition, www.projectoberon.com). *All* changes of the following document are implemented.
 
-**Documentation:** [**DIFFERENCES-between-Experimental-Oberon-and-Original-Oberon.pdf**](Documentation/DIFFERENCES-between-Experimental-Oberon-and-Original-Oberon.pdf)
+**Documentation:** [**The-Experimental-Oberon-System.pdf**](Documentation/The-Experimental-Oberon-System.pdf)
 
-To access the **reduced** version of Experimental Oberon (which **is** backward compatible with Original Oberon), please refer to the following repository: **http://www.github.com/andreaspirklbauer/Oberon-experimental-reduced**
+**Demo video 1:** 
+download: [**DemoMultipleVirtualDisplays.mov**](Documentation/DemoMultipleVirtualDisplays.mov)
+Youtube: **https://youtu.be/eLsHM4QncbY**
 
-To access a version of Original Oberon that **only** adds "safe module unloading" to Original Oberon, please refer to the following repository: **http://www.github.com/andreaspirklbauer/Oberon-safe-module-unloading**
+**Demo video 2:** 
+download: [**DemoFractionalLineScrollVariableLineSpace.mov**](Documentation/DemoFractionalLineScrollVariableLineSpace.mov)
+Youtube: **https://youtu.be/mXWHtTZL4R0**
 
-------------------------------------------------------
-
-**Demo video 1:** [**DemoMultipleVirtualDisplays.mov**](Documentation/DemoMultipleVirtualDisplays.mov)
-
-**Demo video 2:** [**DemoFractionalLineScrollVariableLineSpace.mov**](Documentation/DemoFractionalLineScrollVariableLineSpace.mov)
-
-**Demo video 3:** [**DemoCloningViewersIntoNewVirtualDisplays.mov**](Documentation/DemoCloningViewersIntoNewVirtualDisplays.mov)
+**Demo video 3:**
+download: [**DemoCloningViewersIntoNewVirtualDisplays.mov**](Documentation/DemoCloningViewersIntoNewVirtualDisplays.mov)
+Youtube: **https://youtu.be/t8n_nkuKn3o**
 
 **Compressed archive** of Experimental Oberon (S3RISCinstall directory) for the Oberon emulator: [**S3RISCinstall.tar.gz**](Documentation/S3RISCinstall.tar.gz)
 
@@ -25,7 +24,9 @@ To access a version of Original Oberon that **only** adds "safe module unloading
 
 **NOTE**: If you run Oberon in an emulator (e.g., https://github.com/pdewacht/oberon-risc-emu), you can simply backup your existing S3RISCinstall directory, download the compressed archive [**S3RISCinstall.tar.gz**](Documentation/S3RISCinstall.tar.gz) from this repository (containing Experimental Oberon) to your emulator directory, run the command *tar xvzf S3RISCinstall.tar.gz* in that directory and then start the emulator, instead of going through the instructions outlined below.
 
-**PREREQUISITES**: A working Original Oberon operating system and compiler, current as of October 3, 2016 or later (see www.inf.ethz.ch/personal/wirth/news.txt for the change log of the Oberon system and the compiler). If you run an older version of Original Oberon or the compiler, please upgrade to the latest version first.
+------------------------------------------------------
+
+**PREREQUISITES**: A working Original Oberon operating system and compiler, current as of March 16, 2017 or later (see www.inf.ethz.ch/personal/wirth/news.txt for the change log of the Oberon system and the compiler). If you run an older version of Original Oberon or the compiler, please upgrade to the latest version first.
 
 ------------------------------------------------------
 
@@ -72,7 +73,13 @@ To access a version of Original Oberon that **only** adds "safe module unloading
 
 The files *Modules0.Mod* and *Linker0.Mod* are only used for bootstrapping purposes.
 
-**Note**: If you run Oberon in an emulator on a host system (e.g., using **https://github.com/pdewacht/oberon-risc-emu**), first download the files listed above to your host system (into directory *oberon-risc-emu*), start the Oberon emulator on your host system, click on the *PCLink1.Run* link in the *System.Tool* viewer within Oberon, and execute the following command on the command shell of your host system (example shown for Linux or MacOS):
+**Note**: Convert these files (except the font file) to Oberon format first (Oberon uses only CR as line endings) using the command **dos2oberon** (also available in the Experimental Oberon repository), before importing the files into Oberon.
+
+     ./dos2oberon Modules0.Mod Modules0.Mod
+     ./dos2oberon Linker0.Mod Linker0.Mod
+     ./dos2oberon Builder.Mod Builder.Mod
+
+**Note**: If you run Oberon in an emulator on a host system (e.g., using **https://github.com/pdewacht/oberon-risc-emu**), first download the files listed above to your host system (into directory *oberon-risc-emu*), convert them to to Oberon format using the command **dos2oberon** as shown above, start the Oberon emulator on your host system, click on the *PCLink1.Run* link in the *System.Tool* viewer within Oberon, and execute the following command on the command shell of your host system (example shown for Linux or MacOS):
 
      ./pcreceive.sh Modules0.Mod
      ./pcreceive.sh Linker0.Mod
@@ -93,8 +100,8 @@ Note: Even though the source file for the linker is called *Linker0.Mod*, the ge
 
 **STEP 4**: The "old" compiler is already loaded (due to the compilations of the previous step). Now load the linker and builder compiled above into main memory as well (being resident in memory on the "old" system means that they can be executed at any time later, even after one or more of their imports are recompiled - as will be the case below):
 
-     Linker.Link nonexistingfile                ... load module Linker (compiled from Linker0.Mod!) into main memory
-     Builder.CreateBootTrack nonexistingfile    ... load module Builder into main memory
+     Linker.Link nonexistingfile     ... load module Linker (compiled from Linker0.Mod!) into main memory
+     Builder.Load nonexistingfile    ... load module Builder into main memory
 
 Do NOT reboot the system just yet!
 
@@ -118,8 +125,8 @@ Do NOT recompile the Original Oberon file *Modules.Mod* at this stage!
 
 **Step 5b:** Link and load the modified version of the Oberon *inner core* onto the boot area of your local disk (using the linker and builder that are still loaded in main memory):
 
-     Linker.Link Modules ~                    # create an "old" inner core with the new module interface (using the linker that was created from Linker0.Mod))
-     Builder.CreateBootTrack Modules.bin ~    # load it onto the boot area of the local disk (builder is already loaded)
+     Linker.Link Modules ~     # create an "old" inner core with the new module interface (using the linker that was created from Linker0.Mod))
+     Builder.Load Modules ~    # load inner core (file Modules.bin) onto the boot area of the local disk (builder is already loaded)
 
 Do NOT reboot the system just yet!
 
@@ -155,7 +162,9 @@ Optionally, you may also compile any other modules that you may have on your sys
 
 You are now running a (slightly) modified Original ("old") Oberon 2013 system. The *only* difference to your previous version is that it has the new module interface of module *Modules* (needed for the compilations in subsequent steps). Everything else stays the same. In particular, the Oberon system you are currently running still uses the old Oberon object file format.
 
-Note: The two files *Modules0.Mod* and *Linker0.Mod* are now no longer needed. You can delete them.
+Note that the two files *Modules0.Mod* and *Linker0.Mod* are now no longer needed. You can delete them:
+
+     System.DeleteFiles Modules0.Mod Linker0.Mod ~
 
 ------------------------------------------------------
 
@@ -187,21 +196,32 @@ Download the following Experimental Oberon files from the [**Sources**](Sources/
      Stars.Mod            (optional)
      Checkers.Mod         (optional)
 
-**Note**: If you run Oberon in an emulator on a host system (e.g., using **https://github.com/pdewacht/oberon-risc-emu**), first download the files listed above to your host system (into directory *oberon-risc-emu*), start the Oberon emulator on your host system, click on the *PCLink1.Run* link in the *System.Tool* viewer within Oberon, and execute the following command on the command shell of your host system (example shown for Linux or MacOS):
+**Note**: Convert these files (except the font file) to Oberon format first (Oberon uses only CR as line endings) using the command **dos2oberon** (also available in the Experimental Oberon repository), before importing the files into Oberon.
+
+     for x in *.Mod ; do ./dos2oberon $x $x ; done
+     ./dos2oberon System.Tool System.Tool
+
+**Note**: If you run Oberon in an emulator on a host system (e.g., using **https://github.com/pdewacht/oberon-risc-emu**), first download the files listed above to your host system (into directory *oberon-risc-emu*), convert them to to Oberon format using the command **dos2oberon** as shown above, start the Oberon emulator on your host system, click on the *PCLink1.Run* link in the *System.Tool* viewer within Oberon, and execute the following command on the command shell of your host system (example shown for Linux or MacOS):
 
      cd oberon-risc-emu
      for x in *.Mod ; do ./pcreceive.sh $x ; sleep 1 ; done
      ./pcreceive.sh System.Tool
      ./pcreceive.sh Times24.Scn.Fnt
 
+Before you continue, open the just downloaded Experimental Oberon version of the **System.Tool** viewer in the system track, using the command
+
+    System.Open System.Tool
+
+so that you can directly access the compilations needed for Experimental Oberon in the right order. You can close the old *System.Tool* viewer.
+
 ------------------------------------------------------
 
 **STEP 8:** Recompile the Experimental ("new") Oberon version of the *linker* and *builder* on the "old" system (and still using the "old" compiler) and load them into main memory (of your currently running "old" Original Oberon system).
 
-    ORP.Compile Linker.Mod Builder.Mod ~            # compile the Experimental ("new") Oberon linker (using the "old" compiler)
-    System.Free Linker Builder ~                    # unload the old linker and builder (just in case they were running for some reason)
-    Linker.Link nonexistingfile ~                   # load the NEW linker into main memory
-    Builder.CreateBootTrack nonexistingfile ~       # load the (recompiled) builder into main memory
+    ORP.Compile Linker.Mod Builder.Mod ~     # compile the Experimental ("new") Oberon linker (using the "old" compiler)
+    System.Free Linker Builder ~             # unload the old linker and builder (just in case they were running for some reason)
+    Linker.Link nonexistingfile ~            # load the NEW linker into main memory
+    Builder.Load nonexistingfile ~           # load the (recompiled) builder into main memory
 
 You are now running the "new" Oberon linker (which uses in a "new" Oberon object file format) and builder under the "old" Oberon system. It is important that you compile them with the "old" Oberon compiler. Otherwise you couldn't run them here, as we are still running the Original ("old") Oberon system.
 
@@ -234,7 +254,7 @@ Do NOT reboot the system just yet!
 In the second *ORP.Compile* command above, be sure to specify "Modules.Mod" (without the '0' at the end)! This will generate a new inner core that is based on the Experimental ("new") Oberon object file format.
 
     Linker.Link Modules ~
-    Builder.CreateBootTrack Modules.bin ~
+    Builder.Load Modules ~    # load inner core (file Modules.bin) onto the boot area of the local disk
 
 You have now loaded an Experimental Oberon *inner core* onto the boot area of your system. Rebooting your system at this stage would fail, as all modules that depend on the inner core are still compiled in the Original Oberon version (and thus import module *Modules* with an old module key). To be able to reboot the Experimental Oberon system, we need to compile the outer core and the remaining modules required to start Experimental Oberon, as shown in the next step.
 
@@ -248,7 +268,7 @@ Do NOT reboot the system just yet!
      ORP.Compile Fonts.Mod Texts.Mod ~
      ORP.Compile Oberon.Mod/s ~
      ORP.Compile MenuViewers.Mod/s ~
-     ORP.Compile TextFrames.Mod/s ~             # for this line you'll need the new ORG
+     ORP.Compile TextFrames.Mod/s ~
      ORP.Compile System.Mod/s ~
      ORP.Compile Edit.Mod/s ~
      ORP.Compile Tools.Mod ~
@@ -296,6 +316,6 @@ You are now running Experimental Oberon.
 
 You can now compile any other modules that you may have on your system, to generate object files that are compatible with Experimental Oberon.
 
-If you haven't done so already, you can now delete the files *Modules0.Mod*, *Modules0.smb*, *Modules0.rsc* and the files *Linker0.Mod*, *Linker0.smb* and *Linker0.rsc*. These were only needed to bootstrap a slightly modified version of Original Oberon in steps 2-5, starting from an Original Oberon system.
+If you haven't done so already, you can now delete the files *Modules0.Mod* and *Linker0.Mod*. These were only needed to bootstrap a slightly modified version of Original Oberon in steps 2-5, starting from an Original Oberon system.
 
-You can also delete the files *Display.Mod*, *Display.smb* and *Display.rsc*. Module *Display* has been renamed to module *Raster* in Experimental Oberon, reflecting the fact that it now *only* contains the basic raster operations, but no longer the abstract data type *Display* (which is now exported by module *Viewers* and designates a *logical display area* in the sense defined by Experimental Oberon).
+You can also delete the files *Display.Mod*, *Display.smb* and *Display.rsc*. Module *Display* has been renamed to module *Raster* in Experimental Oberon, reflecting the fact that it now *only* contains the basic raster operations, but no longer the abstract data type *Frame*.

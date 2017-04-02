@@ -1,5 +1,5 @@
-MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 12.12.16*)
-  IMPORT Modules, Input, Raster, Fonts, Texts, Viewers, Oberon;
+MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 4.3.17*)
+  IMPORT Input, Raster, Viewers, Fonts, Texts, Oberon;
 
   CONST replace* = 0; insert* = 1; delete* = 2; unmark* = 3; (*message ids*)
     BS = 8X; TAB = 9X; CR = 0DX; DEL = 7FX; inf = 32767;
@@ -20,7 +20,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 12.12.16*)
     END;
 
     Frame* = POINTER TO FrameDesc;
-    FrameDesc* = RECORD (Viewers.ViewerDesc)
+    FrameDesc* = RECORD (Viewers.FrameDesc)
       text*: Texts.Text;
       org*: LONGINT;
       col*, lsp*: INTEGER;
@@ -35,13 +35,13 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 12.12.16*)
       pool: Line (*line pool to minimize heap usage*)
     END;
 
-    UpdateMsg* = RECORD (Viewers.Msg)
+    UpdateMsg* = RECORD (Viewers.FrameMsg)
       id*: INTEGER;       (*replace, insert, delete, unmark*)
       text*: Texts.Text;
       beg*, end*: LONGINT
     END;
 
-    CopyOverMsg* = RECORD (Viewers.Msg)
+    CopyOverMsg* = RECORD (Viewers.FrameMsg)
       text*: Texts.Text;
       beg*, end*: LONGINT
     END;
@@ -54,11 +54,13 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 12.12.16*)
     W, KW: Texts.Writer; (*keyboard writer*)
 
   PROCEDURE Min (i, j: INTEGER): INTEGER;
-  BEGIN IF i < j THEN j := i END; RETURN j
+  BEGIN IF i < j THEN j := i END ;
+    RETURN j
   END Min;
 
   PROCEDURE Max (i, j: INTEGER): INTEGER;
-  BEGIN IF i > j THEN j := i END; RETURN j
+  BEGIN IF i > j THEN j := i END ;
+    RETURN j
   END Max;
 
   PROCEDURE NewLine (F: Frame; VAR L: Line); (*reuse line from line pool if possible*)
@@ -99,7 +101,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 12.12.16*)
       IF X < CL + 3 THEN X := CL + 4 ELSIF X > CL + DW - 4 THEN X := CL + DW - 4 END
     END;
     IF Y < 6 THEN Y := 6 ELSIF Y > DH - 6 THEN Y := DH - 6 END;
-    Raster.CopyPattern(Raster.white, Raster.updown, X-4, Y-4, Raster.invert)
+    Raster.CopyPattern(Raster.white, Raster.updown, X-4, Y-4, 0, 0, Raster.invert)
   END FlipSM;
 
   PROCEDURE UpdateMark (F: Frame); (*in scroll bar*)
@@ -122,7 +124,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 12.12.16*)
   PROCEDURE SetChangeMark (F: Frame; on: BOOLEAN); (*in corner*)
   BEGIN
     IF F.H > menuH THEN
-      IF on THEN Raster.CopyPattern(Raster.white, Raster.block, F.X+F.W-12, F.Y+F.H-12, Raster.paint)
+      IF on THEN Raster.CopyPattern(Raster.white, Raster.block, F.X+F.W-12, F.Y+F.H-12, 0, 0, Raster.paint)
       ELSE Raster.ReplConst(F.col, F.X+F.W-12, F.Y+F.H-12, 8, 8, Raster.replace)
       END
     END
@@ -151,14 +153,14 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 12.12.16*)
 
   PROCEDURE DisplayLine (F: Frame; L: Line; (*pass 2*)
     VAR R: Texts.Reader; X, Y, topY, botY: INTEGER; len: LONGINT);
-    VAR patadr, NX, dx, x, y, w, h, t0, b0, y0: INTEGER;
+    VAR patadr, NX, dx, x, y, w, h, y0, t, b: INTEGER;
   BEGIN NX := F.X + F.W - F.right;
     WHILE (nextCh # CR) & (R.fnt # NIL) DO
       Fonts.GetPat(R.fnt, nextCh, dx, x, y, w, h, patadr);
       IF (X + x + w <= NX) & (h # 0) THEN y0 := Y + y;
-        IF y0 + h <= topY THEN t0 := 0 ELSIF y0 >= topY THEN t0 := h ELSE t0 := y0 + h - topY END;
-        IF y0 >= botY THEN b0 := 0 ELSIF y0 + h <= botY THEN b0 := h ELSE b0 := botY - y0 END;
-        IF t0 + b0 < h THEN Raster.CopyPattern1(R.col, patadr, X + x, y0, t0, b0, Raster.invert) END
+        IF y0 + h <= topY THEN t := 0 ELSIF y0 >= topY THEN t := h ELSE t := y0 + h - topY END;
+        IF y0 >= botY THEN b := 0 ELSIF y0 + h <= botY THEN b := h ELSE b := botY - y0 END;
+        IF t + b < h THEN Raster.CopyPattern(R.col, patadr, X + x, y0, t, b, Raster.invert) END
       END;
       X := X + dx; INC(len); Texts.Read(R, nextCh)
     END;
@@ -472,13 +474,12 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 12.12.16*)
   BEGIN LocateChar(F, X - F.X, Y - F.Y, loc); RETURN loc.pos
   END Pos;
 
-  (*------------------caret and selection, mouse tracking------------------------*)
+  (*------------------caret, selection, mouse tracking------------------------*)
 
   PROCEDURE FlipCaret (F: Frame);
   BEGIN
     IF (F.carloc.x < F.W) & (F.carloc.y >= 10) & (F.carloc.x + 12 < F.W) THEN
-      Raster.CopyPattern(Raster.white, Raster.hook,
-          F.X + F.carloc.x, F.Y + F.carloc.y - 10, Raster.invert)
+      Raster.CopyPattern(Raster.white, Raster.hook, F.X + F.carloc.x, F.Y + F.carloc.y - 10, 0, 0, Raster.invert)
     END
   END FlipCaret;
 
@@ -547,9 +548,12 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 12.12.16*)
     IF F.trailer.next # F.trailer THEN topY := F.Y + F.H - F.top; botY := F.Y + F.bot;
       IF F.hasSel THEN FlipSelection(F, F.selbeg, F.selend) END;
       LocateChar(F, X - F.X, Y - F.Y, loc);
-      F.selbeg := loc; start := loc.pos;
+      IF F.hasSel & (loc.pos = F.selbeg.pos) & (F.selend.pos = F.selbeg.pos + 1) THEN
+        LocateChar(F, F.left, Y - F.Y, F.selbeg)
+      ELSE F.selbeg := loc
+      END;
       INC(loc.pos); loc.x := loc.x + loc.dx; F.selend := loc;
-      FlipSelection(F, F.selbeg, F.selend); keysum := {};
+      FlipSelection(F, F.selbeg, F.selend); keysum := {}; start := F.selbeg.pos;
       REPEAT prev := loc.pos;
         Input.Mouse(keys, X, Y);
         keysum := keysum + keys;
@@ -608,9 +612,9 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 12.12.16*)
           ReplConst(Raster.white, F, F.X + F.left, F.Y + new.y - new.lin.dsr, new.lin.wid, 2, Raster.invert);
           old := new
         END
-       UNTIL keys = {};
-       ReplConst(Raster.white, F, F.X + F.left, F.Y + new.y - new.lin.dsr, new.lin.wid, 2, Raster.invert);
-       org := new.org
+      UNTIL keys = {};
+      ReplConst(Raster.white, F, F.X + F.left, F.Y + new.y - new.lin.dsr, new.lin.wid, 2, Raster.invert);
+      org := new.org
     ELSE org := 0
     END
   END TrackLine;
@@ -794,27 +798,6 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 12.12.16*)
   BEGIN M.id := op; M.text := T; M.beg := beg; M.end := end; Viewers.Broadcast(M)
   END NotifyDisplay;
 
-  PROCEDURE Call* (F: Frame; pos: LONGINT; new: BOOLEAN);
-    VAR S: Texts.Scanner; res: INTEGER;
-  BEGIN
-    Texts.OpenScanner(S, F.text, pos); Texts.Scan(S);
-    IF (S.class = Texts.Name) & (S.line = 0) THEN
-      Oberon.SetPar(F, F.text, pos + S.len); Oberon.Call(S.s, res);
-      IF res > 0 THEN
-        Texts.WriteString(W, "Call error: "); Texts.WriteString(W, Modules.importing);
-        IF res = 1 THEN Texts.WriteString(W, " module not found")
-        ELSIF res = 2 THEN Texts.WriteString(W, " bad version")
-        ELSIF res = 3 THEN Texts.WriteString(W, " imports ");
-          Texts.WriteString(W, Modules.imported); Texts.WriteString(W, " with bad key")
-        ELSIF res = 4 THEN Texts.WriteString(W, " corrupted obj file")
-        ELSIF res = 5 THEN Texts.WriteString(W, " command not found")
-        ELSIF res = 7 THEN Texts.WriteString(W, " insufficient space")
-        END;
-        Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
-      END
-    END
-  END Call;
-
   PROCEDURE Write* (F: Frame; ch: CHAR; fnt: Fonts.Font; col, voff: INTEGER);
     VAR buf: Texts.Buffer;
   BEGIN (*F.hasCar*)
@@ -902,12 +885,11 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 12.12.16*)
   PROCEDURE GetSelection* (F: Frame; VAR text: Texts.Text; VAR beg, end, time: LONGINT);
   BEGIN
     IF F.hasSel THEN
-      IF F.time > time THEN
+      IF F.text = text THEN
+        IF F.selbeg.pos < beg THEN beg := F.selbeg.pos END ; (*leftmost*)
+        IF F.time > time THEN end := F.selend.pos; time := F.time END (*last selected*)
+      ELSIF F.time > time THEN
         text := F.text; beg := F.selbeg.pos; end := F.selend.pos; time := F.time
-      ELSIF F.text = text THEN
-        IF (F.time < time) & (F.selbeg.pos < beg) THEN beg := F.selbeg.pos
-          ELSIF (F.time > time) & (F.selend.pos > end) THEN end := F.selend.pos; time := F.time
-        END
       END
     END
   END GetSelection;
@@ -918,7 +900,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 12.12.16*)
     IF M.id = replace THEN Replace(F, M.beg, M.end)
     ELSIF M.id = insert THEN Insert(F, M.beg, M.end)
     ELSIF M.id = delete THEN Delete(F, M.beg, M.end)
-    END;
+    END ;
     SetChangeMark(F, F.text.changed)
   END Update;
 
@@ -940,9 +922,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 12.12.16*)
           IF Y # Y0 THEN
             SetChangeMark(F, FALSE);
             RemoveMarks(F); Oberon.RemoveMarks(F.X, F.Y, F.W, F.H);
-            IF X < SR THEN Show(F, (F.Y + F.H - Y) * (F.text.len) DIV F.H)
-            ELSE Scroll(F, Y0 - Y)
-            END;
+            IF X < SR THEN Show(F, (F.Y + F.H - Y) * (F.text.len) DIV F.H) ELSE Scroll(F, Y0 - Y) END;
             Y0 := Y
           END;
           Input.Mouse(Keys, X, Y)
@@ -991,7 +971,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 12.12.16*)
         END
       ELSIF 1 IN Keys THEN (*MM: call*)
         TrackWord(F, X, Y, pos, keysum);
-        IF (pos >= 0) & ~(0 IN keysum) THEN Call(F, pos, 2 IN keysum) END
+        IF (pos >= 0) & ~(0 IN keysum) THEN Oberon.Activate(F, F.text, pos) END
       ELSIF 2 IN Keys THEN (*ML: set caret*)
         Viewers.PassFocus(Viewers.ThisViewer(F));
         TrackCaret(F, X, Y, keysum);
@@ -1018,26 +998,29 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.12.90 / 12.12.16*)
     END
   END Edit;
 
-  PROCEDURE Handle* (F: Viewers.Viewer; VAR M: Viewers.Msg);
+  PROCEDURE Handle* (F: Viewers.Frame; VAR M: Viewers.FrameMsg);
     VAR F1: Frame; buf: Texts.Buffer;
   BEGIN
     CASE F OF Frame:
       CASE M OF
       Viewers.ViewerMsg:
-        IF M.id = Viewers.restore THEN (*Restore(F)*) Modify(F, M.id, M.Y, M.H)
+        IF M.id = Viewers.restore THEN Modify(F, M.id, M.Y, M.H)
         ELSIF M.id = Viewers.suspend THEN Suspend(F)
         ELSIF M.id = Viewers.modify THEN Modify(F, M.id, M.Y, M.H)
         END |
       Viewers.InputMsg:
         IF M.id = Viewers.track THEN Edit(F, M.X, M.Y, M.keys)
-        ELSIF M.id = Viewers.consume THEN
-          IF F.hasCar THEN Write(F, M.ch, Oberon.CurFnt, Oberon.CurCol, Oberon.CurOff) END
+        ELSIF F.hasCar & (M.id = Viewers.consume) THEN
+          CASE M OF
+            Oberon.InputMsg: Write(F, M.ch, M.fnt, M.col, M.voff) |
+	    Viewers.InputMsg: Write(F, M.ch, Oberon.CurFnt, Oberon.CurCol, Oberon.CurOff)
+          END
         END |
       Viewers.ControlMsg:
         IF M.id = Viewers.defocus THEN Defocus(F)
         ELSIF M.id = Viewers.neutralize THEN Neutralize(F)
         END |
-      Viewers.CopyMsg: Copy(F, F1); M.V := F1 |
+      Viewers.CopyMsg: Copy(F, F1); M.F := F1 |
       Oberon.SelectionMsg: GetSelection(F, M.text, M.beg, M.end, M.time) |
       CopyOverMsg: CopyOver(F, M.text, M.beg, M.end) |
       UpdateMsg: IF F.text = M.text THEN Update(F, M) END

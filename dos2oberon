@@ -1,0 +1,49 @@
+#!/usr/bin/perl
+#
+# dos2oberon  -- convert a DOS file (CR + LF as line ending) to an Oberon file (only CR as line endings)
+#
+# Sample workflow:
+#   1) git pull; git --hard reset                (pull repository and update working directory)
+#   2) ./dos2oberon Sources/File.Mod File.Mod    (convert file to Oberon-style)
+#   3) ./pcreceive.sh File.Mod                   (import this file into Oberon)
+#
+#   Converting a file from Oberon-style (uses only CR as line endings) to DOS-style (uses CRLF as line
+#   endings) ensures that the file can be properly displayed on web sites such as www.github.com.
+#
+# See also:
+#   oberon2dos   (converts an Oberon file back to DOS format)
+#
+# Notes:
+#   CR = 13 (decimal) = 0D (hex) = \r (Perl) 
+#   LF = 10 (decimal) = 0A (hex) = \n (Perl)
+#   We use Perl, because on some host systems (e.g., MacOS), the corresponding sed command does not work
+#
+# Author: Andreas Pirklbauer
+#
+
+# quit unless we have the correct number of command line arguments
+$num_args = $#ARGV + 1;
+if ($num_args != 2) {
+    print "Usage: dos2oberon inputfile outputfile\n";
+    exit;
+}
+
+# get the two command line arguments
+$inputfile=$ARGV[0];
+$outputfile=$ARGV[1];
+
+open(FILE, "$inputfile") || die "inputfile not found";
+my @lines = <FILE>;
+close(FILE);
+
+my @newlines;
+foreach(@lines) {
+    # convert all CRLF (\r\n) to CR (\r) only, so we ONLY have CR in the file afterwards
+    $_ =~ s/\r\n/\r/g;
+    push(@newlines,$_);
+}
+
+open(FILE, ">$outputfile") || die "File not found";
+print FILE @newlines;
+close(FILE);
+

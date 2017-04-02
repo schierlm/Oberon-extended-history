@@ -1,4 +1,4 @@
-MODULE Sierpinski;  (*NW 15.1.13 / AP 12.12.16*)
+MODULE Sierpinski;  (*NW 15.1.13 / AP 5.1.17*)
   IMPORT Raster, Viewers, Oberon, MenuViewers, TextFrames;
 
   CONST Menu = "System.Close System.Copy System.Grow | System.Expand System.Clone";
@@ -66,7 +66,7 @@ MODULE Sierpinski;  (*NW 15.1.13 / AP 12.12.16*)
     IF i > 0 THEN D(i-1); NE; A(i-1); N; N; C(i-1); NW; D(i-1) END
   END SD;
 
-  PROCEDURE DrawSierpinski(F: Viewers.Viewer);
+  PROCEDURE DrawSierpinski(F: Viewers.Frame);
     VAR k, n, w, x0, y0: INTEGER;
   BEGIN; k := 0; d := 4;
     IF F.W < F.H THEN w := F.W ELSE w := F.H END ;
@@ -80,8 +80,8 @@ MODULE Sierpinski;  (*NW 15.1.13 / AP 12.12.16*)
     END
   END DrawSierpinski;
 
-  PROCEDURE Handler(F: Viewers.Viewer; VAR M: Viewers.Msg);
-    VAR F1: Viewers.Viewer;
+  PROCEDURE Handler(F: Viewers.Frame; VAR M: Viewers.FrameMsg);
+    VAR F1: Viewers.Frame;
   BEGIN
     IF M IS Viewers.InputMsg THEN
       IF M(Viewers.InputMsg).id = Viewers.track THEN
@@ -94,12 +94,12 @@ MODULE Sierpinski;  (*NW 15.1.13 / AP 12.12.16*)
     ELSIF M IS Viewers.ControlMsg THEN
       IF M(Viewers.ControlMsg).id = Viewers.neutralize THEN Oberon.RemoveMarks(F.X, F.Y, F.W, F.H) END
     ELSIF M IS Viewers.CopyMsg THEN
-       NEW(F1); F1^ := F^; M(Viewers.CopyMsg).V := F1
+      NEW(F1); F1^ := F^; M(Viewers.CopyMsg).F := F1
     END
   END Handler;
 
-  PROCEDURE New(): Viewers.Viewer;
-    VAR F: Viewers.Viewer;
+  PROCEDURE New(): Viewers.Frame;
+    VAR F: Viewers.Frame;
   BEGIN NEW(F); F.handle := Handler; RETURN F
   END New;
 

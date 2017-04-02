@@ -1,4 +1,4 @@
-MODULE ORG; (* NW  18.4.2016 / 17.9.2016 / AP 10.10.2016  code generator in Oberon-07 for RISC*)
+MODULE ORG; (* NW  18.4.2016 / 17.9.2016 / AP 27.12.2016  code generator in Oberon-07 for RISC*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser OSAP; result in array "code".
@@ -344,14 +344,14 @@ MODULE ORG; (* NW  18.4.2016 / 17.9.2016 / AP 10.10.2016  code generator in Ober
     IF s <= 24 THEN s := 32 ELSIF s <= 56 THEN s := 64 ELSIF s <= 120 THEN s := 128
     ELSE s := (s+263) DIV 256 * 256
     END ;
+    data[dcw] := -1; INC(dcw); FindFlds(ORB.Proc, T, 0, dcw); dc := dcw*4; (*procedure variable fields*)
     T.len := dc; data[dcw] := s; INC(dcw);  (*len used as address*)
     k := T.nofpar;   (*extension level!*)
     IF k > 3 THEN ORS.Mark("ext level too large")
     ELSE Q(T, dcw);
       WHILE k < 3 DO data[dcw] := -1; INC(dcw); INC(k) END
     END ;
-    FindFlds(ORB.Pointer, T, 0, dcw); data[dcw] := -1; INC(dcw);
-    FindFlds(ORB.Proc, T, 0, dcw); data[dcw] := -1; INC(dcw); tdx := dcw; dc := dcw*4;
+    FindFlds(ORB.Pointer, T, 0, dcw); data[dcw] := -1; INC(dcw); tdx := dcw; dc := dcw*4; (*pointer fields*)
     IF tdx >= maxTD THEN ORS.Mark("too many record types"); tdx := 0 END
   END BuildTD;
 

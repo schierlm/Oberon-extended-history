@@ -1,15 +1,13 @@
-MODULE Raster;  (*NW 5.11.2013 / 3.7.2016 / AP 12.12.16*)
+MODULE Raster; (*NW 5.11.2013 / 3.7.2016 / AP 12.12.16*)
   IMPORT SYSTEM;
 
-  CONST black* = 0; white* = 1;  (*black = background*)
-    replace* = 0; paint* = 1; invert* = 2;  (*modes*)
-    base = 0E7F00H;  (*adr of 1024 x 768 pixel, monocolor display frame*)
+  CONST black* = 0; white* = 1; (*black = background*)
+    replace* = 0; paint* = 1; invert* = 2; (*modes*)
+    base = 0E7F00H; (*adr of 1024 x 768 pixel, monocolor display frame*)
 
   VAR Base*, Width*, Height*: INTEGER;
     arrow*, star*, hook*, updown*, block*, cross*, grey*: INTEGER;
     (*a pattern is an array of bytes; the first is its width (< 32), the second its height, the rest the raster*)
-
-  (* raster ops *)
     
   PROCEDURE Dot*(col, x, y, mode: INTEGER);
     VAR a: INTEGER; u, s: SET;
@@ -57,14 +55,13 @@ MODULE Raster;  (*NW 5.11.2013 / 3.7.2016 / AP 12.12.16*)
     END
   END ReplConst;
 
-  PROCEDURE CopyPattern1*(col, patadr, x, y, top, bot, mode: INTEGER);  (*with top and bottom margins*)
+  PROCEDURE CopyPattern*(col, patadr, x, y, top, bot, mode: INTEGER); (*only for modes = paint, invert*)
     VAR a, a0, pwd: INTEGER;
       w, h, pbt: BYTE; pix: SET;
   BEGIN (*0 <= top < h & 0 <= bot < h & top + bot < h*)
     SYSTEM.GET(patadr, w); SYSTEM.GET(patadr+1, h); INC(patadr, 2 + bot*((w + 7) DIV 8));
     a := base + (x DIV 32)*4 + (y + bot)*128; h := h - top - bot;
-    FOR a0 := a TO a + (h-1)*128 BY 128 DO
-      (*build pattern line; w < 32*)
+    FOR a0 := a TO a + (h-1)*128 BY 128 DO (*build pattern line; w < 32*)
       SYSTEM.GET(patadr, pbt); INC(patadr); pwd := pbt;
       IF w > 8 THEN SYSTEM.GET(patadr, pbt); INC(patadr); pwd := pbt*100H + pwd;
         IF w > 16 THEN SYSTEM.GET(patadr, pbt); INC(patadr); pwd := pbt*10000H + pwd;
@@ -82,10 +79,6 @@ MODULE Raster;  (*NW 5.11.2013 / 3.7.2016 / AP 12.12.16*)
         END
       END
     END
-  END CopyPattern1;
-
-  PROCEDURE CopyPattern*(col, patadr, x, y, mode: INTEGER);  (*only for modes = paint, invert*)
-  BEGIN CopyPattern1(col, patadr, x, y, 0, 0, mode)
   END CopyPattern;
 
   PROCEDURE CopyBlock*(sx, sy, w, h, dx, dy, mode: INTEGER); (*only for mode = replace*)
@@ -98,7 +91,7 @@ MODULE Raster;  (*NW 5.11.2013 / 3.7.2016 / AP 12.12.16*)
     u0 := sx DIV 32; u1 := sx MOD 32; u2 := (sx+w) DIV 32; u3 := (sx+w) MOD 32;
     v0 := dx DIV 32; v1 := dx MOD 32; v2 := (dx+w) DIV 32; v3 := (dx+w) MOD 32;
     sa := base + u0*4 + sy*128; da := base + v0*4 + dy*128;
-    d := da - sa; n := u1 - v1;   (*displacement in words and bits*)
+    d := da - sa; n := u1 - v1; (*displacement in words and bits*)
     len := (u2 - u0) * 4;
     m0 := {v1 .. 31}; m2 := {v3 .. 31}; m3 := m0 / m2;
     IF d >= 0 THEN (*copy up, scan down*) sa0 := sa + (h-1)*128; end := sa-128; step := -128
@@ -145,9 +138,9 @@ MODULE Raster;  (*NW 5.11.2013 / 3.7.2016 / AP 12.12.16*)
   END CopyBlock;
 
   PROCEDURE ReplPattern*(col, patadr, x, y, w, h, mode: INTEGER);
-  (* pattern width = 32, fixed; pattern starts at patadr+4, for mode = invert only *)
+  (*pattern width = 32, fixed; pattern starts at patadr+4, for mode = invert only*)
     VAR al, ar, a0, a1: INTEGER;
-      pta0, pta1: INTEGER;  (*pattern addresses*)
+      pta0, pta1: INTEGER; (*pattern addresses*)
       ph: BYTE;
       left, right, mid, pix, pixl, pixr, ptw: SET;
   BEGIN al := base + y*128; SYSTEM.GET(patadr+1, ph);

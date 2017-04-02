@@ -1,11 +1,11 @@
-MODULE Checkers;  (*NW 4.10.90 / 10.3.13 / AP 12.12.16*)
+MODULE Checkers;  (*NW 4.10.90 / 10.3.13 / AP 5.1.17*)
   IMPORT SYSTEM, Raster, Viewers, Oberon, MenuViewers, TextFrames;
 
   CONST Menu = "System.Close System.Copy System.Grow | System.Expand System.Clone";
 
-  TYPE Viewer = POINTER TO ViewerDesc;
+  TYPE Frame = POINTER TO FrameDesc;
 
-    ViewerDesc = RECORD (Viewers.ViewerDesc)
+    FrameDesc = RECORD (Viewers.FrameDesc)
         col: INTEGER
       END ;
 
@@ -13,21 +13,21 @@ MODULE Checkers;  (*NW 4.10.90 / 10.3.13 / AP 12.12.16*)
     checks: INTEGER;
     pat: ARRAY 17 OF INTEGER;
 
-  PROCEDURE Restore(F: Viewer);
+  PROCEDURE Restore(F: Frame);
   BEGIN Oberon.RemoveMarks(F.X, F.Y, F.W, F.H);
     Raster.ReplConst(Raster.black, F.X, F.Y, F.W, F.H, Raster.replace); (*clear*)
     Raster.ReplPattern(F.col, checks, F.X+1, F.Y, F.W-1, F.H-1, Raster.paint)
   END Restore;
 
-  PROCEDURE Handle(G: Viewers.Viewer; VAR M: Viewers.Msg);
-    VAR G1: Viewer;
+  PROCEDURE Handle(G: Viewers.Frame; VAR M: Viewers.FrameMsg);
+    VAR G1: Frame;
   BEGIN
-    CASE G OF Viewer:
+    CASE G OF Frame:
       CASE M OF
       Viewers.InputMsg:
         IF M.id = Viewers.track THEN Oberon.DrawMouseArrow(M.X, M.Y) END |
       Viewers.CopyMsg:
-        Oberon.RemoveMarks(G.X, G.Y, G.W, G.H); NEW(G1); G1^ := G^; M.V := G1 |
+        Oberon.RemoveMarks(G.X, G.Y, G.W, G.H); NEW(G1); G1^ := G^; M.F := G1 |
       Viewers.ViewerMsg:
         IF M.id = Viewers.restore THEN G.Y := M.Y; G.H := M.H; Restore(G)
         ELSIF M.id = Viewers.modify THEN
@@ -38,7 +38,7 @@ MODULE Checkers;  (*NW 4.10.90 / 10.3.13 / AP 12.12.16*)
   END Handle;
 
   PROCEDURE Open*;
-    VAR F: Viewer; V: Viewers.Viewer; X, Y: INTEGER;
+    VAR F: Frame; V: Viewers.Viewer; X, Y: INTEGER;
   BEGIN NEW(F); F.col := 14; F.handle := Handle;
     Oberon.AllocateUserViewer(Oberon.Par.vwr.X, X, Y);
     V := MenuViewers.New(

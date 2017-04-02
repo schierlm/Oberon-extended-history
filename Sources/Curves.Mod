@@ -21,7 +21,7 @@ MODULE Curves;  (*NW 8.11.90 / 18.4.2013 / AP 12.12.16*)
   BEGIN DEC(x, 3); DEC(y, 3);
     IF (x >= f.X) & (x+7 < f.X1) & (y >= f.Y) & (y+7 < f.Y1) THEN
       IF col = Raster.black THEN Raster.ReplConst(Raster.black, x, y, 7, 7, Raster.replace)
-      ELSE Raster.CopyPattern(col, GraphicFrames.tack, x, y, Raster.replace)
+      ELSE Raster.CopyPattern(col, GraphicFrames.tack, x, y, 0, 0, Raster.replace)
       END
     END
   END mark;

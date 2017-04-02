@@ -1,4 +1,4 @@
-MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 1.11.16 - Original Oberon version*)
+MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 11.3.17 - Original Oberon version*)
  (*
   * Linker0.Mod - special version of the linker that is used only to bootstrap Experimental Oberon
   *
@@ -17,17 +17,18 @@ MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 
   *
   *)
   IMPORT SYSTEM, Files, Modules, Kernel, Texts, Oberon;
-  CONST versionkey = 1X; MT = 12; DescSize = 88;
+  CONST versionkey = 1X; MT = 12; DescSize = 84;
 
   TYPE Module* = POINTER TO ModDesc;
     Command* = PROCEDURE;
     ModuleName* = ARRAY 32 OF CHAR;
 
-    ModDesc* = RECORD (*copied here from Modules0 so we don't depend on the new symbol filee of module Modules*)
+    ModDesc* = RECORD (*copied here from Modules0 so we don't depend on the new symbol file of module Modules*)
         name*: ModuleName;
         next*: Module;
         key*, num*, size*, refcnt*: INTEGER;
-        data*, var*, str*, code*, imp*, cmd*, ent*, ptr*, pvar*: INTEGER  (*addresses*)
+        data*, code*, imp*, cmd*, ent*, ptr*, pvar*: INTEGER;  (*addresses*)
+        selected*, hidden*: BOOLEAN
       END ;
 
   VAR binroot, M: Module;
@@ -37,7 +38,7 @@ MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 
     W: Texts.Writer;
     Mlist: ARRAY 16 OF ModuleName;
  
-   PROCEDURE ThisFile (name: ARRAY OF CHAR): Files.File;
+  PROCEDURE ThisFile (name: ARRAY OF CHAR): Files.File;
     VAR i: INTEGER;
       filename: ModuleName;
   BEGIN i := 0;
@@ -217,8 +218,7 @@ MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 
   END LinkOne;
 
   PROCEDURE Link*;
-    VAR T: Texts.Text;
-      S: Texts.Scanner;
+    VAR S: Texts.Scanner;
       F: Files.File;  R: Files.Rider;
       M, p : Module;
       Lname : ModuleName;
@@ -232,55 +232,53 @@ MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 
     Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos);
     Texts.Scan(S);
     IF S.class = Texts.Name THEN
-        NEW(T); Texts.Open(T, S.s);
-        Texts.WriteString(W, S.s); 
-        F:= ThisFile(S.s);
-        IF F # NIL THEN (*LinkOne this module*)
-          Texts.WriteString(W, "  binary buffer at "); Texts.WriteHex(W, binStart);   Texts.WriteLn(W);
-          zero(Lname);
-          i := 0;
-          WHILE (S.s[i] # 0X ) & (i < LEN(Lname)) & (i < LEN(S.s)) DO Lname[i] := S.s[i]; INC(i) END;
-          LinkOne(Lname, M);
-          SYSTEM.PUT(binStart + 20,SYSTEM.VAL(INTEGER,binroot) - binStart );
-          SYSTEM.PUT(binStart + 252, 12345678H);   (*a fingerprint*)
-          p := SYSTEM.VAL(Module,binroot);
-          F := ThisBinFile(p.name);
-          WHILE p # NIL DO  (*fix up module chain of pointers*)   Texts.WriteString(W, "    ");
-            Texts.WriteString(W, p.name); Texts.WriteString(W, " at "); Texts.WriteHex(W, p.data);
-            Texts.WriteString(W, " ("); Texts.WriteHex(W, p.data - binStart); Texts.WriteString(W, ") ");
-            Texts.WriteHex(W, p.num);  Texts.WriteLn(W);
-            M := p; p := p.next;
-            IF M.next # NIL THEN
-              M.next := SYSTEM.VAL(Module, SYSTEM.VAL(INTEGER, M.next) - binStart)
-            END;
-            M.data := M.data - binStart;
-            M.code := M.code - binStart;
-            i := M.imp;
-            WHILE i < M.cmd DO SYSTEM.GET(i, v); SYSTEM.PUT(i, v - binStart); INC(i, 4) END ;
-            M.imp := M.imp - binStart;
-            M.cmd := M.cmd - binStart;
-            M.ent := M.ent - binStart;
-            M.ptr := M.ptr - binStart ; 
-            SYSTEM.PUT(binStart + 20H + (4*M.num), M.data) 
-          END ;
-          i := binStart;
-          Files.Set(R, F, 0); 
-          SYSTEM.PUT(binStart + 16, binAllocPtr - binStart);   (*size of linked binary file*)
-          SYSTEM.PUT(binStart + 24, 40000H);   (*limit / heapOrg*) 
-          SYSTEM.GET(binStart, v);
-          SYSTEM.PUT(binStart, 0E7H * 1000000H + (v DIV 4) - 1);   (*branch to module start routine*)
-          WHILE i < binAllocPtr DO SYSTEM.GET(i, v); Files.WriteInt(R, v); INC(i, 4) END;
-          Files.Register(F);
-          Texts.WriteString(W, "    "); Texts.WriteString(W, S.s); Texts.WriteString(W, ".bin");
-          Texts.WriteString(W, " binary written "); Texts.WriteInt(W, Files.Length(F), 6);
-          Texts.WriteString(W, " bytes"); Texts.WriteLn(W)
-        ELSE Texts.WriteString(W, " (not found)"); Texts.WriteLn(W)
-        END 
-   END ;
-   Texts.Append(Oberon.Log, W.buf) 
+      Texts.WriteString(W, S.s); F:= ThisFile(S.s);
+      IF F # NIL THEN (*LinkOne this module*)
+        Texts.WriteString(W, "  binary buffer at "); Texts.WriteHex(W, binStart);   Texts.WriteLn(W);
+        zero(Lname);
+        i := 0;
+        WHILE (S.s[i] # 0X ) & (i < LEN(Lname)) & (i < LEN(S.s)) DO Lname[i] := S.s[i]; INC(i) END;
+        LinkOne(Lname, M);
+        SYSTEM.PUT(binStart + 20,SYSTEM.VAL(INTEGER,binroot) - binStart );
+        SYSTEM.PUT(binStart + 252, 12345678H);   (*a fingerprint*)
+        p := SYSTEM.VAL(Module,binroot);
+        F := ThisBinFile(p.name);
+        WHILE p # NIL DO  (*fix up module chain of pointers*)   Texts.WriteString(W, "    ");
+          Texts.WriteString(W, p.name); Texts.WriteString(W, " at "); Texts.WriteHex(W, p.data);
+          Texts.WriteString(W, " ("); Texts.WriteHex(W, p.data - binStart); Texts.WriteString(W, ") ");
+          Texts.WriteHex(W, p.num);  Texts.WriteLn(W);
+          M := p; p := p.next;
+          IF M.next # NIL THEN
+            M.next := SYSTEM.VAL(Module, SYSTEM.VAL(INTEGER, M.next) - binStart)
+          END;
+          M.data := M.data - binStart;
+          M.code := M.code - binStart;
+          i := M.imp;
+          WHILE i < M.cmd DO SYSTEM.GET(i, v); SYSTEM.PUT(i, v - binStart); INC(i, 4) END ;
+          M.imp := M.imp - binStart;
+          M.cmd := M.cmd - binStart;
+          M.ent := M.ent - binStart;
+          M.ptr := M.ptr - binStart ; 
+          SYSTEM.PUT(binStart + 20H + (4*M.num), M.data) 
+        END ;
+        i := binStart;
+        Files.Set(R, F, 0); 
+        SYSTEM.PUT(binStart + 16, binAllocPtr - binStart);   (*size of linked binary file*)
+        SYSTEM.PUT(binStart + 24, 40000H);   (*limit / heapOrg*) 
+        SYSTEM.GET(binStart, v);
+        SYSTEM.PUT(binStart, 0E7H * 1000000H + (v DIV 4) - 1);   (*branch to module start routine*)
+        WHILE i < binAllocPtr DO SYSTEM.GET(i, v); Files.WriteInt(R, v); INC(i, 4) END;
+        Files.Register(F);
+        Texts.WriteString(W, "    "); Texts.WriteString(W, S.s); Texts.WriteString(W, ".bin");
+        Texts.WriteString(W, " binary written "); Texts.WriteInt(W, Files.Length(F), 6);
+        Texts.WriteString(W, " bytes"); Texts.WriteLn(W)
+      ELSE Texts.WriteString(W, " (not found)"); Texts.WriteLn(W)
+      END 
+    END ;
+    Texts.Append(Oberon.Log, W.buf) 
   END Link;
 
 BEGIN 
-  Texts.OpenWriter(W); Texts.WriteString(W, "OR Linker CP 22.05.14 / AP 1.1.16");
+  Texts.OpenWriter(W); Texts.WriteString(W, "OR Linker CP 22.05.14 / AP 11.3.17");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
 END Linker.

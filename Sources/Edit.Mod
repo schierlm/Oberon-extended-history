@@ -1,4 +1,4 @@
-MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 12.12.90 / 23.6.16*)
+MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 12.12.90 / 5.1.17*)
   IMPORT Files, Fonts, Texts, Viewers, Oberon, MenuViewers, TextFrames;
 
   CONST CR = 0DX; maxlen = 32;
@@ -197,7 +197,7 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 12.12.90 / 23.6.16*)
   END Locate;
 
   PROCEDURE Recall*;
-    VAR Menu, Main: Viewers.Viewer;
+    VAR Menu, Main: Viewers.Frame;
       buf: Texts.Buffer;
       V: Viewers.Viewer;
       pos: LONGINT;

@@ -1,4 +1,4 @@
-MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 12.12.16*)
+MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 20.3.17*)
   IMPORT SYSTEM, Raster, Viewers, Texts, Oberon, MenuViewers, TextFrames;
 
   CONST Menu = "Stars.Close System.Copy System.Grow Stars.Step Stars.Run Stars.Stop | System.Expand System.Clone";
@@ -8,15 +8,15 @@ MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 12.12.16*)
 
   TYPE Frame = POINTER TO FrameDesc;
     Pos = RECORD x, y, dx, dy: INTEGER END ;
-    FrameDesc = RECORD (Viewers.ViewerDesc) s: ARRAY N OF Pos END ;
-    RestoreMsg = RECORD (Viewers.Msg) END ;
-    StepMsg = RECORD (Viewers.Msg) END ;
+    FrameDesc = RECORD (Viewers.FrameDesc) s: ARRAY N OF Pos END ;
+    RestoreMsg = RECORD (Viewers.FrameMsg) END ;
+    StepMsg = RECORD (Viewers.FrameMsg) END ;
 
   VAR T: Oberon.Task;
     W: Texts.Writer;
 
   PROCEDURE Draw(x, y: INTEGER);
-  BEGIN Raster.CopyPattern(Raster.white, Raster.star, x, y, Raster.invert)
+  BEGIN Raster.CopyPattern(Raster.white, Raster.star, x, y, 0, 0, Raster.invert)
   END Draw;
 
   PROCEDURE Restore(F: Frame);
@@ -47,7 +47,7 @@ MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 12.12.16*)
     WHILE i < N DO Move(F, F.s[i]); INC(i) END
   END Steps;
 
-  PROCEDURE Handle(F: Viewers.Viewer; VAR M: Viewers.Msg);
+  PROCEDURE Handle(F: Viewers.Frame; VAR M: Viewers.FrameMsg);
     VAR F1: Frame;
   BEGIN
     CASE F OF Frame:
@@ -56,9 +56,9 @@ MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 12.12.16*)
           IF M(Viewers.InputMsg).id = Viewers.track THEN
             Oberon.DrawMouseArrow(M(Viewers.InputMsg).X, M(Viewers.InputMsg).Y)
           END
-      | StepMsg: Steps(F);
+      | StepMsg: Steps(F)
       | RestoreMsg: Restore(F)
-      | Viewers.CopyMsg: Oberon.Remove(T); NEW(F1); F1^ := F^; M.V := F1
+      | Viewers.CopyMsg: Oberon.Remove(T); NEW(F1); F1^ := F^; M.F := F1
       | Viewers.ViewerMsg:
           IF M.id = Viewers.restore THEN Restore(F) 
           ELSIF M.id = Viewers.modify THEN
@@ -94,8 +94,10 @@ MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 12.12.16*)
   END Stop;
 
   PROCEDURE Close*;
+    VAR V: Viewers.Viewer;
   BEGIN
-    IF Oberon.Par.vwr.dsc = Oberon.Par.frame THEN Stop; Viewers.Close(Oberon.Par.vwr) END
+    IF Oberon.Par.frame = Oberon.Par.vwr.dsc THEN V := Oberon.Par.vwr ELSE V := Oberon.MarkedViewer() END;
+    Stop; Viewers.Close(V)
   END Close;
 
   PROCEDURE Step1;

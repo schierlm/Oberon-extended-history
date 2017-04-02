@@ -1,6 +1,6 @@
-MODULE Modules; (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 12.12.90 / 12.12.16*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 12.12.90 / 3.4.17*)
   IMPORT SYSTEM, Kernel, Files;
-  CONST versionkey = 1X; MT = 12; DescSize = 88;
+  CONST versionkey = 1X; MT = 12; DescSize = 84;
 
   TYPE Module* = POINTER TO ModDesc;
     Command* = PROCEDURE;
@@ -10,7 +10,8 @@ MODULE Modules; (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 12.12.90 
         name*: ModuleName;
         next*: Module;
         key*, num*, size*, refcnt*: INTEGER;
-        data*, var*, str*, code*, imp*, cmd*, ent*, ptr*, pvar*: INTEGER (*addresses*)
+        data*, code*, imp*, cmd*, ent*, ptr*, pvar*: INTEGER;  (*addresses*)
+        selected*, hidden*: BOOLEAN
       END ;
 
   VAR root*, M: Module;
@@ -31,7 +32,7 @@ MODULE Modules; (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 12.12.90 
   BEGIN res := n; importing := name
   END error;
 
-  PROCEDURE CheckName(s: ARRAY OF CHAR);
+  PROCEDURE check(s: ARRAY OF CHAR);
     VAR i: INTEGER; ch: CHAR;
   BEGIN ch := s[0]; res := 1; i := 1;
     IF (ch >= "A") & (ch <= "Z") OR (ch >= "a") & (ch <= "z") THEN
@@ -40,7 +41,7 @@ MODULE Modules; (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 12.12.90 
         OR (ch >= "a") & (ch <= "z") OR (ch = ".")) OR (i = 32);
       IF (i < 32) & (ch = 0X) THEN res := 0 END
     END
-  END CheckName;
+  END check;
 
   PROCEDURE Load*(name: ARRAY OF CHAR; VAR newmod: Module);
     (*search module in list; if not found, load module.
@@ -48,7 +49,7 @@ MODULE Modules; (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 12.12.90 
       res = 4: bad file version; res = 5: corrupted file; res = 7: no space*)
     VAR mod, impmod: Module;
       i, n, key, impkey, mno, nofimps, size: INTEGER;
-      p, u, v, w: INTEGER; (*addresses*)
+      p, u, v, w: INTEGER;  (*addresses*)
       ch: CHAR;
       body: Command;
       fixorgP, fixorgD, fixorgT: INTEGER;
@@ -59,13 +60,13 @@ MODULE Modules; (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 12.12.90 
   BEGIN mod := root; res := 0; nofimps := 0;
     WHILE (mod # NIL) & (name # mod.name) DO mod := mod.next END ;
     IF mod = NIL THEN (*load*)
-      CheckName(name);
+      check(name);
       IF res = 0 THEN F := ThisFile(name) ELSE F := NIL END ;
       IF F # NIL THEN
         Files.Set(R, F, 0); Files.ReadString(R, name1); Files.ReadInt(R, key); Files.Read(R, ch);
         Files.ReadInt(R, size); importing := name1;
         IF ch = versionkey THEN
-          Files.ReadString(R, impname); (*imports*)
+          Files.ReadString(R, impname);   (*imports*)
           WHILE (impname[0] # 0X) & (res = 0) DO
             Files.ReadInt(R, impkey);
             Load(impname, impmod); import[nofimps] := impmod; importing := name1;
@@ -95,40 +96,38 @@ MODULE Modules; (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 12.12.90 
       END ;
       IF res = 0 THEN (*read file*)
         INC(p, DescSize); (*allocate descriptor*)
-        mod.name := name; mod.key := key; mod.refcnt := 0;
-        mod.data := p; (*data*)
-        SYSTEM.PUT(mod.num * 4 + MTOrg, p); (*module table entry*)
+        mod.name := name; mod.key := key; mod.refcnt := 0; mod.selected := FALSE; mod.hidden := FALSE;
+        mod.data := p;  (*data*)
+        SYSTEM.PUT(mod.num * 4 + MTOrg, p);  (*module table entry*)
         Files.ReadInt(R, n);
-        WHILE n > 0 DO Files.ReadInt(R, w); SYSTEM.PUT(p, w); INC(p, 4); DEC(n, 4) END ; (*type descriptors*)
-        mod.var := p; (*variable space*)
+        WHILE n > 0 DO Files.ReadInt(R, w); SYSTEM.PUT(p, w); INC(p, 4); DEC(n, 4) END ;  (*type descriptors*)
         Files.ReadInt(R, n);
-        WHILE n > 0 DO SYSTEM.PUT(p, 0); INC(p, 4); DEC(n, 4) END ;
-        mod.str := p; (*strings*)
+        WHILE n > 0 DO SYSTEM.PUT(p, 0); INC(p, 4); DEC(n, 4) END ;  (*variable space*)
         Files.ReadInt(R, n);
-        WHILE n > 0 DO Files.Read(R, ch); SYSTEM.PUT(p, ch); INC(p); DEC(n) END ;
-        mod.code := p; (*program*)
+        WHILE n > 0 DO Files.Read(R, ch); SYSTEM.PUT(p, ch); INC(p); DEC(n) END ;   (*strings*)
+        mod.code := p;  (*program*)
         Files.ReadInt(R, n);
-        WHILE n > 0 DO Files.ReadInt(R, w); SYSTEM.PUT(p, w); INC(p, 4); DEC(n) END ; (*program code*)
-        mod.imp := p; (*copy imports*)
+        WHILE n > 0 DO Files.ReadInt(R, w); SYSTEM.PUT(p, w); INC(p, 4); DEC(n) END ;  (*program code*)
+        mod.imp := p;  (*copy imports*)
         i := 0;
         WHILE i < nofimps DO
           SYSTEM.PUT(p, import[i]); INC(p, 4); INC(i)
         END ;
-        mod.cmd := p; (*commands*) Files.Read(R, ch);
+        mod.cmd := p;  (*commands*) Files.Read(R, ch);
         WHILE ch # 0X DO
           REPEAT SYSTEM.PUT(p, ch); INC(p); Files.Read(R, ch) UNTIL ch = 0X;
           REPEAT SYSTEM.PUT(p, 0X); INC(p) UNTIL p MOD 4 = 0;
           Files.ReadInt(R, n); SYSTEM.PUT(p, n); INC(p, 4); Files.Read(R, ch)
         END ;
         REPEAT SYSTEM.PUT(p, 0X); INC(p) UNTIL p MOD 4 = 0;
-        mod.ent := p; (*entries*)
+        mod.ent := p;  (*entries*)
         Files.ReadInt(R, n);
         WHILE n > 0 DO Files.ReadInt(R, w); SYSTEM.PUT(p, w); INC(p, 4); DEC(n) END ;
-        mod.ptr := p; (*pointer references*)
+        mod.ptr := p;  (*pointer references*)
         Files.ReadInt(R, w);
         WHILE w >= 0 DO SYSTEM.PUT(p, mod.data + w); INC(p, 4); Files.ReadInt(R, w) END ;
         SYSTEM.PUT(p, 0); INC(p, 4);
-        mod.pvar := p; (*procedure variable references*)
+        mod.pvar := p;  (*procedure variable references*)
         Files.ReadInt(R, w);
         WHILE w >= 0 DO SYSTEM.PUT(p, mod.data + w); INC(p, 4); Files.ReadInt(R, w) END ;
         SYSTEM.PUT(p, 0); INC(p, 4);
@@ -183,7 +182,7 @@ MODULE Modules; (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 12.12.90 
           END ;
           SYSTEM.PUT(adr, inst); adr := adr - disp*4
         END ;
-        body (*initialize module*)
+        body   (*initialize module*)
       ELSIF res = 3 THEN importing := name;
         WHILE nofimps > 0 DO DEC(nofimps); DEC(import[nofimps].refcnt) END
       END
@@ -208,56 +207,162 @@ MODULE Modules; (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 12.12.90 
     RETURN SYSTEM.VAL(Command, w)
   END ThisCommand;
 
-  PROCEDURE Check*(mod: Module; VAR res: INTEGER); (*type and procedure references*)
-    VAR M: Module; pref, pvadr, r: LONGINT;
-  BEGIN (*mod # NIL*) M := root;
-    WHILE M # NIL DO
-      IF (M # mod) & (M.name[0] # 0X) THEN Kernel.Mark(M.ptr) END ;
-      M := M.next
+  PROCEDURE Select*(mod: Module; on: BOOLEAN);
+  BEGIN mod.selected := on
+  END Select;
+
+  PROCEDURE chkmod(x: LONGINT; VAR continue: BOOLEAN): INTEGER; (*check whether x references module M*)
+    VAR i: INTEGER;
+  BEGIN IF (M.name[0] # 0X) & (M.data <= x) & (x < M.imp) THEN continue := FALSE; i := 1 ELSE i := 0 END ;
+    RETURN i
+  END chkmod;
+
+  PROCEDURE chksel(x: LONGINT; VAR continue: BOOLEAN): INTEGER; (*check whether x references selected modules*)
+    VAR mod: Module; i: INTEGER;
+  BEGIN mod := root; i := 0;
+    WHILE (mod # NIL) & (i = 0) DO
+      IF mod.selected & (mod.name[0] # 0X) & (mod.data <= x) & (x < mod.imp) THEN continue := FALSE; i := 1 END ;
+      mod := mod.next
     END ;
-    Kernel.Check(mod.data, mod.var, mod.code, mod.imp, res); (*dynamic refs*)
-    IF res = 0 THEN M := root;
-      WHILE (M # NIL) & (res = 0) DO (*static refs*)
-        IF (M # mod) & (M.name[0] # 0X) THEN
-          pref := M.pvar; SYSTEM.GET(pref, pvadr);
-          WHILE pvadr # 0 DO (*procedure variables*) SYSTEM.GET(pvadr, r);
-            IF (mod.code <= r) & (r < mod.imp) THEN res := 3 END ;
+    RETURN i
+  END chksel;
+
+  PROCEDURE Check*(mod: Module; VAR res: INTEGER); (*check references to mod # NIL or to selected modules*)
+    VAR m: Module; pref, pvadr, r: LONGINT; r0, r1: INTEGER; continue: BOOLEAN;
+  BEGIN m := root;
+    WHILE m # NIL DO (*mark dynamic records reachable by all other loaded modules*)
+      IF (m.name[0] # 0X) & ((mod = NIL) & (~m.selected) OR (mod # NIL) & (m # mod)) THEN Kernel.Mark(m.ptr) END ;
+      m := m.next
+    END ;
+    IF mod # NIL THEN M := mod; Kernel.Scan(chkmod, chkmod, r0, r1) ELSE Kernel.Scan(chksel, chksel, r0, r1) END ;
+    IF r0 > 0 THEN res := 1 ELSIF r1 > 0 THEN res := 2
+    ELSE res := 0; m := root; continue := TRUE;
+      WHILE continue & (m # NIL) DO
+        IF (m.name[0] # 0X) & ((mod = NIL) & (~m.selected) OR (mod # NIL) & (m # mod)) THEN
+          pref := m.pvar; SYSTEM.GET(pref, pvadr);
+          WHILE continue & (pvadr # 0) DO SYSTEM.GET(pvadr, r); (*static procedure references*)
+            IF (mod # NIL) & (chkmod(r, continue) > 0) OR (mod = NIL) & (chksel(r, continue) > 0) THEN res := 3 END ;
             INC(pref, 4); SYSTEM.GET(pref, pvadr)
           END
         END ;
-        M := M.next
+        m := m.next
       END
     END
   END Check;
 
+  PROCEDURE Unload(mod: Module); (*from memory*)
+    VAR imp: Module; p, q: INTEGER;
+  BEGIN mod.name[0] := 0X; mod.hidden := FALSE; p := mod.imp; q := mod.cmd;
+    WHILE p < q DO SYSTEM.GET(p, imp); DEC(imp.refcnt); INC(p, 4) END
+  END Unload;
+
+  PROCEDURE Hide(mod: Module); (*from module list*)
+  BEGIN mod.name[0] := "*"; mod.hidden := TRUE
+  END Hide;
+
+  PROCEDURE FreeSel(VAR res: INTEGER);
+    VAR m, mod, imp: Module; p, q, impcnt: INTEGER; hasSel, hasUnsel: BOOLEAN;
+  BEGIN mod := root; res := 0; hasSel := FALSE; hasUnsel := FALSE;
+    WHILE (mod # NIL) & (res = 0) DO
+      IF mod.name[0] # 0X THEN
+        IF mod.selected THEN hasSel := TRUE;
+          IF mod.refcnt > 0 THEN m := root; impcnt := 0;
+            WHILE m # NIL DO (*count clients inside selected modules*)
+              IF m.selected & (m.name[0] # 0X) THEN p := m.imp; q := m.cmd;
+                WHILE p < q DO SYSTEM.GET(p, imp); INC(p, 4);
+                  IF imp = mod THEN INC(impcnt) END
+                END
+              END ;
+              m := m.next
+            END ;
+            IF mod.refcnt # impcnt THEN res := 4 END (*outside clients exist*)
+          END
+        ELSE hasUnsel := TRUE
+        END
+      END ;
+      mod := mod.next
+    END ;
+    IF hasSel & (res = 0) THEN mod := root;
+      IF hasUnsel THEN Check(NIL, res) END ;
+      WHILE mod # NIL DO
+        IF mod.selected & (mod.name[0] # 0X) THEN
+          IF res = 0 THEN mod.selected := FALSE; Unload(mod) ELSE Hide(mod) END
+        END ;
+        mod := mod.next
+      END
+    END
+  END FreeSel;
+
   PROCEDURE Free*(name: ARRAY OF CHAR);
-    (*unload module if no references exist in remaining modules, otherwise remove only from module list.
+    (*unload module(s) if no references exist in remaining modules; otherwise remove only from module list.
       res = 0: no clients or references; res = 1: types in use in dynamic objects; res = 2: procedures
       in use in dynamic objects; res = 3: procedures in use in static objects; res = 4: clients exist*)
-    VAR mod, imp: Module; p, q: INTEGER;
-  BEGIN mod := root; res := 0;
-    WHILE (mod # NIL) & (mod.name # name) DO mod := mod.next END ;
-    IF mod # NIL THEN
-      IF mod.refcnt = 0 THEN Check(mod, res);
-        IF res = 0 THEN (*unload*) mod.name[0] := 0X; p := mod.imp; q := mod.cmd;
-          WHILE p < q DO SYSTEM.GET(p, imp); DEC(imp.refcnt); INC(p, 4) END
-        ELSIF mod.name[0] < 80X THEN (*hide*) mod.name[0] := CHR(ORD(mod.name[0]) + 128)
+    VAR mod: Module;
+  BEGIN
+    IF name = "*" THEN FreeSel(res)
+    ELSE mod := root; res := 0;
+      WHILE (mod # NIL) & (mod.name # name) DO mod := mod.next END ;
+      IF (mod # NIL) & (mod.name[0] # 0X) THEN
+        IF mod.refcnt = 0 THEN Check(mod, res);
+          IF res = 0 THEN Unload(mod) ELSE Hide(mod) END
+        ELSE res := 4
         END
-      ELSE res := 4
       END
     END
   END Free;
 
-  PROCEDURE Collect*; (*no longer referenced hidden modules*)
-    VAR mod, imp: Module; p, q, res: INTEGER;
-  BEGIN mod := root;
+  PROCEDURE FirstSel(q: INTEGER); (*first selection of k elements among n hidden modules*)
+    VAR mod: Module; p: INTEGER;
+  BEGIN (*q = n - k*) mod := root; p := 0;
     WHILE mod # NIL DO
-      IF (mod.refcnt = 0) & (mod.name[0] >= 80X) THEN Check(mod, res);
-        IF res = 0 THEN (*unload*) mod.name[0] := 0X; p := mod.imp; q := mod.cmd;
-          WHILE p < q DO SYSTEM.GET(p, imp); DEC(imp.refcnt); INC(p, 4) END
-        END
-      END ;
+      IF mod.hidden & (mod.name[0] # 0X) THEN INC(p); mod.selected := p > q END ;
       mod := mod.next
+    END
+  END FirstSel;
+
+  PROCEDURE NextSel(VAR continue: BOOLEAN); (*next selection of k elements among n hidden modules*)
+    VAR mod, m: Module; p, q: INTEGER; done: BOOLEAN;
+  BEGIN mod := root; done := FALSE;
+    WHILE ~done & (mod # NIL) DO
+      IF mod.hidden & (mod.name[0] # 0X) THEN
+        IF mod.selected THEN mod := mod.next ELSE done := TRUE END
+      ELSE mod := mod.next
+      END
+    END ;
+    q := 0; done := FALSE;
+    WHILE ~done & (mod # NIL) DO
+      IF mod.hidden & (mod.name[0] # 0X) THEN
+        IF ~mod.selected THEN INC(q); mod := mod.next ELSE done := TRUE END
+      ELSE mod := mod.next
+      END
+    END ;
+    IF mod = NIL THEN continue := FALSE
+    ELSE mod.selected := FALSE; m := root; p := 0;
+      WHILE (m # NIL) & (m # mod) DO
+        IF m.hidden & (m.name[0] # 0X) THEN INC(p); m.selected := p >= q END ;
+        m := m.next
+      END
+    END
+  END NextSel;
+
+  PROCEDURE Collect*; (*no longer referenced hidden modules*)
+    VAR mod: Module; n, k, res: INTEGER; continue: BOOLEAN;
+  BEGIN mod := root; n := 0; k := 0;
+    WHILE mod # NIL DO
+      IF mod.hidden & (mod.name[0] # 0X) THEN INC(n) END ;
+      mod := mod.next
+    END ;
+    WHILE k < n DO INC(k);
+      FirstSel(n - k); continue := TRUE;
+      WHILE continue DO Check(NIL, res);
+        IF res = 0 THEN k := 0; continue := FALSE; mod := root;
+          WHILE mod # NIL DO
+            IF mod.selected & (mod.name[0] # 0X) THEN mod.selected := FALSE; Unload(mod); DEC(n) END ;
+            mod := mod.next
+          END
+        ELSE NextSel(continue)
+        END
+      END
     END
   END Collect;
 
@@ -267,5 +372,5 @@ MODULE Modules; (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 12.12.90 
   END Init;
 
 BEGIN Init; Load("Oberon", M);
-  LED(res); REPEAT UNTIL FALSE (*only if load fails*)
+  LED(res); REPEAT UNTIL FALSE  (*only if load fails*)
 END Modules.

@@ -1,4 +1,4 @@
-MODULE Kernel; (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 12.12.16*)
+MODULE Kernel; (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 3.4.17*)
   IMPORT SYSTEM;
   CONST SectorLength* = 1024;
     timer = -64; spiData = -48; spiCtrl = -44;
@@ -7,6 +7,7 @@ MODULE Kernel; (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 12.12.16*)
     mapsize = 10000H; (*1K sectors, 64MB*)
 
   TYPE Sector* = ARRAY SectorLength OF BYTE;
+    Handler* = PROCEDURE(x: LONGINT; VAR continue: BOOLEAN): INTEGER;
 
   VAR allocated*, NofSectors*: INTEGER;
     heapOrg*, heapLim*: INTEGER; 
@@ -99,7 +100,7 @@ MODULE Kernel; (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 12.12.16*)
     END
   END Mark;
 
-  PROCEDURE Scan*;
+  PROCEDURE Collect*;
     VAR p, q, mark, tag, size: LONGINT;
   BEGIN p := heapOrg;
     REPEAT SYSTEM.GET(p+4, mark); q := p;
@@ -125,29 +126,31 @@ MODULE Kernel; (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 12.12.16*)
       ELSE (*free*) SYSTEM.GET(p, size); INC(p, size)
       END
     UNTIL p >= heapLim
-  END Scan;
+  END Collect;
 
-  PROCEDURE Check*(type0, type1, code0, code1: LONGINT; VAR res: INTEGER); (*type and procedure references*)
-    VAR p, r, mark, tag, size, offadr, offset: LONGINT;
-  BEGIN p := heapOrg; res := 0;
+(* ---------- Generic heap scan ----------*)
+
+  PROCEDURE Scan*(type, proc: Handler; VAR res0, res1: INTEGER); (*res0, res1 = sum of handler results*)
+    VAR p, r, mark, tag, size, offadr, offset: LONGINT; continue: BOOLEAN;
+  BEGIN p := heapOrg; res0 := 0; res1 := 0; continue := TRUE;
     REPEAT SYSTEM.GET(p+4, mark);
       IF mark < 0 THEN (*free*) SYSTEM.GET(p, size)
       ELSE (*allocated*) SYSTEM.GET(p, tag); SYSTEM.GET(tag, size);
         IF mark > 0 THEN SYSTEM.PUT(p+4, 0); (*unmark*)
-          IF (type0 <= tag) & (tag < type1) THEN (*types*) res := 1
-          ELSIF res = 0 THEN offadr := tag + 16; SYSTEM.GET(offadr, offset);
-            WHILE offset # -1 DO (*pointers*) INC(offadr, 4); SYSTEM.GET(offadr, offset) END ;
-            INC(offadr, 4); SYSTEM.GET(offadr, offset);
-            WHILE offset # -1 DO (*procedure variables*) SYSTEM.GET(p+8+offset, r);
-              IF (code0 <= r) & (r < code1) THEN res := 2 END ;
-              INC(offadr, 4); SYSTEM.GET(offadr, offset)
+          IF continue THEN
+            IF type # NIL THEN INC(res0, type(tag, continue)) END ; (*call type for type tag*)
+            IF continue & (proc # NIL) THEN offadr := tag - 4; SYSTEM.GET(offadr, offset);
+              WHILE continue & (offset # -1) DO SYSTEM.GET(p+8+offset, r);
+                INC(res1, proc(r, continue)); (*call proc for each procedure variable*)
+                DEC(offadr, 4); SYSTEM.GET(offadr, offset)
+              END
             END
           END
         END
       END ;
       INC(p, size)
     UNTIL p >= heapLim
-  END Check;
+  END Scan;
 
 (* ---------- Disk storage management ----------*)
 
