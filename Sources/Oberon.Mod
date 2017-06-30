@@ -1,19 +1,14 @@
-MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.12.90 / 3.4.17*)
-  IMPORT SYSTEM, Kernel, Files, Modules, Input, Raster, Viewers, Fonts, Texts;
+MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 1.6.17*)
+  IMPORT SYSTEM, Kernel, Files, Modules, Input, Display, Viewers, Fonts, Texts;
 
   CONST off = 0; idle = 1; active = 2; (*task states*)
     BasicCycle = 20; ESC = 1BX; SETSTAR = 1AX;
 
   TYPE Painter* = PROCEDURE (x, y: INTEGER);
     Marker* = RECORD Fade*, Draw*: Painter END;
-
+    
     Cursor* = RECORD
-      marker*: Marker; on*: BOOLEAN; X*, Y*: INTEGER
-    END;
-
-    Display* = POINTER TO DisplayDesc;
-    DisplayDesc* = RECORD (Viewers.DisplayDesc)
-      log*: Texts.Text
+       marker*: Marker; on*: BOOLEAN; X*, Y*: INTEGER
     END;
 
     InputMsg* = RECORD (Viewers.InputMsg)
@@ -28,7 +23,9 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.1
     END;
 
     Task* = POINTER TO TaskDesc;
+
     Handler* = PROCEDURE;
+
     TaskDesc* = RECORD
       state, nextTime, period*: INTEGER;
       next: Task;
@@ -36,8 +33,8 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.1
     END;
 
   VAR User*: ARRAY 8 OF CHAR; Password*: LONGINT;
-    Mouse*, Pointer*: Cursor;  (*predefined cursors representing a mouse and a global system pointer*)
-    Arrow*, Star*: Marker;  (*predefined markers representing an arrow pointing to the NW and a star symbol*)
+    Arrow*, Star*: Marker; (*predefined markers representing an arrow pointing to the NW and a star symbol*)
+    Mouse, Pointer: Cursor; (*predefined cursors representing a mouse and a global system pointer*)
 
     Log*: Texts.Text;
 
@@ -50,11 +47,10 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.1
 
     CurFnt*: Fonts.Font;
     CurCol*, CurOff*: INTEGER;
-
-    DW, DH, CL: INTEGER;
-
     NofTasks*: INTEGER;
+
     CurTask: Task;
+    DW, DH, CL: INTEGER;
     ActCnt: INTEGER; (*action count for GC*)
     Mod: Modules.Module;
 
@@ -100,7 +96,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.1
       IF X > CL + DW - 15 THEN X := CL + DW - 15 END
     END ;
     IF Y < 14 THEN Y := 14 ELSIF Y > DH THEN Y := DH END ;
-    Raster.CopyPattern(Raster.white, Raster.arrow, X, Y - 14, 0, 0, Raster.invert)
+    Display.CopyPattern(Display.white, Display.arrow, X, Y - 14, 0, 0, Display.invert)
   END FlipArrow;
      
   PROCEDURE FlipStar (X, Y: INTEGER);
@@ -111,7 +107,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.1
       IF X < CL + 7 THEN X := CL + 7 ELSIF X > CL + DW - 8 THEN X := CL + DW - 8 END
     END ;
     IF Y < 7 THEN Y := 7 ELSIF Y > DH - 8 THEN Y := DH - 8 END ;
-    Raster.CopyPattern(Raster.white, Raster.star, X - 7, Y - 7, 0, 0, Raster.invert)
+    Display.CopyPattern(Display.white, Display.star, X - 7, Y - 7, 0, 0, Display.invert)
   END FlipStar;
 
   PROCEDURE OpenCursor(VAR c: Cursor);
@@ -140,7 +136,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.1
   BEGIN DrawCursor(Mouse, Arrow, x, y)
   END DrawMouseArrow;
 
-  PROCEDURE DrawMouseStar*(x, y: INTEGER);
+  PROCEDURE DrawMouseStar* (x, y: INTEGER);
   BEGIN DrawCursor(Mouse, Star, x, y)
   END DrawMouseStar;
 
@@ -198,10 +194,6 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.1
 
   (*logs and text selections*)
 
-  PROCEDURE OpenDisplayLog* (D: Display; T: Texts.Text);
-  BEGIN D.log := T
-  END OpenDisplayLog;
-
   PROCEDURE OpenLog* (T: Texts.Text);
   BEGIN Log := T
   END OpenLog;
@@ -222,13 +214,39 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.1
     Viewers.ViewerMsg:
       IF (M.id = Viewers.restore) & (V.W > 0) & (V.H > 0) THEN
         RemoveMarks(V.X, V.Y, V.W, V.H);
-        Raster.ReplConst(Raster.black, V.X, V.Y, V.W, V.H, Raster.replace)
+        Display.ReplConst(Display.black, V.X, V.Y, V.W, V.H, Display.replace)
       ELSIF (M.id = Viewers.modify) & (M.Y < V.Y) THEN
         RemoveMarks(V.X, M.Y, V.W, V.Y - M.Y);
-        Raster.ReplConst(Raster.black, V.X, M.Y, V.W, V.Y - M.Y, Raster.replace)
+        Display.ReplConst(Display.black, V.X, M.Y, V.W, V.Y - M.Y, Display.replace)
       END
     END
   END HandleFiller;
+
+  PROCEDURE InitTrack* (D: Viewers.Display; W, H: INTEGER); (*add new track to the right*)
+    VAR Filler: Viewers.Viewer;
+  BEGIN NEW(Filler); Filler.handle := HandleFiller; Viewers.InitTrack(D, W, H, Filler)
+  END InitTrack;
+
+  PROCEDURE OpenTrack* (D: Viewers.Display; X, W: INTEGER); (*create overlay track at X*)
+    VAR Filler: Viewers.Viewer;
+  BEGIN NEW(Filler); Filler.handle := HandleFiller; Viewers.OpenTrack(D, X, W, Filler)
+  END OpenTrack;
+
+  PROCEDURE InitDisplay* (D: Viewers.Display; name: ARRAY OF CHAR);
+  BEGIN Viewers.InitDisplay(D, DW, DH, name);
+    InitTrack(D, DW DIV 8 * 5, DH);
+    InitTrack(D, DW DIV 8 * 3, DH)
+  END InitDisplay;
+
+  PROCEDURE SetDisplay* (D: Viewers.Display);
+  BEGIN Viewers.SetDisplay(D); Input.SetMouseLimits(D.curW, D.H)
+  END SetDisplay;
+
+  PROCEDURE CloseDisplay* (D: Viewers.Display; hint: INTEGER);
+    VAR prev: Viewers.Display;
+  BEGIN prev := Viewers.CurDisplay; Viewers.CloseDisplay(D, hint);
+    IF Viewers.CurDisplay # prev THEN Input.SetMouseLimits(Viewers.CurDisplay.curW, Viewers.CurDisplay.H) END
+  END CloseDisplay;
 
   PROCEDURE DisplayWidth* (X: INTEGER): INTEGER;
   BEGIN RETURN DW
@@ -242,23 +260,13 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.1
   BEGIN RETURN Viewers.This(Viewers.CurDisplay, Pointer.X, Pointer.Y)
   END MarkedViewer;
 
-  PROCEDURE ThisViewer* (): Viewers.Viewer; (*to be used in viewer close commands*)
+  PROCEDURE ThisViewer* (): Viewers.Viewer; (*for use in viewer close commands*)
     VAR V: Viewers.Viewer;
   BEGIN IF Par.frame = Par.vwr.dsc THEN V := Par.vwr ELSE V := MarkedViewer() END ;
     RETURN V
   END ThisViewer;
 
   (*standard Oberon display with user track and system track, and filler viewer*)
-
-  PROCEDURE InitTrack* (D: Viewers.Display; W, H: INTEGER); (*add new track to the right*)
-    VAR Filler: Viewers.Viewer;
-  BEGIN NEW(Filler); Filler.handle := HandleFiller; Viewers.InitTrack(D, W, H, Filler)
-  END InitTrack;
-
-  PROCEDURE OpenTrack* (D: Viewers.Display; X, W: INTEGER); (*create overlay track at X*)
-    VAR Filler: Viewers.Viewer;
-  BEGIN NEW(Filler); Filler.handle := HandleFiller; Viewers.OpenTrack(D, X, W, Filler)
-  END OpenTrack;
 
   PROCEDURE UserTrack* (X: INTEGER): INTEGER;
   BEGIN RETURN X DIV DW * DW
@@ -310,27 +318,27 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.1
   BEGIN Par.vwr := Viewers.ThisViewer(F); Par.frame := F; Par.text := T; Par.pos := pos
   END SetPar;
 
-  PROCEDURE Call* (name: ARRAY OF CHAR; VAR res: INTEGER);
+  PROCEDURE Call* (name: ARRAY OF CHAR; VAR Mname, Cname: ARRAY OF CHAR; VAR res: INTEGER);
     VAR mod: Modules.Module; P: Modules.Command;
-      i, j: INTEGER; ch: CHAR; call: BOOLEAN;
-      Mname, Cname: ARRAY 32 OF CHAR;
-  BEGIN i := 0; ch := name[0]; call := FALSE;
-    IF ("0" <= ch) & (ch <= "9") THEN (*module number*)
-      j := ORD(ch) - 30H; INC(i); ch := name[i];
-      WHILE ("0" <= ch) & (ch <= "9") DO j := 10*j + (ORD(ch) - 30H); INC(i); ch := name[i] END ;
+      i, j: INTEGER; ch: CHAR;
+  BEGIN i := 0; ch := name[0];
+    IF ("0" <= ch) & (ch <= "9") THEN (*module number*) j := 0;
+      REPEAT j := 10*j + (ORD(ch) - 30H); INC(i); ch := name[i] UNTIL (ch < "0") OR (ch > "9");
       IF ch = "." THEN INC(i); mod := Modules.root;
         WHILE (mod # NIL) & (mod.num # j) DO mod := mod.next END ;
-        call := (mod # NIL) & (mod.name[0] # 0X)
-      ELSE res := 5
+        IF (mod # NIL) & (mod.name[0] # 0X) THEN res := 0; j := 0;
+          REPEAT ch := mod.name[j]; Mname[j] := ch; INC(j)  UNTIL ch = 0X
+        ELSE res := 8
+        END
+      ELSE res := 9
       END
-    ELSE (*module name*)
-      WHILE (ch # ".") & (ch # 0X) DO Mname[i] := ch; INC(i); ch := name[i] END ;
-      IF ch = "." THEN Mname[i] := 0X; INC(i);
-         Modules.Load(Mname, mod); res := Modules.res; call := Modules.res = 0
-      ELSE res := 5
-      END
+    ELSIF (ch >= "A") & (ch <= "Z") OR (ch >= "a") & (ch <= "z") OR (ch = "*") THEN (*module name*)
+      REPEAT Mname[i] := ch; INC(i); ch := name[i] UNTIL (ch = ".") OR (ch = 0X);
+      IF ch = "." THEN Mname[i] := 0X; INC(i); Modules.Load(Mname, mod); res := Modules.res ELSE res := 9 END
+    ELSE res := 9
     END ;
-    IF call THEN j := 0; ch := name[i]; INC(i);
+    IF res = 0 THEN
+      j := 0; ch := name[i]; INC(i);
       WHILE ch # 0X DO Cname[j] := ch; INC(j); ch := name[i]; INC(i) END ;
       Cname[j] := 0X;
       P := Modules.ThisCommand(mod, Cname); res := Modules.res;
@@ -338,24 +346,26 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.1
     END
   END Call;
 
-  PROCEDURE Activate* (F: Viewers.Frame; T: Texts.Text; pos: LONGINT); (*command*)
+  PROCEDURE Activate*(F: Viewers.Frame; T: Texts.Text; pos: LONGINT); (*command*)
     VAR S: Texts.Scanner; res: INTEGER;
+      Mname, Cname: ARRAY 32 OF CHAR;
   BEGIN
     Texts.OpenScanner(S, T, pos); Texts.Scan(S);
     IF ((S.class = Texts.Name) OR (S.class = Texts.String)) & (S.line = 0) THEN (*strings allowed*)
-      SetPar(F, T, pos + S.len); Call(S.s, res);
-      IF res > 0 THEN
-        Texts.WriteString(W, "Call error: "); Texts.WriteString(W, Modules.importing);
-        IF res = 1 THEN Texts.WriteString(W, " module not found")
-        ELSIF res = 2 THEN Texts.WriteString(W, " bad version")
-        ELSIF res = 3 THEN Texts.WriteString(W, " imports ");
+      SetPar(F, T, pos + S.len); Call(S.s, Mname, Cname, res);
+      IF (res > 0) & (Log # NIL) THEN
+        Texts.WriteString(W, "Call error: ");
+        IF res = 1 THEN Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " module not found")
+        ELSIF res = 2 THEN Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " bad version")
+        ELSIF res = 3 THEN Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " imports ");
           Texts.WriteString(W, Modules.imported); Texts.WriteString(W, " with bad key")
-        ELSIF res = 4 THEN Texts.WriteString(W, " corrupted obj file")
-        ELSIF res = 5 THEN Texts.WriteString(W, " command not found")
-        ELSIF res = 7 THEN Texts.WriteString(W, " insufficient space")
+        ELSIF res = 4 THEN Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " corrupted obj file")
+        ELSIF res = 5 THEN Texts.WriteString(W, Mname); Texts.WriteString(W, " command not found")
+        ELSIF res = 7 THEN Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " insufficient space")
+        ELSIF res = 8 THEN Texts.WriteString(W, Mname); Texts.WriteString(W, " module not found")
+        ELSIF res = 9 THEN Texts.WriteString(W, S.s); Texts.WriteString(W, " invalid command")
         END ;
-        Texts.WriteLn(W);
-        IF Log # NIL THEN Texts.Append(Log, W.buf) END
+        Texts.WriteLn(W); Texts.Append(Log, W.buf)
       END
     END
   END Activate;
@@ -416,7 +426,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.1
         ELSIF ch = SETSTAR THEN
           N.id := Viewers.mark; N.X := X; N.Y := Y; V := Viewers.This(Viewers.CurDisplay, X, Y); V.handle(V, N)
         ELSE M.id := Viewers.consume; M.ch := ch; M.fnt := CurFnt; M.col := CurCol; M.voff := CurOff;
-          Viewers.CurDisplay.focusViewer.handle(Viewers.CurDisplay.focusViewer, M); DEC(ActCnt)
+          V := Viewers.FocusViewer; V.handle(V, M); DEC(ActCnt)
         END
       ELSIF keys # {} THEN
         M.id := Viewers.track; M.X := X; M.Y := Y; M.keys := keys;
@@ -443,15 +453,15 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.1
     SYSTEM.LDREG(14, Kernel.stackOrg); (*reset stack pointer*) Loop
   END Reset;
 
-BEGIN User[0] := 0X; DW := Raster.Width; DH := Raster.Height; CL := DW;
+BEGIN User[0] := 0X;
   Arrow.Fade := FlipArrow; Arrow.Draw := FlipArrow;
   Star.Fade := FlipStar; Star.Draw := FlipStar;
   OpenCursor(Mouse); OpenCursor(Pointer);
 
-  CurFnt := Fonts.Default; CurCol := Raster.white; CurOff := 0;
-  ActCnt := 0; CurTask := NewTask(GC, 1000); Install(CurTask);
+  DW := Display.Width; DH := Display.Height; CL := DW;
+  CurFnt := Fonts.Default; CurCol := Display.white; CurOff := 0;
 
+  ActCnt := 0; CurTask := NewTask(GC, 1000); Install(CurTask);
   Texts.OpenWriter(W); Log := NIL;
   Modules.Load("System", Mod); Mod := NIL; Loop
 END Oberon.
-

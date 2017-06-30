@@ -1,4 +1,4 @@
-MODULE Clipboard;
+MODULE Clipboard; (*AP 1.6.17*)
   IMPORT SYSTEM, Texts, Viewers, Oberon, TextFrames;
 
   CONST control = -24; data = -20;
@@ -42,7 +42,7 @@ MODULE Clipboard;
       len, i: INTEGER;
       ch: CHAR;
   BEGIN
-    V := Viewers.CurDisplay.focusViewer;
+    V := Viewers.FocusViewer;
     IF (V # NIL) & (V.dsc # NIL) & (V.dsc.next IS TextFrames.Frame) THEN
       SYSTEM.GET(control, len);
       IF len > 0 THEN

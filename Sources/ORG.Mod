@@ -1,4 +1,4 @@
-MODULE ORG; (* NW  18.4.2016 / 17.9.2016 / AP 27.12.2016  code generator in Oberon-07 for RISC*)
+MODULE ORG; (* NW  18.4.2016 / 17.9.2016 / AP 1.6.17  code generator in Oberon-07 for RISC*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser OSAP; result in array "code".
@@ -1050,7 +1050,7 @@ MODULE ORG; (* NW  18.4.2016 / 17.9.2016 / AP 27.12.2016  code generator in Ober
     IF version = 0 THEN Put1(Mov, 0, 0, 0); Put3(BR, 7, 0)  (*RISC-0*)
     ELSE Put2(Ldr, LNK, SP, 0); Put1(Add, SP, SP, 4); Put3(BR, 7, LNK)
     END ;
-    obj := ORB.topScope.next; nofimps := 0; comsize := 4; nofptrs := 0; nofpvars := 0; 
+    obj := ORB.topScope.next; nofimps := 0; comsize := 4; nofptrs := 0; nofpvars := 0;
     WHILE obj # NIL DO
       IF (obj.class = ORB.Mod) & (obj.dsc # ORB.system) THEN INC(nofimps) (*count imports*)
       ELSIF (obj.exno # 0) & (obj.class = ORB.Const) & (obj.type.form = ORB.Proc)

@@ -1,4 +1,4 @@
-MODULE Tools;   (*NW 22.2.14 / AP 23.6.16*)
+MODULE Tools;   (*NW 22.2.14 / AP 1.6.17*)
   IMPORT SYSTEM, Kernel, Files, Modules, Input, Texts, Viewers, Oberon, MenuViewers, TextFrames;
 
   CONST StandardMenu = "System.Close System.Copy System.Grow Edit.Search Edit.Store | System.Expand System.Clone";

@@ -1,4 +1,4 @@
-MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.90 / 11.2.17*)
+MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.6.17*)
   CONST restore* = 0; modify* = 1; suspend* = 2; consume* = 3; track* = 4;
     defocus* = 5; neutralize* = 6; mark* = 7; inf = 65535; DnLength* = 24;
 
@@ -21,7 +21,7 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.90 / 11.2.17*)
     DisplayDesc* = RECORD (ViewerDesc)
       curW*, id*: INTEGER;
       name*: ARRAY DnLength OF CHAR;
-      focusViewer*,
+      focus, (*focus viewer*)
       backup: Viewer (*last closed viewer*)
     END;
 
@@ -46,6 +46,7 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.90 / 11.2.17*)
     END;
 
   VAR CurDisplay*, root*: Display;
+    FocusViewer*: Viewer;
     nextId: INTEGER;
 
   PROCEDURE This* (D: Display; X, Y: INTEGER): Viewer;
@@ -62,23 +63,24 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.90 / 11.2.17*)
   END This;
 
   PROCEDURE ThisViewer* (F: Frame): Viewer;
-  BEGIN WHILE (F # NIL) & (F.parent # NIL) & (F.parent.state # -1) (*~track*) DO F := F.parent END ;
+  BEGIN WHILE (F # NIL) & (F.parent # NIL) & (F.parent.state # -1) (*~track*) DO F := F.parent END;
     RETURN F(Viewer)
   END ThisViewer;
 
   PROCEDURE ThisDisplay* (F: Frame): Display;
-  BEGIN WHILE (F # NIL) & (F.parent # NIL) (*~display*) DO F := F.parent END ;
+  BEGIN WHILE (F # NIL) & (F.parent # NIL) (*~display*) DO F := F.parent END;
     RETURN F(Display)
   END ThisDisplay;
 
-  PROCEDURE SetFocusViewer* (D: Display; V: Viewer);
-  BEGIN D.focusViewer := V
-  END SetFocusViewer;
+  PROCEDURE SetFocus* (D: Display; V: Viewer);
+  BEGIN D.focus := V;
+    IF D = CurDisplay THEN FocusViewer := V END
+  END SetFocus;
 
   PROCEDURE PassFocus* (V: Viewer);
-    VAR M: ControlMsg;
-  BEGIN M.id := defocus; CurDisplay.focusViewer.handle(CurDisplay.focusViewer, M);
-    SetFocusViewer(ThisDisplay(V), V)
+    VAR D: Display; M: ControlMsg;
+  BEGIN D := ThisDisplay(V);
+    M.id := defocus; D.focus.handle(D.focus, M); SetFocus(D, V)
   END PassFocus;
 
   PROCEDURE Adjust* (F: Frame; id, Y, H: INTEGER);
@@ -98,8 +100,7 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.90 / 11.2.17*)
       IF Y < v.Y + V.minH THEN Y := v.Y + V.minH END;
       IF (v.next.Y # 0) & (Y > v.Y + v.H - v.minH) THEN
         V.X := T.X; V.W := T.W; V.Y := v.Y; V.H := v.H;
-        M.id := suspend; M.state := 0;
-        v.handle(v, M); v(Viewer).state := 0;
+        M.id := suspend; M.state := 0; v.handle(v, M); v.state := 0;
         V.next := v.next; V.prev := v.prev; v.prev.next := V; v.next.prev := V;
         V.parent := T; V.state := 2
       ELSE V.X := T.X; V.W := T.W; V.Y := v.Y; V.H := Y - v.Y;
@@ -144,11 +145,11 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.90 / 11.2.17*)
         IF m[i] = self THEN Adjust(V, modify, Y, H)
         ELSIF m[i] = above THEN v := V.next;
           IF a THEN dY := Y + H - V.Y - V.H;
-            WHILE (v.state > 1) & (dY > v.H - v.minH) DO dY := dY - v.H + v.minH; v := v.next END ;
+            WHILE (v.state > 1) & (dY > v.H - v.minH) DO dY := dY - v.H + v.minH; v := v.next END;
             y := v.Y;
             IF v.state > 1 THEN Adjust(v, modify, y + dY, v.H - dY); v := v.prev; y := y + dY - v.minH
             ELSE v.Y := v.Y + dY; v.H := v.H - dY; v := v.prev; y := y + dY - v.minH
-            END ;
+            END;
             WHILE v # V DO Adjust(v, modify, y, v.minH); v := v.prev; y := y - v.minH END
           ELSE Adjust(v, modify, Y + H, v.Y + v.H - Y - H)
           END
@@ -156,8 +157,8 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.90 / 11.2.17*)
           IF v.state > 1 THEN
             IF Y > V.Y THEN Adjust(v, modify, v.Y, Y - v.Y)
             ELSE dY := V.Y - Y;
-              WHILE (v.state > 1) & (dY > v.H - v.minH) DO dY := dY - v.H + v.minH; v := v.prev END ;
-              IF v.state > 1 THEN Adjust(v, modify, v.Y, v.H - dY); y := v.Y + v.H ELSE y := v.Y END ;
+              WHILE (v.state > 1) & (dY > v.H - v.minH) DO dY := dY - v.H + v.minH; v := v.prev END;
+              IF v.state > 1 THEN Adjust(v, modify, v.Y, v.H - dY); y := v.Y + v.H ELSE y := v.Y END;
               v := v.next;
               WHILE v # V DO Adjust(v, modify, y, v.minH); y := y + v.H; v := v.next END
             END
@@ -175,7 +176,7 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.90 / 11.2.17*)
     WHILE T.next # NIL DO T := T.next END;
     t.next := S(Track).under; T.next := S.next; M.id := restore;
     REPEAT t := t.next; v := t.dsc;
-      REPEAT v := v.next; v.handle(v, M); v(Viewer).state := - v(Viewer).state
+      REPEAT v := v.next; v.handle(v, M); v.state := - v.state
       UNTIL v = t.dsc
     UNTIL t = T
   END RestoreTrack;
@@ -187,16 +188,15 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.90 / 11.2.17*)
       U := V.next; T := D.dsc;
       REPEAT T := T.next UNTIL V.X < T.X + T.W;
       IF (T(Track).under = NIL) OR (U.next # V) THEN
-        M.id := suspend; M.state := 0;
-        V.handle(V, M); V.state := 0; D.backup := V;
+        M.id := suspend; M.state := 0; V.handle(V, M); V.state := 0;
         Adjust(U, modify, V.Y, V.H + U.H);
-        V.prev.next := V.next; V.next.prev := V.prev
+        V.prev.next := V.next; V.next.prev := V.prev; D.backup := V
       ELSE (*close track*)
-        M.id := suspend; M.state := 0;
-        V.handle(V, M); V.state := 0; D.backup := V;
-        U.handle(U, M); U(Viewer).state := 0;
+        M.id := suspend; M.state := 0; V.handle(V, M); V.state := 0;
+        U.handle(U, M); U.state := 0; D.backup := V;
         RestoreTrack(T)
-      END
+      END;
+      IF D.focus = V THEN SetFocus(D, This(D, 0, 0)) END
     END
   END Close;
 
@@ -231,17 +231,22 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.90 / 11.2.17*)
     END
   END Locate;
 
-  PROCEDURE Install* (V: Viewer; F: Frame); (*install frame F in viewer V*)
-    VAR v: Frame;
-  BEGIN F.parent := V; F.next := NIL;
-    IF V.dsc = NIL THEN V.dsc := F
-    ELSE v := V.dsc;
-      WHILE v.next # NIL DO v := v.next END;
-      v.next := F
+  PROCEDURE Install* (parent, F: Frame); (*install frame F as a subframe into parent frame*)
+  BEGIN F.parent := parent; F.next := NIL;
+    IF parent.dsc = NIL THEN parent.dsc := F; F.prev := F
+    ELSE F.prev := parent.dsc.prev; F.prev.next := F; parent.dsc.prev := F
     END
   END Install;
 
-  PROCEDURE InitFiller (X, Y, W, H, minH: INTEGER; Filler: Viewer); (*except parent & dsc*)
+  PROCEDURE Remove* (F: Frame); (*remove subframe F from its parent frame*)
+  BEGIN
+    IF F = F.parent.dsc THEN F.parent.dsc := F.next ELSE F.prev.next := F.next END;
+    IF F.next # NIL THEN F.next.prev := F.prev
+    ELSIF F.prev # F THEN F.parent.dsc.prev := F.prev
+    END
+  END Remove;
+
+  PROCEDURE InitFiller (X, Y, W, H, minH: INTEGER; Filler: Viewer); (*except handle, parent, dsc*)
   BEGIN Filler.X := X; Filler.Y := Y; Filler.W := W; Filler.H := H; Filler.minH := minH;
     Filler.state := 1; Filler.next := Filler; Filler.prev := Filler
   END InitFiller;
@@ -268,7 +273,7 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.90 / 11.2.17*)
       WHILE X + W > T.X + T.W DO T := T.next END;
       M.id := suspend; t := S;
       REPEAT t := t.next; v := t.dsc;
-        REPEAT v := v.next; M.state := -v(Viewer).state; v.handle(v, M); v(Viewer).state := M.state
+        REPEAT v := v.next; M.state := -v.state; v.handle(v, M); v.state := M.state
         UNTIL v = t.dsc
       UNTIL t = T;
       InitFiller(S.next.X, 0, T.X + T.W - S.next.X, D.H, 0, Filler); Filler.dsc := NIL;
@@ -280,15 +285,18 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.90 / 11.2.17*)
   END OpenTrack;
 
   PROCEDURE CloseTrack* (D: Display; X: INTEGER);
-    VAR T, V: Frame; M: ViewerMsg;
+    VAR T, V: Frame; M: ViewerMsg; hasFocus: BOOLEAN;
   BEGIN
     IF X < inf THEN
       T := D.dsc;
       REPEAT T := T.next UNTIL X < T.X + T.W;
-      IF T(Track).under # NIL THEN
+      IF T(Track).under # NIL THEN hasFocus := FALSE;
         M.id := suspend; M.state := 0; V := T.dsc;
-        REPEAT V := V.next; V.handle(V, M); V(Viewer).state := 0 UNTIL V = T.dsc;
-        RestoreTrack(T)
+        REPEAT V := V.next; V.handle(V, M); V.state := 0;
+          IF D.focus = V THEN hasFocus := TRUE END
+        UNTIL V = T.dsc;
+        RestoreTrack(T);
+        IF hasFocus THEN SetFocus(D, This(D, 0, 0)) END
       END
     END
   END CloseTrack;
@@ -316,7 +324,7 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.90 / 11.2.17*)
   PROCEDURE InitDisplay* (D: Display; W, H: INTEGER; name: ARRAY OF CHAR);
     VAR fillerTrack: Track; fillerViewer: Viewer;
   BEGIN D.id := nextId;
-    SetDisplayName(D, name); D.curW := 0; D.focusViewer := NIL; D.backup := NIL;
+    SetDisplayName(D, name); D.curW := 0; D.focus := NIL; D.backup := NIL;
     D.X := 0; D.Y := 0; D.W := W; D.H := H; D.minH := 1; D.state := 0; D.parent := NIL;
     NEW(fillerTrack); InitFiller(0, 0, inf, H, 0, fillerTrack); D.dsc := fillerTrack;
     NEW(fillerViewer); InitFiller(0, 0, inf, H, 0, fillerViewer); fillerTrack.dsc := fillerViewer;
@@ -328,36 +336,29 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.90 / 11.2.17*)
   PROCEDURE SetDisplay* (D: Display);
     VAR M: ViewerMsg;
   BEGIN
-    IF CurDisplay # NIL THEN M.id := suspend; Broadcast(M); CurDisplay.state := -CurDisplay.state END;
-    CurDisplay := D(Display);
-    IF CurDisplay.state = 0 THEN CurDisplay.state := 2 ELSE CurDisplay.state := -CurDisplay.state END;
-    M.id := restore; Broadcast(M)
+    IF CurDisplay # NIL THEN M.id := suspend; M.state := 0; Broadcast(M); CurDisplay.state := 0 END;
+    CurDisplay := D; D.state := 2; SetFocus(D, This(D, 0, 0)); M.id := restore; Broadcast(M)
   END SetDisplay;
 
   PROCEDURE GetDisplay* (id: INTEGER): Display;
-    VAR S: Frame;
-  BEGIN S := root;
-    WHILE (S # NIL) & (id # S(Display).id) DO S := S.next END ;
-    RETURN S(Display)
+    VAR D: Display;
+  BEGIN D := root;
+    WHILE (D # NIL) & (id # D.id) DO D := D.next(Display) END;
+    RETURN D
   END GetDisplay;
 
-  PROCEDURE CloseDisplay* (id, hint: INTEGER); (*except last display*)
-    VAR D: Display;
-  BEGIN D := GetDisplay(id);
-    IF (D # NIL) & (root # NIL) & (root.next # NIL) THEN D.state := 0;
+  PROCEDURE CloseDisplay* (D: Display; hint: INTEGER); (*except last display*)
+  BEGIN
+    IF root.next # NIL THEN D.state := 0;
       IF D = root (*first*) THEN D.next.prev := D.prev; root := D.next(Display)
       ELSIF D = root.prev (*last*) THEN root.prev := D.prev; D.prev.next := NIL
       ELSE D.next.prev := D.prev; D.prev.next := D.next
       END;
-      IF D.id = CurDisplay.id THEN
-        IF hint = CurDisplay.id THEN D := root
-        ELSE D := GetDisplay(hint);
-          IF (D = NIL) OR (D.state = 0) OR (D.state = 1) THEN D := root END
-        END;
-        SetDisplay(D)
+      IF D = CurDisplay THEN D := GetDisplay(hint);
+        IF D = NIL THEN SetDisplay(root) ELSE SetDisplay(D) END
       END
     END
   END CloseDisplay;
 
-BEGIN root := NIL; CurDisplay := NIL; nextId := 0
+BEGIN root := NIL; CurDisplay := NIL; FocusViewer := NIL; nextId := 0
 END Viewers.

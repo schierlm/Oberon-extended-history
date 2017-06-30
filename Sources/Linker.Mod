@@ -1,6 +1,6 @@
-MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 11.3.17*)
+MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 24.6.17*)
   IMPORT SYSTEM, Files, Modules, Kernel, Texts, Oberon;
-  CONST versionkey = 1X; MT = 12; DescSize = 84;
+  CONST versionkey = 1X; MT = 12; DescSize = 88;
 
   VAR binroot, M: Modules.Module;
     binMTOrg, binStart, binAllocPtr, res*: INTEGER;
@@ -94,7 +94,7 @@ MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 
       IF res = 0 THEN (*read file*)
         INC(p, DescSize); (*allocate descriptor*)
         zero(mod.name);
-        mod.name := name; mod.key := key; mod.refcnt := 0; mod.selected := FALSE; mod.hidden := FALSE;
+        mod.name := name; mod.key := key; mod.refcnt := 0;
         mod.data := p;  (*data*)
         SYSTEM.PUT(mod.num * 4 + binMTOrg, p);  (*module table entry*)
         Files.ReadInt(R, n);
@@ -250,6 +250,6 @@ MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 
   END Link;
 
 BEGIN
-  Texts.OpenWriter(W); Texts.WriteString(W, "OR Linker CP 22.05.14 / AP 11.3.17");
+  Texts.OpenWriter(W); Texts.WriteString(W, "OR Linker CP 22.05.14 / AP 24.6.17");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
 END Linker.

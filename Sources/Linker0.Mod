@@ -1,23 +1,23 @@
-MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 11.3.17 - Original Oberon version*)
+MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 24.6.17 - Linker0*)
  (*
-  * Linker0.Mod - special version of the linker that is used only to bootstrap Experimental Oberon
+  * Linker0.Mod - special version of the linker that is used *only* to bootstrap Experimental Oberon
   *
   * It is compiled and run under the "old" Original Oberon, but already uses (parts of) the "new" module
-  * definition of module Modules (Modules0.Mod), in particular the new definition of type ModDesc.
+  * interface of module Modules (Modules0.Mod), in particular the new definition of type ModDesc.
   *
   * Note that one cannot simply first compile the modified version of module Modules (Modules0.Mod) and then
   * compile and run Linker0.Mod, since this would change the module key of module Modules itself; however,
   * the linker that is used for bootstrapping purposes (Linker0) still needs to be able to be run under
   * the unmodified Original Oberon system, i.e. using the original version of module Modules (Modules.Mod).
   *
-  * This is why the type definitions of module Modules0.Mod are simply copied here - to remove any dependencies
-  * on the new version of module Modules (Modules0.Mod).
+  * This is why the type definitions of module Modules0.Mod are simply copied here - to remove any
+  * dependencies on the new version of module Modules (Modules0.Mod).
   *
   * See the README file of Experimental Oberon for the correct compilation and linking order.
   *
   *)
   IMPORT SYSTEM, Files, Modules, Kernel, Texts, Oberon;
-  CONST versionkey = 1X; MT = 12; DescSize = 84;
+  CONST versionkey = 1X; MT = 12; DescSize = 88;
 
   TYPE Module* = POINTER TO ModDesc;
     Command* = PROCEDURE;
@@ -28,7 +28,8 @@ MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 
         next*: Module;
         key*, num*, size*, refcnt*: INTEGER;
         data*, code*, imp*, cmd*, ent*, ptr*, pvar*: INTEGER;  (*addresses*)
-        selected*, hidden*: BOOLEAN
+        selected, hidden, marked, unused: BOOLEAN;
+        count: INTEGER
       END ;
 
   VAR binroot, M: Module;
@@ -278,7 +279,7 @@ MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 
     Texts.Append(Oberon.Log, W.buf) 
   END Link;
 
-BEGIN 
-  Texts.OpenWriter(W); Texts.WriteString(W, "OR Linker CP 22.05.14 / AP 11.3.17");
+BEGIN
+  Texts.OpenWriter(W); Texts.WriteString(W, "OR Linker CP 22.05.14 / AP 24.6.17");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
 END Linker.

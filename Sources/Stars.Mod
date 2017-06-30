@@ -1,5 +1,5 @@
-MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 20.3.17*)
-  IMPORT SYSTEM, Raster, Viewers, Texts, Oberon, MenuViewers, TextFrames;
+MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 1.6.17*)
+  IMPORT SYSTEM, Display, Viewers, Texts, Oberon, MenuViewers, TextFrames;
 
   CONST Menu = "Stars.Close System.Copy System.Grow Stars.Step Stars.Run Stars.Stop | System.Expand System.Clone";
     N = 6;  (*nof stars*)
@@ -16,13 +16,13 @@ MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 20.3.17*)
     W: Texts.Writer;
 
   PROCEDURE Draw(x, y: INTEGER);
-  BEGIN Raster.CopyPattern(Raster.white, Raster.star, x, y, 0, 0, Raster.invert)
+  BEGIN Display.CopyPattern(Display.white, Display.star, x, y, 0, 0, Display.invert)
   END Draw;
 
   PROCEDURE Restore(F: Frame);
     VAR x0, y0: INTEGER;
   BEGIN Oberon.RemoveMarks(F.X, F.Y, F.W, F.H);
-    Raster.ReplConst(0, F.X+1, F.Y, F.W-1, F.H, 0);
+    Display.ReplConst(0, F.X+1, F.Y, F.W-1, F.H, 0);
     x0 := F.W DIV 2 + F.X; y0 := F.H DIV 2 + F.Y;
     F.s[0].x := x0; F.s[0].y := y0; F.s[0].dx := 2; F.s[0].dy := 4; Draw(F.s[0].x, F.s[0].y);
     F.s[1].x := x0; F.s[1].y := y0; F.s[1].dx := 3; F.s[1].dy := 9; Draw(F.s[1].x, F.s[1].y);

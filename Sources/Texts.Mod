@@ -1,4 +1,4 @@
-MODULE Texts; (*JG 21.11.90 / NW 11.7.90 / 24.12.95 / 22.11.10 / 18.11.2014 / AP 19.3.17*)
+MODULE Texts; (*JG 21.11.90 / NW 11.7.90 / 24.12.95 / 22.11.10 / 20.3.2017*)
   IMPORT Files, Fonts;
 
   CONST (*scanner symbol classes*)

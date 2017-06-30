@@ -1,5 +1,5 @@
-MODULE Sierpinski;  (*NW 15.1.13 / AP 5.1.17*)
-  IMPORT Raster, Viewers, Oberon, MenuViewers, TextFrames;
+MODULE Sierpinski;  (*NW 15.1.13 / AP 1.6.17*)
+  IMPORT Display, Viewers, Oberon, MenuViewers, TextFrames;
 
   CONST Menu = "System.Close System.Copy System.Grow | System.Expand System.Clone";
 
@@ -7,43 +7,43 @@ MODULE Sierpinski;  (*NW 15.1.13 / AP 5.1.17*)
     A, B, C, D: PROCEDURE (i: INTEGER);
 
   PROCEDURE E;
-  BEGIN Raster.ReplConst(Raster.white, x, y, d, 1, Raster.paint); INC(x, d)
+  BEGIN Display.ReplConst(Display.white, x, y, d, 1, Display.paint); INC(x, d)
   END E;
 
   PROCEDURE N;
-  BEGIN Raster.ReplConst(Raster.white, x, y, 1, d, Raster.paint); INC(y, d)
+  BEGIN Display.ReplConst(Display.white, x, y, 1, d, Display.paint); INC(y, d)
   END N;
 
   PROCEDURE W;
-  BEGIN DEC(x, d); Raster.ReplConst(Raster.white, x, y, d, 1, Raster.paint)
+  BEGIN DEC(x, d); Display.ReplConst(Display.white, x, y, d, 1, Display.paint)
   END W;
 
   PROCEDURE S;
-  BEGIN DEC(y, d); Raster.ReplConst(Raster.white, x, y, 1, d, Raster.paint)
+  BEGIN DEC(y, d); Display.ReplConst(Display.white, x, y, 1, d, Display.paint)
   END S;
 
   PROCEDURE NE;
     VAR i: INTEGER;
   BEGIN i := d;
-    REPEAT Raster.Dot(Raster.white, x, y, Raster.paint); INC(x); INC(y); DEC(i) UNTIL i = 0
+    REPEAT Display.Dot(Display.white, x, y, Display.paint); INC(x); INC(y); DEC(i) UNTIL i = 0
   END NE;
 
   PROCEDURE NW;
     VAR i: INTEGER;
   BEGIN i := d;
-    REPEAT Raster.Dot(Raster.white, x, y, Raster.paint); DEC(x); INC(y); DEC(i) UNTIL i = 0
+    REPEAT Display.Dot(Display.white, x, y, Display.paint); DEC(x); INC(y); DEC(i) UNTIL i = 0
   END NW;
 
   PROCEDURE SW;
     VAR i: INTEGER;
   BEGIN i := d;
-    REPEAT Raster.Dot(Raster.white, x, y, Raster.paint); DEC(x); DEC(y); DEC(i) UNTIL i = 0
+    REPEAT Display.Dot(Display.white, x, y, Display.paint); DEC(x); DEC(y); DEC(i) UNTIL i = 0
   END SW;
 
   PROCEDURE SE;
     VAR i: INTEGER;
   BEGIN i := d;
-    REPEAT Raster.Dot(Raster.white, x, y, Raster.paint); INC(x); DEC(y); DEC(i) UNTIL i = 0
+    REPEAT Display.Dot(Display.white, x, y, Display.paint); INC(x); DEC(y); DEC(i) UNTIL i = 0
   END SE;
 
   PROCEDURE SA(i: INTEGER);
@@ -71,7 +71,7 @@ MODULE Sierpinski;  (*NW 15.1.13 / AP 5.1.17*)
   BEGIN; k := 0; d := 4;
     IF F.W < F.H THEN w := F.W ELSE w := F.H END ;
     WHILE d*8 < w DO d := d*2; INC(k) END ;
-    Raster.ReplConst(Raster.black, F.X, F.Y, F.W, F.H, Raster.replace);
+    Display.ReplConst(Display.black, F.X, F.Y, F.W, F.H, Display.replace);
     x0 := F.W DIV 2; y0 := F.H DIV 2 + d; n := 0;
     WHILE n < k DO
       INC(n); DEC(x0, d); d := d DIV 2; INC(y0, d);

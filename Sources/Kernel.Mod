@@ -1,4 +1,4 @@
-MODULE Kernel; (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 3.4.17*)
+MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.6.17*)
   IMPORT SYSTEM;
   CONST SectorLength* = 1024;
     timer = -64; spiData = -48; spiCtrl = -44;
@@ -13,10 +13,10 @@ MODULE Kernel; (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 3.4.17*)
     heapOrg*, heapLim*: INTEGER; 
     stackOrg* ,  stackSize*, MemLim*: INTEGER;
     clock: INTEGER;
-    list0, list1, list2, list3: INTEGER; (*lists of free blocks of size n*256, 128, 64, 32 bytes*)
+    list0, list1, list2, list3: INTEGER;  (*lists of free blocks of size n*256, 128, 64, 32 bytes*)
     data: INTEGER; (*SPI data in*)
     sectorMap: ARRAY mapsize DIV 32 OF SET;
-
+    
 (* ---------- New: heap allocation ----------*)
 
   PROCEDURE GetBlock(VAR p: LONGINT; len: LONGINT);
@@ -26,9 +26,11 @@ MODULE Kernel; (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 3.4.17*)
     WHILE ~done & (q1 # 0) DO
       SYSTEM.GET(q1, size); SYSTEM.GET(q1+8, q2);
       IF size < len THEN (*no fit*) q0 := q1; q1 := q2
-      ELSIF size = len THEN (*extract -> p*) done := TRUE; p := q1;
+      ELSIF size = len THEN (*extract -> p*)
+        done := TRUE; p := q1;
         IF q0 # 0 THEN SYSTEM.PUT(q0+8, q2) ELSE list0 := q2 END
-      ELSE (*reduce size*) done := TRUE; p := q1; q1 := q1 + len;
+      ELSE (*reduce size*)
+        done := TRUE; p := q1; q1 := q1 + len;
         SYSTEM.PUT(q1, size-len); SYSTEM.PUT(q1+4, -1); SYSTEM.PUT(q1+8, q2);
         IF q0 # 0 THEN SYSTEM.PUT(q0+8, q1) ELSE list0 := q1 END
       END
@@ -63,7 +65,7 @@ MODULE Kernel; (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 3.4.17*)
     END
   END GetBlock32;
 
-  PROCEDURE New*(VAR ptr: LONGINT; tag: LONGINT);
+   PROCEDURE New*(VAR ptr: LONGINT; tag: LONGINT);
     (*called by NEW via MT[0]; ptr and tag are pointers*)
     VAR p, size, lim: LONGINT;
   BEGIN SYSTEM.GET(tag, size);
@@ -85,11 +87,12 @@ MODULE Kernel; (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 3.4.17*)
   BEGIN SYSTEM.GET(pref, pvadr); (*pointers < heapOrg considered NIL*)
     WHILE pvadr # 0 DO
       SYSTEM.GET(pvadr, p); SYSTEM.GET(p-4, offadr);
-      IF (p >= heapOrg) & (offadr = 0) THEN q := p; (*mark elements in data structure with root p*)
+      IF (p >= heapOrg) & (offadr = 0) THEN q := p;   (*mark elements in data structure with root p*)
         REPEAT SYSTEM.GET(p-4, offadr);
           IF offadr = 0 THEN SYSTEM.GET(p-8, tag); offadr := tag + 16 ELSE INC(offadr, 4) END ;
           SYSTEM.PUT(p-4, offadr); SYSTEM.GET(offadr, offset);
-          IF offset # -1 THEN (*down*) SYSTEM.GET(p+offset, r); SYSTEM.GET(r-4, offadr);
+          IF offset # -1 THEN (*down*)
+            SYSTEM.GET(p+offset, r); SYSTEM.GET(r-4, offadr);
             IF (r >= heapOrg) & (offadr = 0) THEN SYSTEM.PUT(p+offset, q); q := p; p := r END
           ELSE (*up*) SYSTEM.GET(q-4, offadr); SYSTEM.GET(offadr, offset);
             IF p # q THEN SYSTEM.GET(q+offset, r); SYSTEM.PUT(q+offset, p); p := q; q := r END
@@ -107,7 +110,7 @@ MODULE Kernel; (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 3.4.17*)
       WHILE mark = 0 DO
         SYSTEM.GET(p, tag); SYSTEM.GET(tag, size); INC(p, size); SYSTEM.GET(p+4, mark)
       END ;
-      size := p - q; DEC(allocated, size); (*size of free block*)
+      size := p - q; DEC(allocated, size);  (*size of free block*)
       IF size > 0 THEN
         IF size MOD 64 # 0 THEN
           SYSTEM.PUT(q, 32); SYSTEM.PUT(q+4, -1); SYSTEM.PUT(q+8, list3); list3 := q; INC(q, 32); DEC(size, 32)
@@ -130,18 +133,18 @@ MODULE Kernel; (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 3.4.17*)
 
 (* ---------- Generic heap scan ----------*)
 
-  PROCEDURE Scan*(type, proc: Handler; VAR res0, res1: INTEGER); (*res0, res1 = sum of handler results*)
+  PROCEDURE Scan*(type, proc: Handler; VAR resType, resProc: INTEGER); (*returns sums of handler calls*)
     VAR p, r, mark, tag, size, offadr, offset: LONGINT; continue: BOOLEAN;
-  BEGIN p := heapOrg; res0 := 0; res1 := 0; continue := TRUE;
+  BEGIN p := heapOrg; resType := 0; resProc := 0; continue := TRUE;
     REPEAT SYSTEM.GET(p+4, mark);
       IF mark < 0 THEN (*free*) SYSTEM.GET(p, size)
       ELSE (*allocated*) SYSTEM.GET(p, tag); SYSTEM.GET(tag, size);
         IF mark > 0 THEN SYSTEM.PUT(p+4, 0); (*unmark*)
           IF continue THEN
-            IF type # NIL THEN INC(res0, type(tag, continue)) END ; (*call type for type tag*)
+            IF type # NIL THEN INC(resType, type(tag, continue)) END ; (*call type for type tag*)
             IF continue & (proc # NIL) THEN offadr := tag - 4; SYSTEM.GET(offadr, offset);
               WHILE continue & (offset # -1) DO SYSTEM.GET(p+8+offset, r);
-                INC(res1, proc(r, continue)); (*call proc for each procedure variable*)
+                INC(resProc, proc(r, continue)); (*call proc for each procedure variable*)
                 DEC(offadr, 4); SYSTEM.GET(offadr, offset)
               END
             END
@@ -182,10 +185,10 @@ MODULE Kernel; (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 3.4.17*)
 
   PROCEDURE SDShift(VAR n: INTEGER);
     VAR data: INTEGER;
-  BEGIN SPICmd(58, 0); (*CMD58 get card capacity bit*)
+  BEGIN SPICmd(58, 0);  (*CMD58 get card capacity bit*)
     SYSTEM.GET(spiData, data); SPI(-1);
-    IF (data # 0) OR ~SYSTEM.BIT(spiData, 6) THEN n := n * 512 END ; (*non-SDHC card*)
-    SPI(-1); SPI(-1); SPIIdle(1) (*flush response*)
+    IF (data # 0) OR ~SYSTEM.BIT(spiData, 6) THEN n := n * 512 END ;  (*non-SDHC card*)
+    SPI(-1); SPI(-1); SPIIdle(1)  (*flush response*)
   END SDShift;
 
   PROCEDURE ReadSD(src, dst: INTEGER);
@@ -245,9 +248,9 @@ MODULE Kernel; (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 3.4.17*)
   PROCEDURE GetSector*(src: INTEGER; VAR dst: Sector);
   BEGIN src := src DIV 29; ASSERT(SYSTEM.H(0) = 0);
     src := src * 2 + FSoffset;
-    ReadSD(src, SYSTEM.ADR(dst)); ReadSD(src+1, SYSTEM.ADR(dst)+512)
+    ReadSD(src, SYSTEM.ADR(dst)); ReadSD(src+1, SYSTEM.ADR(dst)+512) 
   END GetSector;
-
+  
   PROCEDURE PutSector*(dst: INTEGER; VAR src: Sector);
   BEGIN dst := dst DIV 29; ASSERT(SYSTEM.H(0) =  0);
     dst := dst * 2 + FSoffset;
@@ -282,7 +285,7 @@ MODULE Kernel; (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 3.4.17*)
   END Trap;
 
   PROCEDURE Init*;
-  BEGIN Install(SYSTEM.ADR(Trap), 20H); (*install temporary trap*)
+  BEGIN Install(SYSTEM.ADR(Trap), 20H);  (*install temporary trap*)
     SYSTEM.GET(12, MemLim); SYSTEM.GET(24, heapOrg);
     stackOrg := heapOrg; stackSize := 8000H; heapLim := MemLim;
     list1 := 0; list2 := 0; list3 := 0; list0 := heapOrg;

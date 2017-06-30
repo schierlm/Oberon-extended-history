@@ -1,5 +1,5 @@
-MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 12.12.90 / 5.1.17*)
-  IMPORT SYSTEM, Raster, Viewers, Input, Fonts, Texts, Graphics, Oberon;
+MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 1.6.17*)
+  IMPORT SYSTEM, Display, Viewers, Input, Fonts, Texts, Graphics, Oberon;
 
   CONST (*update message ids*)
     drawobj = 1; drawobjs = 2; drawobjd = 3;
@@ -74,8 +74,8 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 12.12.90 / 5.1.17*)
   PROCEDURE SetChangeMark(F: Frame; col: INTEGER); (*set mark in corner of frame*)
   BEGIN
     IF F.H > 16 THEN
-      IF col = 0 THEN Raster.ReplConst(Raster.black, F.X+F.W-12, F.Y+F.H-12, 8, 8, Raster.replace)
-      ELSE Raster.CopyPattern(Raster.white, Raster.block, F.X+F.W-12, F.Y+F.H-12, 0, 0, Raster.paint)
+      IF col = 0 THEN Display.ReplConst(Display.black, F.X+F.W-12, F.Y+F.H-12, 8, 8, Display.replace)
+      ELSE Display.CopyPattern(Display.white, Display.block, F.X+F.W-12, F.Y+F.H-12, 0, 0, Display.paint)
       END
     END
   END SetChangeMark;
@@ -84,12 +84,12 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 12.12.90 / 5.1.17*)
     VAR x, x0, y: INTEGER; M: DrawMsg;
   BEGIN F.X1 := F.X + F.W; F.Y1 := F.Y + F.H;
     F.x := (F.X + F.Xg) DIV 16 * 16; F.y := (F.Y + F.Yg) DIV 16 * 16; F.marked := FALSE; F.mark.next := NIL;
-    Oberon.RemoveMarks(F.X, F.Y, F.W, F.H); Raster.ReplConst(F.col, F.X, F.Y, F.W, F.H, 0);
+    Oberon.RemoveMarks(F.X, F.Y, F.W, F.H); Display.ReplConst(F.col, F.X, F.Y, F.W, F.H, 0);
     IF F.ticked THEN
       x0 := (F.X + 15) DIV 16 * 16; y := (F.Y + 15) DIV 16 * 16;
       WHILE y < F.Y1 DO
         x := x0;
-        WHILE x < F.X1 DO Raster.Dot(Raster.white, x, y, Raster.replace); INC(x, 16) END ;
+        WHILE x < F.X1 DO Display.Dot(Display.white, x, y, Display.replace); INC(x, 16) END ;
         INC(y, 16)
       END
     END ;
@@ -105,7 +105,7 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 12.12.90 / 5.1.17*)
       IF X < CL + 7 THEN X := CL + 7 ELSIF X > CL + DW - 7 THEN X := CL + DW - 7 END
     END ;
     IF Y < 7 THEN Y := 7 ELSIF Y > DH THEN Y := DH - 7 END ;
-    Raster.CopyPattern(Raster.white, Raster.cross, X-7, Y-7, 0, 0, Raster.invert)
+    Display.CopyPattern(Display.white, Display.cross, X-7, Y-7, 0, 0, Display.invert)
   END FlipCross;
 
   PROCEDURE Focus*(): Frame;
@@ -160,8 +160,8 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 12.12.90 / 5.1.17*)
 
   PROCEDURE FlipMark(x, y: INTEGER);
   BEGIN
-    Raster.ReplConst(Raster.white, x-7, y, 15, 1, 2);
-    Raster.ReplConst(Raster.white, x, y-7, 1, 15, 2)
+    Display.ReplConst(Display.white, x-7, y, 15, 1, 2);
+    Display.ReplConst(Display.white, x, y-7, 1, 15, 2)
   END FlipMark;
 
   PROCEDURE Defocus*(F: Frame);
@@ -409,8 +409,8 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 12.12.90 / 5.1.17*)
         DM := M;
         x := G.x + newcap.x + newcap.w; y := G.y + newcap.y;
         IF (DM.graph = G.graph) & (x >= G.X) & (x + DM.w < G.X1) & (y >= G.Y) & (y < G.Y1) THEN
-          Raster.CopyPattern(Oberon.CurCol, DM.pat, x + DM.x1, y + DM.y1, 0, 0, 2);
-          Raster.ReplConst(Raster.white, x, y, DM.w, newcap.h, 2)
+          Display.CopyPattern(Oberon.CurCol, DM.pat, x + DM.x1, y + DM.y1, 0, 0, 2);
+          Display.ReplConst(Display.white, x, y, DM.w, newcap.h, 2)
         END
       | Viewers.ControlMsg:
           IF M.id = Viewers.neutralize THEN
@@ -419,10 +419,7 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 12.12.90 / 5.1.17*)
           END
       | Oberon.SelectionMsg: GetSelection(G, M.text, M.beg, M.end, M.time)
       | Viewers.CopyMsg: Oberon.RemoveMarks(G.X, G.Y, G.W, G.H); Defocus(G); NEW(G1); G1^ := G^; M.F := G1
-      | Viewers.ViewerMsg:
-          IF (M.id = Viewers.restore) OR (M.id = Viewers.modify) THEN
-            G.Y := M.Y; G.H := M.H; Restore(G)
-          END
+      | Viewers.ViewerMsg: G.Y := M.Y; G.H := M.H; Restore(G)
       END
     END
   END Handle;
@@ -439,7 +436,7 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 12.12.90 / 5.1.17*)
     IF x+w >= F.X1 THEN w := F.X1 - x END ;
     IF y < F.Y THEN DEC(h, F.Y-y); y := F.Y END ;
     IF y+h >= F.Y1 THEN h := F.Y1 - y END ;
-    Raster.ReplConst(col, x, y, w, h, mode)
+    Display.ReplConst(col, x, y, w, h, mode)
   END ReplConst;
 
   PROCEDURE ReplPattern*(F: Frame; col, patadr, x, y, w, h, mode: INTEGER);
@@ -448,7 +445,7 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 12.12.90 / 5.1.17*)
     IF x+w >= F.X1 THEN w := F.X1 - x END ;
     IF y < F.Y THEN DEC(h, F.Y-y); y := F.Y END ;
     IF y+h >= F.Y1 THEN h := F.Y1 - y END ;
-    Raster.ReplPattern(col, patadr, x, y, w, h, mode)
+    Display.ReplPattern(col, patadr, x, y, w, h, mode)
   END ReplPattern;
   
   PROCEDURE DrawLine(obj: Graphics.Object; VAR M: Graphics.Msg);
@@ -461,11 +458,11 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 12.12.90 / 5.1.17*)
     CASE M OF DrawMsg:
       x := obj.x + M.x; y := obj.y + M.y; w := obj.w; h := obj.h; f := M.f;
       IF (x+w > f.X) & (x < f.X1) & (y+h > f.Y) & (y < f.Y1) THEN
-        col := Raster.white;
+        col := Display.white;
         IF (M.mode = 0) & obj.selected OR (M.mode = 1) THEN
-          ReplPattern(f, col, Raster.grey, x, y, w, h, Raster.replace)
-        ELSIF M.mode IN {0, 2} THEN ReplConst(f, col, x, y, w, h, Raster.replace)
-        ELSIF M.mode = 3 THEN ReplConst(f, Raster.black, x, y, w, h, Raster.replace)  (*erase*)
+          ReplPattern(f, col, Display.grey, x, y, w, h, Display.replace)
+        ELSIF M.mode IN {0, 2} THEN ReplConst(f, col, x, y, w, h, Display.replace)
+        ELSIF M.mode = 3 THEN ReplConst(f, Display.black, x, y, w, h, Display.replace)  (*erase*)
         END
       END
     END
@@ -487,14 +484,14 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 12.12.90 / 5.1.17*)
             fnt := R.fnt; x0 := x; y0 := y - fnt.minY;
             REPEAT Fonts.GetPat(fnt, ch, dx, x1, y1, w1, h1, pat);
               IF x0+x1+w1 <= f.X1 THEN
-                Raster.CopyPattern(col, pat, x0+x1, y0+y1, 0, 0, Raster.paint); INC(x0, dx); Texts.Read(R, ch)
+                Display.CopyPattern(col, pat, x0+x1, y0+y1, 0, 0, Display.paint); INC(x0, dx); Texts.Read(R, ch)
               ELSE ch := 0X
               END
             UNTIL ch < " ";
-            IF obj.selected THEN ReplConst(f, Raster.white, x, y, w, h, Raster.invert) END
+            IF obj.selected THEN ReplConst(f, Display.white, x, y, w, h, Display.invert) END
           END
-        ELSIF M.mode IN {1, 2} THEN ReplConst(f, Raster.white, x, y, w, h, Raster.invert)
-        ELSIF M.mode = 3 THEN ReplConst(f, Raster.black, x, y, w, h, Raster.replace)
+        ELSIF M.mode IN {1, 2} THEN ReplConst(f, Display.white, x, y, w, h, Display.invert)
+        ELSIF M.mode = 3 THEN ReplConst(f, Display.black, x, y, w, h, Display.replace)
         END
       END
     END
@@ -510,9 +507,9 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 12.12.90 / 5.1.17*)
         M1.x := x; M1.y := y;
         IF M.mode = 0 THEN
           M1.f := f; M1.col := obj.col; M1.mode := 0; Graphics.DrawMac(obj(Graphics.Macro).mac, M1);
-          IF obj.selected THEN ReplPattern(f, Raster.white, dotted, x, y, w, h, Raster.invert) END
-        ELSIF M.mode IN {1, 2} THEN ReplPattern(f, Raster.white, dotted, x, y, w, h, Raster.invert)
-        ELSIF M.mode = 3 THEN ReplConst(f, Raster.black, x, y, w, h, Raster.replace)
+          IF obj.selected THEN ReplPattern(f, Display.white, dotted, x, y, w, h, Display.invert) END
+        ELSIF M.mode IN {1, 2} THEN ReplPattern(f, Display.white, dotted, x, y, w, h, Display.invert)
+        ELSIF M.mode = 3 THEN ReplConst(f, Display.black, x, y, w, h, Display.replace)
         END
       END
     END
@@ -522,11 +519,11 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 12.12.90 / 5.1.17*)
 
   PROCEDURE Open*(G: Frame; graph: Graphics.Graph); 
   BEGIN G.graph := graph; G.Xg := 0; G.Yg := 0; G.x := G.X; G.y := G.Y;
-    G.col := Raster.black; G.marked := FALSE;
+    G.col := Display.black; G.marked := FALSE;
     G.mark.next := NIL; G.ticked := TRUE; G.handle := Handle
   END Open;
 
-BEGIN DW := Raster.Width - 8; DH := Raster.Height - 8; CL := 0;
+BEGIN DW := Display.Width - 8; DH := Display.Height - 8; CL := 0;
   Texts.OpenWriter(W);
   tack := SYSTEM.ADR($0707 4122 1408 1422 4100$);
   dotted := SYSTEM.ADR($2004 0000 1111 1111 0000 0000 0000 0000 0000 0000$);

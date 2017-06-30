@@ -1,5 +1,5 @@
-MODULE Checkers;  (*NW 4.10.90 / 10.3.13 / AP 5.1.17*)
-  IMPORT SYSTEM, Raster, Viewers, Oberon, MenuViewers, TextFrames;
+MODULE Checkers;  (*NW 4.10.90 / 10.3.13 / AP 1.6.17*)
+  IMPORT SYSTEM, Display, Viewers, Oberon, MenuViewers, TextFrames;
 
   CONST Menu = "System.Close System.Copy System.Grow | System.Expand System.Clone";
 
@@ -15,8 +15,8 @@ MODULE Checkers;  (*NW 4.10.90 / 10.3.13 / AP 5.1.17*)
 
   PROCEDURE Restore(F: Frame);
   BEGIN Oberon.RemoveMarks(F.X, F.Y, F.W, F.H);
-    Raster.ReplConst(Raster.black, F.X, F.Y, F.W, F.H, Raster.replace); (*clear*)
-    Raster.ReplPattern(F.col, checks, F.X+1, F.Y, F.W-1, F.H-1, Raster.paint)
+    Display.ReplConst(Display.black, F.X, F.Y, F.W, F.H, Display.replace); (*clear*)
+    Display.ReplPattern(F.col, checks, F.X+1, F.Y, F.W-1, F.H-1, Display.paint)
   END Restore;
 
   PROCEDURE Handle(G: Viewers.Frame; VAR M: Viewers.FrameMsg);

@@ -1,4 +1,4 @@
-MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 12.12.90 / 3.4.17*)
+MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.7.17*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules, Input, Fonts, Texts,
     Viewers, Oberon, MenuViewers, TextFrames;
 
@@ -82,16 +82,15 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 12.12.90 / 3.4.17*)
   END MakeDisplayName;
 
   PROCEDURE OpenViewers; (*open log and system tool viewer in system track of current display*)
-    VAR logV, toolV, menu, main: Viewers.Frame; curDisplay: Oberon.Display;
+    VAR logV, toolV, menu, main: Viewers.Frame; curDisplay: Viewers.Display;
       X, Y: INTEGER;
-  BEGIN curDisplay := Viewers.CurDisplay(Oberon.Display);
+  BEGIN curDisplay := Viewers.CurDisplay;
     IF curDisplay # NIL THEN
-      Texts.WriteString(W, "Oberon V6  NW 14.4.13 / AP 11.3.17  Display ");
-      Texts.WriteInt(W, curDisplay.id, 2); Texts.Write(W, " "); Texts.WriteString(W, curDisplay.name);
-      Texts.WriteLn(W); Texts.Append(curDisplay.log, W.buf);
+      Texts.WriteString(W, "Oberon V6  NW 14.4.13 / AP 1.7.17  Display ");
+      Texts.WriteInt(W, curDisplay.id, 2); Texts.Write(W, " "); Texts.WriteString(W, curDisplay.name); EndLine;
       Oberon.AllocateSystemViewer(0, X, Y);
       menu := TextFrames.NewMenu("System.Log", LogMenu);
-      main := TextFrames.NewText(curDisplay.log, 0);
+      main := TextFrames.NewText(Oberon.Log, 0);
       logV := MenuViewers.New(menu, main, TextFrames.menuH, X, Y);
       Oberon.AllocateSystemViewer(0, X, Y);
       menu := TextFrames.NewMenu("System.Tool", StandardMenu);
@@ -100,70 +99,61 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 12.12.90 / 3.4.17*)
     END
   END OpenViewers;
 
-  PROCEDURE OpenOberonDisplay(name: ARRAY OF CHAR); (*if name is empty, a default name is created*)
-    VAR D: Oberon.Display; DW, DH: INTEGER;
-  BEGIN DW := Oberon.DisplayWidth(0); DH := Oberon.DisplayHeight(0);
-    NEW(D); Viewers.InitDisplay(D, DW, DH, name);
-    IF D.name = "" THEN MakeDisplayName(D.id, "Display ", D.name) END;
-    Oberon.OpenDisplayLog(D, TextFrames.Text(""));
-    Oberon.OpenLog(D.log);
-    Oberon.InitTrack(D, DW DIV 8 * 5, DH);
-    Oberon.InitTrack(D, DW DIV 8 * 3, DH);
-    Viewers.SetDisplay(D);
-    Viewers.SetFocusViewer(D, Viewers.This(D, 0, 0));
-    Input.SetMouseLimits(D.curW, D.H);
-    OpenViewers
-  END OpenOberonDisplay;
+  PROCEDURE CreateDisplay(name: ARRAY OF CHAR);
+    VAR D: Viewers.Display;
+  BEGIN NEW(D); Oberon.InitDisplay(D, name); (*create and initialize a new display*)
+    Oberon.SetDisplay(D); (*make it the current display*)
+    OpenViewers (*open log and system tool viewer*)
+  END CreateDisplay;
 
   PROCEDURE OpenDisplay*; (*display name is provided as parameter*)
-    VAR S: Texts.Scanner; old: INTEGER;
-  BEGIN old := Viewers.CurDisplay.id;
+    VAR S: Texts.Scanner; prev: INTEGER;
+      name: ARRAY Viewers.DnLength OF CHAR;
+  BEGIN prev := Viewers.CurDisplay.id;
     Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
-    IF S.class = Texts.Name THEN OpenOberonDisplay(S.s) ELSE OpenOberonDisplay("") END;
-    Texts.WriteString(W, "Now in display "); Texts.WriteInt(W, Viewers.CurDisplay.id, 2);
-    Texts.WriteString(W,". To return to previous display:  System.SetDisplay ");
-    Texts.WriteInt(W, old, 2); EndLine
+    IF S.class = Texts.Name THEN CreateDisplay(S.s)
+    ELSE MakeDisplayName(prev, "opened from display ", name); CreateDisplay(name)
+    END ;
+    Texts.WriteString(W, " now in display "); Texts.WriteInt(W, Viewers.CurDisplay.id, 2);
+    Texts.WriteString(W,". to return to previous display:  System.SetDisplay "); Texts.WriteInt(W, prev, 2);
+    EndLine
   END OpenDisplay;
 
-  PROCEDURE CloseDisplay*; (*display id is provided as parameter*)
-    VAR D: Viewers.Display; S: Texts.Scanner; old, id, hint: INTEGER;
+  PROCEDURE CloseDisplay*; (*display id and (optionally) a hint are provided as parameters*)
+    VAR D: Viewers.Display; S: Texts.Scanner; prev, id, hint: INTEGER;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
-    IF S.class = Texts.Int THEN id := S.i; D := Viewers.GetDisplay(id);
+    IF S.class = Texts.Int THEN id := S.i; D := Viewers.GetDisplay(S.i);
       IF D = NIL THEN Texts.WriteString(W, " no such display ")
-      ELSE old := Viewers.CurDisplay.id;
-        IF D.id = old THEN Texts.Scan(S);
-          IF S.class = Texts.Int THEN hint := S.i ELSE hint := 0 END;
-          Viewers.CloseDisplay(D.id, hint);
-          IF Viewers.CurDisplay.id = old THEN Texts.WriteString(W, " can't close last display")
-          ELSE Oberon.OpenLog(Viewers.CurDisplay(Oberon.Display).log);
-            Texts.WriteString(W, " Display "); Texts.WriteInt(W, id, 2); Texts.WriteString(W, " was closed.")
-          END
-        ELSE Viewers.CloseDisplay(id, old);
-          Texts.WriteString(W, " Display "); Texts.WriteInt(W, id, 2); Texts.WriteString(W, " was closed.")
+      ELSE prev := Viewers.CurDisplay.id;
+        IF D.id = prev THEN Texts.Scan(S);
+          IF S.class = Texts.Int THEN hint := S.i ELSE hint := 0 END
+        ELSE hint := prev
+        END ;
+        Oberon.CloseDisplay(D, hint);
+        IF (id = prev) & (Viewers.CurDisplay.id = prev) THEN Texts.WriteString(W, " can't close last display")
+        ELSE Texts.WriteString(W, " display "); Texts.WriteInt(W, id, 2); Texts.WriteString(W, " closed");
+          IF id = prev THEN Texts.WriteString(W, ". now in display "); Texts.WriteInt(W, Viewers.CurDisplay.id, 2) END
         END
       END
     ELSE Texts.WriteString(W, " must provide a valid display number")
-    END;
+    END ;
     EndLine
   END CloseDisplay;
 
   PROCEDURE SetDisplay*; (*display id is provided as parameter*)
-    VAR D: Viewers.Display; S: Texts.Scanner; old: INTEGER;
+    VAR D: Viewers.Display; S: Texts.Scanner; prev: INTEGER;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
     IF S.class = Texts.Int THEN D := Viewers.GetDisplay(S.i);
       IF D = NIL THEN Texts.WriteString(W, " no such display ")
-      ELSE old := Viewers.CurDisplay.id;
-        IF D.id = old THEN Texts.WriteString(W, " already the current display ")
-        ELSE Viewers.SetDisplay(D);
-          Input.SetMouseLimits(D.curW, D.H);
-          Oberon.OpenLog(D(Oberon.Display).log);
-          Texts.WriteString(W, "Now in display "); Texts.WriteInt(W, Viewers.CurDisplay.id, 2);
-          Texts.WriteString(W,". To return to previous display:  System.SetDisplay ");
-          Texts.WriteInt(W, old, 2)
+      ELSE prev := Viewers.CurDisplay.id;
+        IF D.id = prev THEN Texts.WriteString(W, " already the current display ")
+        ELSE Oberon.SetDisplay(D);
+          Texts.WriteString(W, " now in display "); Texts.WriteInt(W, Viewers.CurDisplay.id, 2);
+          Texts.WriteString(W,". to return to previous display:  System.SetDisplay "); Texts.WriteInt(W, prev, 2)
         END
       END
     ELSE Texts.WriteString(W, " must provide a valid display number")
-    END;
+    END ;
     EndLine
   END SetDisplay;
 
@@ -180,17 +170,17 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 12.12.90 / 3.4.17*)
       ELSE Texts.WriteString(W, " no display name provided (SetDisplayName id name)")
       END
     ELSE Texts.WriteString(W, " no display id provided (SetDisplayName id name)")
-    END;
+    END ;
     EndLine
   END SetDisplayName;
 
   PROCEDURE ShowDisplays*;
     VAR D: Viewers.Frame;
   BEGIN D := Viewers.root; Texts.WriteString(W, "System.ShowDisplays"); EndLine;
-    WHILE D # NIL DO Texts.WriteString(W, " ");
+    WHILE D # NIL DO
       Texts.WriteString(W, " display "); Texts.WriteInt(W, D(Viewers.Display).id, 2);
       Texts.WriteString(W, " "); Texts.WriteString(W, D(Viewers.Display).name);
-      IF D = Viewers.CurDisplay THEN Texts.WriteString(W, "      (current display)") END;
+      IF D = Viewers.CurDisplay THEN Texts.WriteString(W, "      (current display)") END ;
       EndLine;
       D := D.next
     END
@@ -251,21 +241,20 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 12.12.90 / 3.4.17*)
   END Flush;
 
   PROCEDURE RecallFocus*; (*recover the focus viewer of the current display*)
-    VAR V: Viewers.Viewer; curDisplay: Viewers.Display; M: Viewers.ViewerMsg;
-  BEGIN curDisplay := Viewers.CurDisplay; V := Viewers.CurDisplay.focusViewer;
+    VAR V: Viewers.Viewer; M: Viewers.ViewerMsg;
+  BEGIN V := Viewers.FocusViewer;
     IF (V # NIL) & (V.state = 0) THEN
-      Viewers.Open(curDisplay, V, V.X, V.Y + V.H); M.id := Viewers.restore; V.handle(V, M)
+      Viewers.Open(Viewers.CurDisplay, V, V.X, V.Y + V.H); M.id := Viewers.restore; V.handle(V, M)
     END
   END RecallFocus;
 
-  PROCEDURE OpenLog*; (*open a(nother) log viewer of the current display*)
-    VAR V: Viewers.Viewer; curDisplay: Viewers.Viewer; X, Y: INTEGER;
-  BEGIN curDisplay := Viewers.CurDisplay;
-    IF curDisplay IS Oberon.Display THEN Oberon.AllocateSystemViewer(0, X, Y);
-      V := MenuViewers.New(
-        TextFrames.NewMenu("System.Log", LogMenu),
-        TextFrames.NewText(curDisplay(Oberon.Display).log, 0), TextFrames.menuH, X, Y)
-    END
+  PROCEDURE OpenLog*; (*open a(nother) log viewer for the system-wide central log*)
+    VAR V: Viewers.Viewer; X, Y: INTEGER;
+  BEGIN Oberon.AllocateSystemViewer(0, X, Y);
+    IF Oberon.Log = NIL THEN Oberon.OpenLog(TextFrames.Text("")) END ;
+    V := MenuViewers.New(
+      TextFrames.NewMenu("System.Log", LogMenu),
+      TextFrames.NewText(Oberon.Log, 0), TextFrames.menuH, X, Y)
   END OpenLog;
 
   PROCEDURE Copy*; (*create a copy of the viewer in the current display*)
@@ -289,18 +278,18 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 12.12.90 / 3.4.17*)
   END Grow;
 
   PROCEDURE Clone*; (*create a copy of the viewer in a newly created display*)
-    VAR V, V1: Viewers.Viewer; M: Viewers.CopyMsg; N: Viewers.ViewerMsg; old: INTEGER;
+    VAR D: Viewers.Display; V, V1: Viewers.Viewer;
+      M: Viewers.CopyMsg; N: Viewers.ViewerMsg; prev: INTEGER;
       name: ARRAY Viewers.DnLength OF CHAR;
-  BEGIN V := Oberon.Par.vwr; V.handle(V, M); V1 := M.F(Viewers.Viewer);
-    old := Viewers.CurDisplay.id; MakeDisplayName(old, "cloned from display ", name);
-    OpenOberonDisplay(name);
+  BEGIN V := Oberon.Par.vwr; V.handle(V, M); V1 := M.F(Viewers.Viewer); prev := Viewers.CurDisplay.id;
+    MakeDisplayName(prev, "cloned from display ", name); CreateDisplay(name);
     Viewers.Open(Viewers.CurDisplay, V1, 0, Oberon.DisplayHeight(0));
     N.id := Viewers.restore; V1.handle(V1, N);
-    Texts.WriteString(W, "Now in display "); Texts.WriteInt(W, Viewers.CurDisplay.id, 2);
-    Texts.WriteString(W,". To return to previous display:  System.SetDisplay ");
-    Texts.WriteInt(W, old, 2); Texts.WriteLn(W);
-    Texts.WriteString(W,"To close this (cloned) display and then return:     System.CloseDisplay ");
-    Texts.WriteInt(W, Viewers.CurDisplay.id, 2); Texts.WriteInt(W, old, 2);
+    Texts.WriteString(W, " now in display "); Texts.WriteInt(W, Viewers.CurDisplay.id, 2);
+    Texts.WriteString(W,". to return to previous display:  System.SetDisplay ");
+    Texts.WriteInt(W, prev, 2); Texts.WriteLn(W);
+    Texts.WriteString(W," to close this (cloned) display and then return:  System.CloseDisplay ");
+    Texts.WriteInt(W, Viewers.CurDisplay.id, 2); Texts.WriteInt(W, prev, 2);
     EndLine
   END Clone;
 
@@ -330,80 +319,164 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 12.12.90 / 3.4.17*)
 
   (* ------------- Toolbox for module management ---------------*)
 
-  PROCEDURE ThisMod(num: INTEGER; name: ARRAY OF CHAR): Modules.Module; (*find module by module number or name*)
-    VAR mod: Modules.Module;
-  BEGIN mod := Modules.root;
-    IF name = "" THEN
-      WHILE (mod # NIL) & (mod.num # num) DO mod := mod.next END
-    ELSE
-      WHILE (mod # NIL) & (mod.name # name) DO mod := mod.next END
-    END ;
-    IF (mod # NIL) & (mod.name[0] = 0X) THEN mod := NIL END ;
-    RETURN mod
-  END ThisMod;
-
-  PROCEDURE Free1(s: ARRAY OF CHAR);
-    VAR mod: Modules.Module;
-  BEGIN IF s # "*" THEN Texts.WriteString(W, s); Texts.Write(W, " ") END ;
-    Modules.Free(s);
-    IF Modules.res = 0 THEN Texts.WriteString(W, "unloading")
-    ELSIF Modules.res = 1 THEN Texts.WriteString(W, "removing (types in use in dynamic objects)")
-    ELSIF Modules.res = 2 THEN Texts.WriteString(W, "removing (procedures in use in dynamic objects)")
-    ELSIF Modules.res = 3 THEN Texts.WriteString(W, "removing (procedures in use in static objects)")
-    ELSIF Modules.res = 4 THEN Texts.WriteString(W, "unloading failed (clients exist)")
-    END ;
-    EndLine
-  END Free1;
-
-  PROCEDURE Free*; (*unload modules individually; module names or module numbers are provided as parameters*)
+  PROCEDURE Select1(on, this, clients, imports: BOOLEAN); (*modules, clients, imports*)
     VAR T: Texts.Text;
       beg, end, time: LONGINT;
       S: Texts.Scanner;
-      mod: Modules.Module;
-  BEGIN Texts.WriteString(W, "System.Free"); EndLine;
-    Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
+  BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
     IF (S.class = Texts.Char) & (S.c = "^") THEN
       Oberon.GetSelection(T, beg, end, time);
-      IF time >= 0 THEN Texts.OpenScanner(S, T, beg); Texts.Scan(S);
-        IF S.class = Texts.Int THEN mod := ThisMod(S.i, "");
-          IF mod # NIL THEN Free1(mod.name) END
-        ELSIF (S.class = Texts.Name) OR (S.class = Texts.String) THEN Free1(S.s)
+      IF time >= 0 THEN
+        Texts.OpenScanner(S, T, beg); Texts.Scan(S);
+        IF (S.class = Texts.Name) OR (S.class = Texts.String) THEN
+          Texts.Write(W, " "); Texts.WriteString(W, S.s);
+          Modules.Select(S.s, on, this, clients, imports); Texts.Scan(S)
         END
       END
     ELSE
-      WHILE (S.class = Texts.Int) OR (S.class = Texts.Name) OR (S.class = Texts.String) DO (*strings allowed*)
-        IF S.class = Texts.Int THEN (*module number*) mod := ThisMod(S.i, "");
-          IF mod # NIL THEN Free1(mod.name) END
-        ELSE (*module name*) Free1(S.s)
-        END ;
-        Texts.Scan(S)
+      WHILE (S.class = Texts.Name) OR (S.class = Texts.String) DO
+	Texts.Write(W, " "); Texts.WriteString(W, S.s);
+        Modules.Select(S.s, on, this, clients, imports); Texts.Scan(S)
+      END
+    END
+  END Select1;
+
+  PROCEDURE Select*; (*module names are provided as parameters*)
+  BEGIN Texts.WriteString(W, "System.Select"); Select1(TRUE, TRUE, FALSE, FALSE); EndLine
+  END Select;
+
+  PROCEDURE SelectAll*;
+  BEGIN Modules.SelectAll(TRUE)
+  END SelectAll;
+
+  PROCEDURE DeselectAll*;
+  BEGIN Modules.SelectAll(FALSE)
+  END DeselectAll;
+
+  PROCEDURE WriteSelection(): BOOLEAN; (*in log viewer*)
+    VAR mod: Modules.Module; hasSel: BOOLEAN;
+  BEGIN mod := Modules.root; hasSel := FALSE;
+    WHILE mod # NIL DO
+      IF (mod.name[0] # 0X) & Modules.Selected(mod) THEN
+        IF ~hasSel THEN Texts.Write(W, " "); hasSel := TRUE END ;
+        Texts.Write(W, " "); Texts.WriteString(W, mod.name);
+      END ;
+      mod := mod.next
+    END ;
+    IF hasSel THEN Texts.Append(Oberon.Log, W.buf) END
+    RETURN hasSel
+  END WriteSelection;
+
+  PROCEDURE FreeMsg(hideable: BOOLEAN);
+  BEGIN
+    IF Modules.res = 0 THEN Texts.WriteString(W, " unloading")
+    ELSIF Modules.res = 1 THEN Texts.WriteString(W, " unloading failed (clients exist)")
+    ELSIF Modules.res < 5 THEN
+      IF hideable THEN Texts.WriteString(W, " removing") ELSE Texts.WriteString(W, " unloading failed") END ;
+      IF Modules.res = 2 THEN Texts.WriteString(W, " (types in use in dynamic objects)")
+      ELSIF Modules.res = 3 THEN Texts.WriteString(W, " (procedures in use in dynamic objects)")
+      ELSIF Modules.res = 4 THEN Texts.WriteString(W, " (procedures in use in static objects)")
       END
     END ;
-    Oberon.Collect(0)
+    EndLine
+  END FreeMsg;
+
+  PROCEDURE Free1(this, clients, imports, shrink, hideable: BOOLEAN; exclude: ARRAY OF CHAR);
+  BEGIN Modules.SelectAll(FALSE); Select1(TRUE, this, clients, imports);
+    IF exclude[0] # 0X THEN Modules.Select(exclude, FALSE, TRUE, FALSE, TRUE);
+      Texts.WriteString(W, " ("); Texts.WriteString(W, exclude); Texts.WriteString(W, " and its clients excluded)")
+    END ;
+    EndLine;
+    IF shrink THEN Modules.ShrinkSelection END ;
+    IF WriteSelection() THEN Modules.FreeSelection(hideable); FreeMsg(hideable); Oberon.Collect(0) END
+  END Free1;
+
+  (*--- Free (=unload from memory OR hide from module list) various subsets of modules ---*)
+
+  PROCEDURE Free*; (*free modules as a group; module names are provided as parameters*)
+  BEGIN Texts.WriteString(W, "System.Free"); Free1(TRUE, FALSE, FALSE, FALSE, TRUE, "System")
   END Free;
 
-  PROCEDURE Deselect*; (*all modules*)
-    VAR mod: Modules.Module;
-  BEGIN mod := Modules.root;
-    WHILE mod # NIL DO Modules.Select(mod, FALSE); mod := mod.next END
-  END Deselect;
+  PROCEDURE FreeSelection*; (*free selected modules as a group*)
+  BEGIN Texts.WriteString(W, "System.FreeSelection"); EndLine;
+    IF WriteSelection() THEN Modules.FreeSelection(TRUE); FreeMsg(TRUE); Oberon.Collect(0) END
+  END FreeSelection;
 
-  PROCEDURE FreeGroup*; (*unload modules as a group; references only within the selected modules are allowed*)
-    VAR mod: Modules.Module; S: Texts.Scanner; n: INTEGER;
-  BEGIN Texts.WriteString(W, "System.FreeGroup"); EndLine;
-    Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
-    IF (S.class = Texts.Int) OR (S.class = Texts.Name) OR (S.class = Texts.String) THEN Deselect; n := 0;
-      WHILE (S.class = Texts.Int) OR (S.class = Texts.Name) OR (S.class = Texts.String) DO (*strings allowed*)
-        IF S.class = Texts.Int THEN mod := ThisMod(S.i, "") ELSE mod := ThisMod(-1, S.s) END ;
-        IF mod # NIL THEN Modules.Select(mod, TRUE);
-          Texts.WriteString(W, mod.name); Texts.Write(W, " "); INC(n)
-        END ;
-        Texts.Scan(S)
-      END ;
-      IF n > 0 THEN Free1("*"); Deselect END ;
+  PROCEDURE FreeImports*; (*free modules and their imports; module names are provided as parameters*)
+  BEGIN Texts.WriteString(W, "System.FreeImports"); Free1(TRUE, FALSE, TRUE, FALSE, TRUE, "System")
+  END FreeImports;
+
+  PROCEDURE FreeClients*; (*free modules and their clients; module names are provided as parameters*)
+  BEGIN Texts.WriteString(W, "System.FreeClients"); Free1(TRUE, TRUE, FALSE, FALSE, TRUE, "System")
+  END FreeClients;
+
+  PROCEDURE FreeRemovableImports*; (*free the removable subset of the specifed modules and their imports*)
+  BEGIN Texts.WriteString(W, "System.FreeRemovableImports"); Free1(TRUE, FALSE, TRUE, TRUE, TRUE, "System")
+  END FreeRemovableImports;
+
+  PROCEDURE FreeRemovableClients*; (*free the removable subset of the specifed modules and their clients*)
+  BEGIN Texts.WriteString(W, "System.FreeRemovableClients"); Free1(TRUE, TRUE, FALSE, TRUE, TRUE, "System")
+  END FreeRemovableClients;
+
+  (*--- Unload (=unload from memory, but don't hide if refs exist) various subsets of modules ---*)
+
+  PROCEDURE Unload*; (*unload modules as a group; module names are provided as parameters*)
+  BEGIN Texts.WriteString(W, "System.Unload"); Free1(TRUE, FALSE, FALSE, FALSE, FALSE, "System")
+  END Unload;
+
+  PROCEDURE UnloadSelection*; (*unload selected modules as a group*)
+  BEGIN Texts.WriteString(W, "System.UnloadSelection"); EndLine;
+    IF WriteSelection() THEN Modules.FreeSelection(FALSE); FreeMsg(FALSE); Oberon.Collect(0) END
+  END UnloadSelection;
+
+  PROCEDURE UnloadImports*; (*unload modules and their imports; module names are provided as parameters*)
+  BEGIN Texts.WriteString(W, "System.UnloadImports"); Free1(TRUE, FALSE, TRUE, FALSE, FALSE, "System")
+  END UnloadImports;
+
+  PROCEDURE UnloadClients*; (*unload modules and their clients; module names are provided as parameters*)
+  BEGIN Texts.WriteString(W, "System.UnloadClients"); Free1(TRUE, TRUE, FALSE, FALSE, FALSE, "System")
+  END UnloadClients;
+
+  PROCEDURE UnloadRemovableImports*; (*unload the removable subset of the specifed modules and their imports*)
+  BEGIN Texts.WriteString(W, "System.UnloadRemovableImports"); Free1(TRUE, FALSE, TRUE, TRUE, FALSE, "System")
+  END UnloadRemovableImports;
+
+  PROCEDURE UnloadRemovableClients*; (*unload the removable subset of the specifed modules and their clients*)
+  BEGIN Texts.WriteString(W, "System.FreeRemovableClients"); Free1(TRUE, TRUE, FALSE, TRUE, FALSE, "System")
+  END UnloadRemovableClients;
+
+  (*--- Show various subsets of modules ---*)
+
+  PROCEDURE Show1(this, clients, imports, shrink: BOOLEAN; exclude: ARRAY OF CHAR);
+  BEGIN Modules.SelectAll(FALSE); Select1(TRUE, this, clients, imports);
+    IF exclude[0] # 0X THEN Modules.Select(exclude, FALSE, TRUE, FALSE, TRUE);
+      Texts.WriteString(W, " ("); Texts.WriteString(W, exclude); Texts.WriteString(W, " and its clients excluded)")
     END ;
-    Oberon.Collect(0)
-  END FreeGroup;
+    EndLine;
+    IF shrink THEN Modules.ShrinkSelection END ;
+    IF WriteSelection() THEN EndLine; Modules.SelectAll(FALSE) END
+  END Show1;
+
+  PROCEDURE ShowSelection*; (*show selected modules*)
+  BEGIN Texts.WriteString(W, "System.ShowSelection"); EndLine;
+    IF WriteSelection() THEN Texts.WriteString(W, " selected"); EndLine END
+  END ShowSelection;
+
+  PROCEDURE ShowImports*; (*show modules and their imports; module names are provided as parameters*)
+  BEGIN Texts.WriteString(W, "System.ShowImports"); Show1(TRUE, FALSE, TRUE, FALSE, "")
+  END ShowImports;
+
+  PROCEDURE ShowClients*; (*show modules and their clients; module names are provided as parameters*)
+  BEGIN Texts.WriteString(W, "System.ShowClients"); Show1(TRUE, TRUE, FALSE, FALSE, "")
+  END ShowClients;
+
+  PROCEDURE ShowRemovableImports*; (*show the removable subset of the specifed modules and their imports*)
+  BEGIN Texts.WriteString(W, "System.ShowRemovableImports"); Show1(TRUE, FALSE, TRUE, TRUE, "System")
+  END ShowRemovableImports;
+
+  PROCEDURE ShowRemovableClients*; (*show the removable subset of the specifed modules and their clients*)
+  BEGIN Texts.WriteString(W, "System.ShowRemovableClients"); Show1(TRUE, TRUE, FALSE, TRUE, "System")
+  END ShowRemovableClients;
 
   PROCEDURE FreeFonts*;
   BEGIN Texts.WriteString(W, "System.FreeFonts"); Fonts.Free; EndLine
@@ -560,11 +633,10 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 12.12.90 / 3.4.17*)
     WHILE M # NIL DO
       IF M.name[0] # 0X THEN
         Texts.WriteString(W, M.name); Texts.WriteInt(W, M.num, 4); Texts.Write(W, 9X);
-        Texts.WriteHex(W, ORD(M)); Texts.WriteHex(W, M.code); Texts.WriteInt(W, M.refcnt, 4);
-        IF M.selected THEN Texts.WriteString(W, " (selected)") END ;
-        IF M.hidden THEN Texts.WriteString(W, " (removed from module list)") END
+        Texts.WriteHex(W, ORD(M)); Texts.WriteHex(W, M.code); Texts.WriteInt(W, M.refcnt, 4)
       ELSE Texts.WriteString(W, "---")
       END ;
+      IF Modules.Selected(M) THEN Texts.WriteString(W, " *") END ;
       Texts.WriteLn(W); M := M.next
     END;
     Texts.Append(T, W.buf)
@@ -598,11 +670,11 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 12.12.90 / 3.4.17*)
   END ShowCommands;
 
   PROCEDURE InitMod(name: ARRAY OF CHAR);
-    VAR mod: Modules.Module; P: Modules.Command; w: INTEGER;
+    VAR mod: Modules.Module; body: Modules.Command; w: INTEGER;
   BEGIN mod := Modules.root;
     WHILE (mod # NIL) & (name # mod.name) DO mod := mod.next END ;
     IF mod # NIL THEN SYSTEM.GET(mod.ent, w);
-      P := SYSTEM.VAL(Modules.Command, mod.code + w); P
+      body := SYSTEM.VAL(Modules.Command, mod.code + w); body
     END
   END InitMod;
 
@@ -645,6 +717,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 12.12.90 / 3.4.17*)
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); Oberon.Reset
   END Abort;
 
-BEGIN Texts.OpenWriter(W); OpenOberonDisplay("Oberon");  
+BEGIN Texts.OpenWriter(W);
+  Oberon.OpenLog(TextFrames.Text("")); CreateDisplay("Oberon");
   Kernel.Install(SYSTEM.ADR(Trap), 20H); Kernel.Install(SYSTEM.ADR(Abort), 0)
 END System.

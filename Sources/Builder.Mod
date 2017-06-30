@@ -1,4 +1,4 @@
-MODULE Builder; (*AP 11.3.17*)
+MODULE Builder; (*AP 1.6.17*)
   IMPORT Kernel, Files, Texts, Oberon;
   CONST beg = 2; end = 63; nofsecs = end - beg + 1; (*boot area = sectors 2-63*)
 
@@ -86,6 +86,6 @@ MODULE Builder; (*AP 11.3.17*)
   BEGIN (*to be implemented for specific target platform, e.g. write Xilinx .mem file*)
   END WriteFile;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Builder  AP 11.3.17");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Builder  AP 1.6.17");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
 END Builder.

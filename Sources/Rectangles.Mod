@@ -1,5 +1,5 @@
-MODULE Rectangles;  (*NW 25.2.90 / 18.4.2013 / AP 12.12.16*)
-  IMPORT SYSTEM, Raster, Files, Input, Texts, Oberon, Graphics, GraphicFrames;
+MODULE Rectangles;  (*NW 25.2.90 / 18.4.2013*)
+  IMPORT SYSTEM, Display, Files, Input, Texts, Oberon, Graphics, GraphicFrames;
 
   TYPE
     Rectangle* = POINTER TO RectDesc;
@@ -29,10 +29,10 @@ MODULE Rectangles;  (*NW 25.2.90 / 18.4.2013 / AP 12.12.16*)
 
     PROCEDURE draw(f: GraphicFrames.Frame; col, x, y, w, h, lw: INTEGER);
     BEGIN
-      GraphicFrames.ReplConst(f, col, x, y, w, lw, Raster.replace);
-      GraphicFrames.ReplConst(f, col, x+w-lw, y, lw, h, Raster.replace);
-      GraphicFrames.ReplConst(f, col, x, y+h-lw, w, lw, Raster.replace);
-      GraphicFrames.ReplConst(f, col, x, y, lw, h, Raster.replace)
+      GraphicFrames.ReplConst(f, col, x, y, w, lw, Display.replace);
+      GraphicFrames.ReplConst(f, col, x+w-lw, y, lw, h, Display.replace);
+      GraphicFrames.ReplConst(f, col, x, y+h-lw, w, lw, Display.replace);
+      GraphicFrames.ReplConst(f, col, x, y, lw, h, Display.replace)
     END draw;
 
   BEGIN
@@ -40,13 +40,13 @@ MODULE Rectangles;  (*NW 25.2.90 / 18.4.2013 / AP 12.12.16*)
       x := obj.x + M.x; y := obj.y + M.y; w := obj.w; h := obj.h; f := M.f;
       lw := obj(Rectangle).lw;
       IF (x < f.X1) & (x+w > f.X) & (y < f.Y1) & (y+h > f.Y) THEN
-        IF M.col = Raster.black THEN col := obj.col ELSE col := M.col END ;
+        IF M.col = Display.black THEN col := obj.col ELSE col := M.col END ;
         IF M.mode = 0 THEN
           draw(f, col, x, y, w, h, lw);
-          IF obj.selected THEN mark(f, Raster.white, x, y) END
-        ELSIF M.mode = 1 THEN mark(f, Raster.white, x, y)  (*normal -> selected*)
-        ELSIF M.mode = 2 THEN mark(f, Raster.black, x, y)   (*selected -> normal*)
-        ELSIF M.mode = 3 THEN draw(f, Raster.black, x, y, w, h, lw); mark(f, Raster.black, x, y)  (*erase*)
+          IF obj.selected THEN mark(f, Display.white, x, y) END
+        ELSIF M.mode = 1 THEN mark(f, Display.white, x, y)  (*normal -> selected*)
+        ELSIF M.mode = 2 THEN mark(f, Display.black, x, y)   (*selected -> normal*)
+        ELSIF M.mode = 3 THEN draw(f, Display.black, x, y, w, h, lw); mark(f, Display.black, x, y)  (*erase*)
         END
       END
     END

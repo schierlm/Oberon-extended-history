@@ -1,4 +1,4 @@
-MODULE ORS; (* NW 19.9.93 / 16.3.2017  Scanner in Oberon-07*)
+MODULE ORS; (* NW 19.9.93 / 20.3.2017  Scanner in Oberon-07*)
   IMPORT SYSTEM, Texts, Oberon;
 
 (* Oberon Scanner does lexical analysis. Input is Oberon-Text, output is

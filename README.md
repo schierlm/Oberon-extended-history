@@ -26,7 +26,7 @@ Youtube: **https://youtu.be/t8n_nkuKn3o**
 
 ------------------------------------------------------
 
-**PREREQUISITES**: A working Original Oberon operating system and compiler, current as of March 16, 2017 or later (see www.inf.ethz.ch/personal/wirth/news.txt for the change log of the Oberon system and the compiler). If you run an older version of Original Oberon or the compiler, please upgrade to the latest version first.
+**PREREQUISITES**: A working Original Oberon 2013 operating system and compiler, current as of June 1, 2017 or later (see www.inf.ethz.ch/personal/wirth/news.txt for the change log of the Oberon system and the compiler). If you run an older version of Original Oberon, please upgrade to the latest version first.
 
 ------------------------------------------------------
 
@@ -174,7 +174,7 @@ Download the following Experimental Oberon files from the [**Sources**](Sources/
 
      Kernel.Mod
      Modules.Mod          (the Experimental ("new") Oberon version of the module loader; uses the new object file format)
-     Raster.Mod           (the Experimental ("new") Oberon version of module Display which no longer exports a data type 'Display')
+     Display.Mod          (the Experimental ("new") Oberon version of module Display; no longer exports a data type 'Frame')
      Viewers.Mod
      Oberon.Mod
      MenuViewers.Mod
@@ -191,10 +191,12 @@ Download the following Experimental Oberon files from the [**Sources**](Sources/
      Clipboard.Mod        (optional)
      System.Tool          (optional, recommended)
      Times24.Scn.Fnt      (optional)
-     Sierpinksi.Mod       (optional)
+     Curves.Mod           (optional)
      Hilbert.Mod          (optional)
      Stars.Mod            (optional)
+     Rectangles.Mod       (optional)
      Checkers.Mod         (optional)
+     Sierpinksi.Mod       (optional)
 
 **Note**: Convert these files (except the font file) to Oberon format first (Oberon uses only CR as line endings) using the command **dos2oberon** (also available in the Experimental Oberon repository), before importing the files into Oberon.
 
@@ -264,7 +266,7 @@ Do NOT reboot the system just yet!
 
 **STEP 11:** Recompile the Experimental Oberon version of the outer core and the remaining modules that were downloaded in step 7 and that are required to restart the Experimental Oberon system (module Oberon and its imports, plus module System and its imports) in the following order, or see [**Sources/System.Tool**](Sources/System.Tool) for the correct compilation order (you can omit the /s after the first compilation):
 
-     ORP.Compile Input.Mod Raster.Mod/s Viewers.Mod/s ~
+     ORP.Compile Input.Mod Display.Mod/s Viewers.Mod/s ~
      ORP.Compile Fonts.Mod Texts.Mod ~
      ORP.Compile Oberon.Mod/s ~
      ORP.Compile MenuViewers.Mod/s ~
@@ -317,5 +319,3 @@ You are now running Experimental Oberon.
 You can now compile any other modules that you may have on your system, to generate object files that are compatible with Experimental Oberon.
 
 If you haven't done so already, you can now delete the files *Modules0.Mod* and *Linker0.Mod*. These were only needed to bootstrap a slightly modified version of Original Oberon in steps 2-5, starting from an Original Oberon system.
-
-You can also delete the files *Display.Mod*, *Display.smb* and *Display.rsc*. Module *Display* has been renamed to module *Raster* in Experimental Oberon, reflecting the fact that it now *only* contains the basic raster operations, but no longer the abstract data type *Frame*.

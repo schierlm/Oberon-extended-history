@@ -1,4 +1,4 @@
-MODULE SCC; (*NW 13.11.87 / 22.8.90 Ceres-2; nRF24L01+ version PR 21.7.13 / 23.12.13 / AP 12.12.16 BYTE -> CHAR*)
+MODULE SCC; (*NW 13.11.87 / 22.8.90 Ceres-2; nRF24L01+ version PR 21.7.13 / 23.12.13 / AP 1.6.17*)
   IMPORT SYSTEM, Kernel;
 
   CONST

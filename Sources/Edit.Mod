@@ -1,4 +1,4 @@
-MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 12.12.90 / 5.1.17*)
+MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 1.6.17*)
   IMPORT Files, Fonts, Texts, Viewers, Oberon, MenuViewers, TextFrames;
 
   CONST CR = 0DX; maxlen = 32;
@@ -77,7 +77,7 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 12.12.90 / 5.1.17*)
       fnt: Fonts.Font; col, voff: INTEGER;
   BEGIN Oberon.GetSelection(T, beg, end, time);
     IF time >= 0 THEN
-      v := Viewers.CurDisplay.focusViewer;
+      v := Viewers.FocusViewer;
       IF (v # NIL) & (v.dsc # NIL) & (v.dsc.next IS TextFrames.Frame) THEN
         F := v.dsc.next(TextFrames.Frame);
         Texts.Attributes(F.text, F.carloc.pos, fnt, col, voff);
@@ -138,7 +138,7 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 12.12.90 / 5.1.17*)
     END Forward;
 
   BEGIN V := Oberon.Par.vwr;
-    IF Oberon.Par.frame # V.dsc THEN V := Viewers.CurDisplay.focusViewer END;
+    IF Oberon.Par.frame # V.dsc THEN V := Viewers.FocusViewer END;
     IF (V.dsc # NIL) & (V.dsc.next IS TextFrames.Frame) THEN
       Text := V.dsc.next(TextFrames.Frame);
       prevTime := time; Oberon.GetSelection(T, beg, end, time);
@@ -177,7 +177,7 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 12.12.90 / 5.1.17*)
       V: Viewers.Viewer;
       beg, end, time: LONGINT;
   BEGIN
-    V := Viewers.CurDisplay.focusViewer;
+    V := Viewers.FocusViewer;
     IF (V.dsc # NIL) & (V.dsc.next IS TextFrames.Frame) THEN
       Text := V.dsc.next(TextFrames.Frame);
       Oberon.GetSelection(T, beg, end, time);
@@ -202,7 +202,7 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 12.12.90 / 5.1.17*)
       V: Viewers.Viewer;
       pos: LONGINT;
       M: TextFrames.Frame;
-  BEGIN V := Viewers.CurDisplay.focusViewer;
+  BEGIN V := Viewers.FocusViewer;
     IF (V # NIL) & (V IS MenuViewers.Viewer) THEN
       Menu := V.dsc; Main := V.dsc.next;
       IF Main IS TextFrames.Frame THEN

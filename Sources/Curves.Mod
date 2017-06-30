@@ -1,5 +1,5 @@
-MODULE Curves;  (*NW 8.11.90 / 18.4.2013 / AP 12.12.16*)
-  IMPORT Raster, Files, Oberon, Graphics, GraphicFrames;
+MODULE Curves;  (*NW 8.11.90 / 18.4.2013 / AP 1.6.17*)
+  IMPORT Display, Files, Oberon, Graphics, GraphicFrames;
 
   TYPE
     Curve* = POINTER TO CurveDesc;
@@ -14,14 +14,14 @@ MODULE Curves;  (*NW 8.11.90 / 18.4.2013 / AP 12.12.16*)
 
   PROCEDURE Dot(f: GraphicFrames.Frame; col, x, y: INTEGER);
   BEGIN
-    IF (x >= f.X) & (x+7 < f.X1) & (y >= f.Y) & (x+7 < f.Y1) THEN Raster.Dot(col, x, y, Raster.replace) END
+    IF (x >= f.X) & (x+7 < f.X1) & (y >= f.Y) & (x+7 < f.Y1) THEN Display.Dot(col, x, y, Display.replace) END
   END Dot;
 
   PROCEDURE mark(f: GraphicFrames.Frame; col, x, y: INTEGER);
   BEGIN DEC(x, 3); DEC(y, 3);
     IF (x >= f.X) & (x+7 < f.X1) & (y >= f.Y) & (y+7 < f.Y1) THEN
-      IF col = Raster.black THEN Raster.ReplConst(Raster.black, x, y, 7, 7, Raster.replace)
-      ELSE Raster.CopyPattern(col, GraphicFrames.tack, x, y, 0, 0, Raster.replace)
+      IF col = Display.black THEN Display.ReplConst(Display.black, x, y, 7, 7, Display.replace)
+      ELSE Display.CopyPattern(col, GraphicFrames.tack, x, y, 0, 0, Display.replace)
       END
     END
   END mark;
@@ -102,41 +102,41 @@ MODULE Curves;  (*NW 8.11.90 / 18.4.2013 / AP 12.12.16*)
   BEGIN
     CASE M OF  GraphicFrames.DrawMsg:
       x := obj.x + M.x; y := obj.y + M.y; w := obj.w; h := obj.h; f := M.f;
-      IF M.col = Raster.black THEN col := obj.col ELSE col := M.col END ;
+      IF M.col = Display.black THEN col := obj.col ELSE col := M.col END ;
       IF (x < f.X1) & (f.X <= x+w) & (y < f.Y1) & (f.Y <= y+h) THEN
         IF obj(Curve).kind = 0 THEN  (*up-line*)
           IF M.mode = 0 THEN
-            IF obj.selected THEN mark(f, Raster.white, x, y) END ;
+            IF obj.selected THEN mark(f, Display.white, x, y) END ;
             line(f, col, x, y, w, h, 1)
-          ELSIF M.mode = 1 THEN mark(f, Raster.white, x, y)
+          ELSIF M.mode = 1 THEN mark(f, Display.white, x, y)
           ELSIF M.mode = 2 THEN mark(f, f.col, x, y)
-          ELSIF M.mode = 3 THEN mark(f, Raster.black, x, y); line(f, Raster.black, x, y, w, h, 1)
+          ELSIF M.mode = 3 THEN mark(f, Display.black, x, y); line(f, Display.black, x, y, w, h, 1)
           END
         ELSIF obj(Curve).kind = 1 THEN  (*down-line*)
           IF M.mode = 0 THEN
-            IF obj.selected THEN mark(f, Raster.white, x, y+h) END ;
+            IF obj.selected THEN mark(f, Display.white, x, y+h) END ;
             line(f, col, x, y, w, h, -1)
-          ELSIF M.mode = 1 THEN mark(f, Raster.white, x, y+h)
+          ELSIF M.mode = 1 THEN mark(f, Display.white, x, y+h)
           ELSIF M.mode = 2 THEN mark(f, f.col, x, y+h)
-          ELSIF M.mode = 3 THEN mark(f, Raster.black, x, y+h); line(f, Raster.black, x, y, w, h, -1)
+          ELSIF M.mode = 3 THEN mark(f, Display.black, x, y+h); line(f, Display.black, x, y, w, h, -1)
           END
         ELSIF obj(Curve).kind = 2 THEN  (*circle*)
           w := w DIV 2;
           IF M.mode = 0 THEN
-            IF obj.selected THEN mark(f, Raster.white, x+w, y) END ;
+            IF obj.selected THEN mark(f, Display.white, x+w, y) END ;
             circle(f, col, x+w, y+w, w)
-          ELSIF M.mode = 1 THEN mark(f, Raster.white, x+w, y)
+          ELSIF M.mode = 1 THEN mark(f, Display.white, x+w, y)
           ELSIF M.mode = 2 THEN mark(f, f.col, x+w, y)
-          ELSIF M.mode = 3 THEN mark(f, Raster.black, x+w, y); circle(f, Raster.black, x+w, y+w, w)
+          ELSIF M.mode = 3 THEN mark(f, Display.black, x+w, y); circle(f, Display.black, x+w, y+w, w)
           END
         ELSIF obj(Curve).kind = 3 THEN  (*ellipse*)
           w := w DIV 2; h := h DIV 2;
           IF M.mode = 0 THEN
-            IF obj.selected THEN mark(f, Raster.white, x+w, y) END ;
+            IF obj.selected THEN mark(f, Display.white, x+w, y) END ;
             ellipse(f, col, x+w, y+h, w, h)
-          ELSIF M.mode = 1 THEN mark(f, Raster.white, x+w, y)
+          ELSIF M.mode = 1 THEN mark(f, Display.white, x+w, y)
           ELSIF M.mode = 2 THEN mark(f, f.col, x+w, y)
-          ELSIF M.mode = 3 THEN mark(f, Raster.black, x+w, y); ellipse(f, Raster.black, x+w, y+h, w, h)
+          ELSIF M.mode = 3 THEN mark(f, Display.black, x+w, y); ellipse(f, Display.black, x+w, y+h, w, h)
           END
         END
       END

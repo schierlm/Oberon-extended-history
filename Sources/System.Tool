@@ -9,20 +9,19 @@ System.Directory ^
   *.Mod  *.Bak  *.Tool  *.Text  *.Scn.Fnt  *.smb  *.rsc
 
 ORP.Compile @  ORP.Compile @/s  ORP.Compile ^/s ORP.Compile ~
-System.Free ~            # unload modules individually (by name or num)
-System.FreeGroup ~   # unload modules as a group (by name or num)
+System.Free ~   # unload modules as a group
 System.Open Draw.Tool
 System.CopyFiles ~
 System.RenameFiles ~         Stars.Open Stars.Run System.Free Stars~
 System.DeleteFiles ~           "13.ShowModules"  "*tars.Stop"
 
 System.ShowModules  System.ShowCommands ^  Modules.Collect
+System.ShowImports ORP~ System.ShowRemovableImports ORP~
+System.ShowClients Oberon~ System.ShowRemovableClients Oberon~
 
 PCLink1.Run
 Hilbert.Draw  Sierpinski.Draw  Blink.Run  Stars.Open
-Tools.Inspect 0
-Tools.Sector 1
-Tools.ShowFile 
+Tools.Inspect 0  Tools.Sector 1  Tools.ShowFile
 Tools.Recall  Tools.Clear
 
 # ------------ rebuilding the system ----------------
@@ -32,7 +31,7 @@ ORP.Compile Kernel.Mod/s FileDir.Mod/s Files.Mod Modules.Mod/s ~
 Linker.Link Modules ~              System.RunInit System ~
 Builder.Load Modules ~           System.Open Draw.Tool ~
 
-ORP.Compile Input.Mod Raster.Mod/s Viewers.Mod/s ~
+ORP.Compile Input.Mod Display.Mod/s Viewers.Mod/s ~
 ORP.Compile Fonts.Mod Texts.Mod ~
 ORP.Compile Oberon.Mod/s ~                      Edit.Open Oberon.Mod
 ORP.Compile MenuViewers.Mod/s ~             Edit.Open MenuViewers.Mod
