@@ -1,4 +1,4 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.7.17*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.8.17*)
   IMPORT SYSTEM, Kernel, Files;
   CONST versionkey = 1X; MT = 12; DescSize = 88;
 
@@ -187,7 +187,6 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.7.17*)
       ELSIF res = 3 THEN importing := name;
         WHILE nofimps > 0 DO DEC(nofimps); DEC(import[nofimps].refcnt) END
       END
-    ELSE importing := name
     END ;
     newmod :=  mod
   END Load;
@@ -208,8 +207,6 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.7.17*)
     END
     RETURN SYSTEM.VAL(Command, w)
   END ThisCommand;
-
-  (*---------------------------selections---------------------------*)
 
   PROCEDURE Mark(mod: Module; clients, imports: BOOLEAN);
     VAR imp, m: Module; p, q: INTEGER;
@@ -240,12 +237,10 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.7.17*)
     END ;
     IF m # NIL THEN Mark(m, clients, imports); mod := root;
       WHILE mod # NIL DO
-        IF mod.marked THEN mod.marked := FALSE;
-          IF (mod # m) OR this THEN
-            IF on THEN
-              IF ~mod.selected THEN mod.selected := TRUE; INC(NofSelected) END
-            ELSIF mod.selected THEN mod.selected := FALSE; DEC(NofSelected)
-            END
+        IF mod.marked & ((mod # m) OR this) THEN
+          IF on THEN
+            IF ~mod.selected THEN mod.selected := TRUE; INC(NofSelected) END
+          ELSIF mod.selected THEN mod.selected := FALSE; DEC(NofSelected)
           END
         END ;
         mod := mod.next
@@ -266,7 +261,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.7.17*)
   BEGIN RETURN mod.selected
   END Selected;
 
-  PROCEDURE ShrinkSelection*; (*until it can be unloaded*)
+  PROCEDURE ShrinkSelection*; (*until no outside clients exist*)
     VAR mod, imp: Module; p, q: INTEGER; continue: BOOLEAN;
   BEGIN mod := root; continue := TRUE;
     WHILE mod # NIL DO
@@ -277,7 +272,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.7.17*)
     END ;
     WHILE continue DO mod := root; continue := FALSE;
       WHILE mod # NIL DO
-        IF mod.marked & (mod.count = 0) THEN (*module can be unloaded*)
+        IF mod.marked & (mod.count = 0) THEN
           mod.marked := FALSE; continue := TRUE; p := mod.imp; q := mod.cmd;
           WHILE p < q DO SYSTEM.GET(p, imp); INC(p, 4);
             IF imp.marked THEN DEC(imp.count) END
@@ -293,25 +288,22 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.7.17*)
     END
   END ShrinkSelection;
 
-  (*---------------------------client and reference checking---------------------------*)
+  PROCEDURE ChkSel(x: LONGINT; VAR continue: BOOLEAN): INTEGER; (*check whether x references selected modules*)
+    VAR mod: Module; i: INTEGER;
+  BEGIN mod := root; i := 0;
+    WHILE (mod # NIL) & (i = 0) DO (*stop when the first reference to any of the selected modules is found*)
+      IF (mod.name[0] # 0X) & mod.selected & (mod.data <= x) & (x < mod.imp) THEN continue := FALSE; INC(i) END ;
+      mod := mod.next
+    END ;
+    RETURN i
+  END ChkSel;
 
   PROCEDURE Check*(VAR res: INTEGER);
     (*check whether outside clients or references to selected modules exist.
       res = 0: no clients or references; res = 1: clients exist; res = 2: types in use in dynamic objects;
       res = 3: procedures in use in dynamic objects; res = 4: procedures in use in static objects*)
     VAR mod, imp, m: Module; continue: BOOLEAN;
-      pref, pvadr, r: LONGINT; resType, resProc, p, q, impcnt: INTEGER;
-
-    PROCEDURE Chk(x: LONGINT; VAR continue: BOOLEAN): INTEGER; (*whether x references selected modules*)
-      VAR mod: Module; i: INTEGER;
-    BEGIN mod := root; i := 0;
-      WHILE (mod # NIL) & (i = 0) DO
-        IF (mod.name[0] # 0X) & mod.selected & (mod.data <= x) & (x < mod.imp) THEN continue := FALSE; INC(i) END ;
-        mod := mod.next
-      END ;
-      RETURN i
-    END Chk;
-
+      pref, pvadr, r: LONGINT; p, q, impcnt, resType, resProc: INTEGER;
   BEGIN res := 0; mod := root;
     WHILE (mod # NIL) & (res = 0) DO
       IF (mod.name[0] # 0X) & mod.selected & (mod.refcnt > 0) THEN m := root; impcnt := 0;
@@ -323,7 +315,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.7.17*)
           END ;
           m := m.next
         END ;
-        IF mod.refcnt # impcnt THEN res := 1 END (*outside clients exist*)
+        IF mod.refcnt # impcnt THEN res := 1 END
       END ;
       mod := mod.next
     END ;
@@ -332,14 +324,14 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.7.17*)
         IF (mod.name[0] # 0X) & ~mod.selected THEN Kernel.Mark(mod.ptr) END ;
         mod := mod.next
       END ;
-      Kernel.Scan(Chk, Chk, resType, resProc); (*check dynamic type and procedure references*)
+      Kernel.Scan(ChkSel, ChkSel, resType, resProc); (*check dynamic type and procedure references*)
       IF resType > 0 THEN res := 2 ELSIF resProc > 0 THEN res := 3
-      ELSE res := 0; mod := root; continue := TRUE;
-        WHILE continue & (mod # NIL) DO
+      ELSE mod := root; continue := TRUE;
+        WHILE continue & (mod # NIL) DO (*check static procedure references*)
           IF (mod.name[0] # 0X) & ~mod.selected THEN
             pref := mod.pvar; SYSTEM.GET(pref, pvadr);
             WHILE continue & (pvadr # 0) DO SYSTEM.GET(pvadr, r);
-              IF Chk(r, continue) > 0 THEN res := 4 END ; (*check static procedure references*)
+              IF ChkSel(r, continue) > 0 THEN res := 4 END ;
               INC(pref, 4); SYSTEM.GET(pref, pvadr)
             END
           END ;
@@ -348,8 +340,6 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.7.17*)
       END
     END
   END Check;
-
-  (*---------------------------unloading---------------------------*)
 
   PROCEDURE Unload(mod: Module); (*module and its selected imports from memory*)
     VAR imp: Module; p, q: INTEGER;
@@ -360,7 +350,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.7.17*)
     IF mod.hidden THEN mod.hidden := FALSE; DEC(NofHidden) END
   END Unload;
 
-  PROCEDURE FreeSelection*(hideable: BOOLEAN); (*and deselect all modules*)
+  PROCEDURE FreeSelection*(allowhiding: BOOLEAN); (*and deselect all modules*)
     VAR mod: Module;
   BEGIN res := 0;
     IF NofSelected > 0 THEN Check(res);
@@ -369,7 +359,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.7.17*)
         IF (mod.name[0] # 0X) & mod.selected THEN
           IF res = 0 THEN (*unload*)
             IF mod.refcnt = 0 THEN Unload(mod) END
-          ELSIF (res > 1) & hideable THEN (*hide*) mod.name[0] := "*";
+          ELSIF (res > 1) & allowhiding THEN (*hide*) mod.name[0] := "*";
             IF ~mod.hidden THEN mod.hidden := TRUE; INC(NofHidden) END
           END
         END ;
@@ -378,7 +368,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.7.17*)
     END
   END FreeSelection;
 
-  PROCEDURE Free*(name: ARRAY OF CHAR; hideable: BOOLEAN); (*named module and deselect all modules*)
+  PROCEDURE Free*(name: ARRAY OF CHAR; allowhiding: BOOLEAN); (*named module and deselect all modules*)
     VAR mod: Module;
   BEGIN mod := root; NofSelected := 0;
     WHILE mod # NIL DO
@@ -387,11 +377,12 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.7.17*)
       END ;
       mod := mod.next
     END ;
-    FreeSelection(hideable)
+    FreeSelection(allowhiding)
   END Free;
 
   PROCEDURE Collect*; (*no longer referenced hidden modules*)
-    VAR mod, m, M: Module; p, q, k, res: INTEGER; continue, h: BOOLEAN;
+    VAR mod, m, M: Module; continue: BOOLEAN;
+      p, q, k, res: INTEGER;
   BEGIN
     IF NofHidden > 0 THEN k := 0;
       IF NofSelected > 0 THEN (*save selection*) mod := root;
@@ -400,7 +391,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.7.17*)
       WHILE k < NofHidden DO INC(k);
         mod := root; p := 0; continue := TRUE;
         WHILE mod # NIL DO (*set first selection of k modules*)
-          IF (mod.name[0] # 0X) & mod.hidden THEN mod.selected := p < k ; INC(p) END ;
+          IF (mod.name[0] # 0X) & mod.hidden THEN mod.selected := p < k; INC(p) END ;
           mod := mod.next
         END ;
         WHILE continue DO Check(res);
@@ -413,16 +404,18 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.7.17*)
               mod := mod.next
             END
           ELSIF k < NofHidden THEN (*determine whether there is a next selection of k modules*)
-            mod := root; q := 0; M := NIL; h := FALSE;
+            mod := root; q := 0; M := NIL;
             WHILE mod # NIL DO
               IF (mod.name[0] # 0X) & mod.hidden THEN
-                IF mod.selected THEN INC(q); m := mod; h := TRUE ELSIF h THEN q := 0; M := m; h := FALSE END
+                IF mod.selected THEN m := mod; INC(q) (*number of selected modules at the very end*)
+                ELSIF q > 0 THEN q := 0; M := m (*last selected module before last unselected group*)
+                END
               END ;
               mod := mod.next
             END ;
-            IF M # NIL THEN (*if so, set next selection of k modules*)
+            IF M # NIL THEN (*if selected modules are followed by unselected modules*)
               mod := M.next; p := 0; M.selected := FALSE;
-              WHILE mod # NIL DO
+              WHILE mod # NIL DO (*set next selection of k modules*)
                 IF (mod.name[0] # 0X) & mod.hidden THEN mod.selected := p <= q; INC(p) END ;
                 mod := mod.next
               END
@@ -430,13 +423,13 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.7.17*)
             END
           ELSE (*done*) mod := root; continue := FALSE;
             WHILE mod # NIL DO
-              IF mod.hidden THEN mod.selected := FALSE END ;
+              IF mod.hidden THEN mod.selected := FALSE END ; (*for case where NofSelected = 0*)
               mod := mod.next
             END
           END
         END
       END ;
-      IF NofSelected > 0 THEN (*restore selection*)
+      IF NofSelected > 0 THEN (*restore selection without reselecting unloaded hidden modules*)
         mod := root; NofSelected := 0;
         WHILE mod # NIL DO
           IF mod.marked & (mod.name[0] # 0X) THEN mod.selected := TRUE; INC(NofSelected)

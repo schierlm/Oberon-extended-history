@@ -1,4 +1,4 @@
-MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.7.17*)
+MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.9.17*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules, Input, Fonts, Texts,
     Viewers, Oberon, MenuViewers, TextFrames;
 
@@ -82,12 +82,12 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.7.17*)
   END MakeDisplayName;
 
   PROCEDURE OpenViewers; (*open log and system tool viewer in system track of current display*)
-    VAR logV, toolV, menu, main: Viewers.Frame; curDisplay: Viewers.Display;
-      X, Y: INTEGER;
-  BEGIN curDisplay := Viewers.CurDisplay;
-    IF curDisplay # NIL THEN
-      Texts.WriteString(W, "Oberon V6  NW 14.4.13 / AP 1.7.17  Display ");
-      Texts.WriteInt(W, curDisplay.id, 2); Texts.Write(W, " "); Texts.WriteString(W, curDisplay.name); EndLine;
+    VAR logV, toolV, menu, main: Viewers.Frame; X, Y: INTEGER;
+  BEGIN
+    IF Viewers.CurDisplay # NIL THEN
+      Texts.WriteString(W, "Oberon V6  NW 14.4.13 / AP 1.9.17  Display ");
+      Texts.WriteInt(W, Viewers.CurDisplay.id, 2); Texts.Write(W, " ");
+      Texts.WriteString(W, Viewers.CurDisplay.name); EndLine;
       Oberon.AllocateSystemViewer(0, X, Y);
       menu := TextFrames.NewMenu("System.Log", LogMenu);
       main := TextFrames.NewText(Oberon.Log, 0);
@@ -187,8 +187,8 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.7.17*)
   END ShowDisplays;
 
   PROCEDURE ThisDisplay*;
-    VAR V: Viewers.Viewer; D: Viewers.Display;
-  BEGIN V := Oberon.Par.vwr; D := Viewers.ThisDisplay(V);
+    VAR D: Viewers.Display;
+  BEGIN D := Viewers.ThisDisplay(Oberon.Par.vwr);
     Texts.WriteString(W, " current display "); Texts.WriteInt(W, D.id, 2); Texts.Write(W, " ");
     Texts.WriteString(W, D.name); EndLine
   END ThisDisplay;
@@ -359,7 +359,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.7.17*)
     WHILE mod # NIL DO
       IF (mod.name[0] # 0X) & Modules.Selected(mod) THEN
         IF ~hasSel THEN Texts.Write(W, " "); hasSel := TRUE END ;
-        Texts.Write(W, " "); Texts.WriteString(W, mod.name);
+        Texts.Write(W, " "); Texts.WriteString(W, mod.name)
       END ;
       mod := mod.next
     END ;
@@ -367,39 +367,39 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.7.17*)
     RETURN hasSel
   END WriteSelection;
 
-  PROCEDURE FreeMsg(hideable: BOOLEAN);
+  PROCEDURE WriteFreeMsg(allowhiding: BOOLEAN);
   BEGIN
     IF Modules.res = 0 THEN Texts.WriteString(W, " unloading")
     ELSIF Modules.res = 1 THEN Texts.WriteString(W, " unloading failed (clients exist)")
     ELSIF Modules.res < 5 THEN
-      IF hideable THEN Texts.WriteString(W, " removing") ELSE Texts.WriteString(W, " unloading failed") END ;
+      IF allowhiding THEN Texts.WriteString(W, " removing") ELSE Texts.WriteString(W, " unloading failed") END ;
       IF Modules.res = 2 THEN Texts.WriteString(W, " (types in use in dynamic objects)")
       ELSIF Modules.res = 3 THEN Texts.WriteString(W, " (procedures in use in dynamic objects)")
       ELSIF Modules.res = 4 THEN Texts.WriteString(W, " (procedures in use in static objects)")
       END
     END ;
     EndLine
-  END FreeMsg;
+  END WriteFreeMsg;
 
-  PROCEDURE Free1(this, clients, imports, shrink, hideable: BOOLEAN; exclude: ARRAY OF CHAR);
+  PROCEDURE Free1(this, clients, imports, shrink, allowhiding: BOOLEAN; exclude: ARRAY OF CHAR);
   BEGIN Modules.SelectAll(FALSE); Select1(TRUE, this, clients, imports);
     IF exclude[0] # 0X THEN Modules.Select(exclude, FALSE, TRUE, FALSE, TRUE);
       Texts.WriteString(W, " ("); Texts.WriteString(W, exclude); Texts.WriteString(W, " and its clients excluded)")
     END ;
     EndLine;
     IF shrink THEN Modules.ShrinkSelection END ;
-    IF WriteSelection() THEN Modules.FreeSelection(hideable); FreeMsg(hideable); Oberon.Collect(0) END
+    IF WriteSelection() THEN Modules.FreeSelection(allowhiding); WriteFreeMsg(allowhiding); Oberon.Collect(0) END
   END Free1;
 
-  (*--- Free (=unload from memory OR hide from module list) various subsets of modules ---*)
+  (*Unload various subsets of modules from memory or hide them from module list*)
 
   PROCEDURE Free*; (*free modules as a group; module names are provided as parameters*)
-  BEGIN Texts.WriteString(W, "System.Free"); Free1(TRUE, FALSE, FALSE, FALSE, TRUE, "System")
+  BEGIN Texts.WriteString(W, "System.Free"); Free1(TRUE, FALSE, FALSE, FALSE, TRUE, "")
   END Free;
 
   PROCEDURE FreeSelection*; (*free selected modules as a group*)
   BEGIN Texts.WriteString(W, "System.FreeSelection"); EndLine;
-    IF WriteSelection() THEN Modules.FreeSelection(TRUE); FreeMsg(TRUE); Oberon.Collect(0) END
+    IF WriteSelection() THEN Modules.FreeSelection(TRUE); WriteFreeMsg(TRUE); Oberon.Collect(0) END
   END FreeSelection;
 
   PROCEDURE FreeImports*; (*free modules and their imports; module names are provided as parameters*)
@@ -418,7 +418,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.7.17*)
   BEGIN Texts.WriteString(W, "System.FreeRemovableClients"); Free1(TRUE, TRUE, FALSE, TRUE, TRUE, "System")
   END FreeRemovableClients;
 
-  (*--- Unload (=unload from memory, but don't hide if refs exist) various subsets of modules ---*)
+  (*Unload various subsets of modules from memory, but don't hide them from module list if refs exist*)
 
   PROCEDURE Unload*; (*unload modules as a group; module names are provided as parameters*)
   BEGIN Texts.WriteString(W, "System.Unload"); Free1(TRUE, FALSE, FALSE, FALSE, FALSE, "System")
@@ -426,7 +426,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.7.17*)
 
   PROCEDURE UnloadSelection*; (*unload selected modules as a group*)
   BEGIN Texts.WriteString(W, "System.UnloadSelection"); EndLine;
-    IF WriteSelection() THEN Modules.FreeSelection(FALSE); FreeMsg(FALSE); Oberon.Collect(0) END
+    IF WriteSelection() THEN Modules.FreeSelection(FALSE); WriteFreeMsg(FALSE); Oberon.Collect(0) END
   END UnloadSelection;
 
   PROCEDURE UnloadImports*; (*unload modules and their imports; module names are provided as parameters*)
@@ -445,7 +445,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.7.17*)
   BEGIN Texts.WriteString(W, "System.FreeRemovableClients"); Free1(TRUE, TRUE, FALSE, TRUE, FALSE, "System")
   END UnloadRemovableClients;
 
-  (*--- Show various subsets of modules ---*)
+  (*Show various subsets of modules*)
 
   PROCEDURE Show1(this, clients, imports, shrink: BOOLEAN; exclude: ARRAY OF CHAR);
   BEGIN Modules.SelectAll(FALSE); Select1(TRUE, this, clients, imports);
@@ -669,6 +669,20 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.7.17*)
     END
   END ShowCommands;
 
+  PROCEDURE ShowFonts*;
+    VAR fnt: Fonts.Font;
+  BEGIN Texts.WriteString(W, "System.ShowFonts"); Texts.WriteLn(W); fnt := Fonts.root;
+    WHILE fnt # NIL DO
+      Texts.Write(W, 9X); Texts.WriteString(W, fnt.name); Texts.WriteLn(W); fnt := fnt.next
+    END ;
+    Texts.Append(Oberon.Log, W.buf)
+  END ShowFonts;
+
+  PROCEDURE Unmark*; (*heap*)
+    VAR resType, resProc: INTEGER;
+  BEGIN Kernel.Scan(NIL, NIL, resType, resProc)
+  END Unmark;
+
   PROCEDURE InitMod(name: ARRAY OF CHAR);
     VAR mod: Modules.Module; body: Modules.Command; w: INTEGER;
   BEGIN mod := Modules.root;
@@ -683,15 +697,6 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.7.17*)
   BEGIN GetArg(S);
     IF S.class = Texts.Name THEN InitMod(S.s) END
   END RunInit;
-
-  PROCEDURE ShowFonts*;
-    VAR fnt: Fonts.Font;
-  BEGIN Texts.WriteString(W, "System.ShowFonts"); Texts.WriteLn(W); fnt := Fonts.root;
-    WHILE fnt # NIL DO
-      Texts.Write(W, 9X); Texts.WriteString(W, fnt.name); Texts.WriteLn(W); fnt := fnt.next
-    END ;
-    Texts.Append(Oberon.Log, W.buf)
-  END ShowFonts;
 
   PROCEDURE Trap(VAR a: INTEGER; b: INTEGER);
     VAR u, v, w: INTEGER; mod: Modules.Module;

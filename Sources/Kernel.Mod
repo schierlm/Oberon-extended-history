@@ -1,4 +1,4 @@
-MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.6.17*)
+MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.8.17*)
   IMPORT SYSTEM;
   CONST SectorLength* = 1024;
     timer = -64; spiData = -48; spiCtrl = -44;
@@ -133,9 +133,9 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.6.17*)
 
 (* ---------- Generic heap scan ----------*)
 
-  PROCEDURE Scan*(type, proc: Handler; VAR resType, resProc: INTEGER); (*returns sums of handler calls*)
+  PROCEDURE Scan*(type, proc: Handler; VAR resType, resProc: INTEGER); (*returns sum of handler calls*)
     VAR p, r, mark, tag, size, offadr, offset: LONGINT; continue: BOOLEAN;
-  BEGIN p := heapOrg; resType := 0; resProc := 0; continue := TRUE;
+  BEGIN p := heapOrg; resType := 0; resProc := 0; continue := (type # NIL) OR (proc # NIL);
     REPEAT SYSTEM.GET(p+4, mark);
       IF mark < 0 THEN (*free*) SYSTEM.GET(p, size)
       ELSE (*allocated*) SYSTEM.GET(p, tag); SYSTEM.GET(tag, size);
