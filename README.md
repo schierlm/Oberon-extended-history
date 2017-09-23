@@ -26,7 +26,7 @@ Youtube: **https://youtu.be/t8n_nkuKn3o**
 
 ------------------------------------------------------
 
-**PREREQUISITES**: A working Original Oberon 2013 operating system and compiler, current as of June 1, 2017 or later (see www.inf.ethz.ch/personal/wirth/news.txt for the change log of the Oberon system and the compiler). If you run an older version of Original Oberon, please upgrade to the latest version first.
+**PREREQUISITES**: A working Original Oberon 2013 operating system and compiler, current as of September 23, 2017 or later (see www.inf.ethz.ch/personal/wirth/news.txt for the change log of the Oberon system and the compiler). If you run an older version of Original Oberon, please upgrade to the latest version first.
 
 ------------------------------------------------------
 

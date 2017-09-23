@@ -1,7 +1,5 @@
-(*
-  ORP.Compile @  
-  ORX.WriteFile BootLoad.rsc 512 "D:/Verilog/RISC5/prom.mem"~
-*)
+(*  ORP.Compile @
+    ORX.WriteFile BootLoad.rsc 512 "D:/Verilog/RISC5/prom.mem"~ *)
 
 MODULE* BootLoad;  (*NW 20.10.2013 / PR 4.2.2014; boot from SDHC disk or line*)
   IMPORT SYSTEM;
