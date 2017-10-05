@@ -1,4 +1,4 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.8.17*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 25.9.17*)
   IMPORT SYSTEM, Kernel, Files;
   CONST versionkey = 1X; MT = 12; DescSize = 88;
 
@@ -292,7 +292,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.8.17*)
     VAR mod: Module; i: INTEGER;
   BEGIN mod := root; i := 0;
     WHILE (mod # NIL) & (i = 0) DO (*stop when the first reference to any of the selected modules is found*)
-      IF (mod.name[0] # 0X) & mod.selected & (mod.data <= x) & (x < mod.imp) THEN continue := FALSE; INC(i) END ;
+      IF (mod.name[0] # 0X) & mod.selected & (mod.data <= x) & (x < mod.imp) THEN continue := FALSE; i := 1 END ;
       mod := mod.next
     END ;
     RETURN i
@@ -350,7 +350,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.8.17*)
     IF mod.hidden THEN mod.hidden := FALSE; DEC(NofHidden) END
   END Unload;
 
-  PROCEDURE FreeSelection*(allowhiding: BOOLEAN); (*and deselect all modules*)
+  PROCEDURE FreeSelection*(hide: BOOLEAN); (*and deselect all modules*)
     VAR mod: Module;
   BEGIN res := 0;
     IF NofSelected > 0 THEN Check(res);
@@ -359,7 +359,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.8.17*)
         IF (mod.name[0] # 0X) & mod.selected THEN
           IF res = 0 THEN (*unload*)
             IF mod.refcnt = 0 THEN Unload(mod) END
-          ELSIF (res > 1) & allowhiding THEN (*hide*) mod.name[0] := "*";
+          ELSIF (res > 1) & hide THEN (*hide*) mod.name[0] := "*";
             IF ~mod.hidden THEN mod.hidden := TRUE; INC(NofHidden) END
           END
         END ;
@@ -368,7 +368,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.8.17*)
     END
   END FreeSelection;
 
-  PROCEDURE Free*(name: ARRAY OF CHAR; allowhiding: BOOLEAN); (*named module and deselect all modules*)
+  PROCEDURE Free*(name: ARRAY OF CHAR; hide: BOOLEAN); (*named module and deselect all modules*)
     VAR mod: Module;
   BEGIN mod := root; NofSelected := 0;
     WHILE mod # NIL DO
@@ -377,7 +377,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.8.17*)
       END ;
       mod := mod.next
     END ;
-    FreeSelection(allowhiding)
+    FreeSelection(hide)
   END Free;
 
   PROCEDURE Collect*; (*no longer referenced hidden modules*)

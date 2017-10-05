@@ -1,4 +1,4 @@
-MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.9.17*)
+MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 25.9.17*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules, Input, Fonts, Texts,
     Viewers, Oberon, MenuViewers, TextFrames;
 
@@ -367,12 +367,12 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.9.17*)
     RETURN hasSel
   END WriteSelection;
 
-  PROCEDURE WriteFreeMsg(allowhiding: BOOLEAN);
+  PROCEDURE WriteFreeMsg(hide: BOOLEAN);
   BEGIN
     IF Modules.res = 0 THEN Texts.WriteString(W, " unloading")
     ELSIF Modules.res = 1 THEN Texts.WriteString(W, " unloading failed (clients exist)")
     ELSIF Modules.res < 5 THEN
-      IF allowhiding THEN Texts.WriteString(W, " removing") ELSE Texts.WriteString(W, " unloading failed") END ;
+      IF hide THEN Texts.WriteString(W, " removing") ELSE Texts.WriteString(W, " unloading failed") END ;
       IF Modules.res = 2 THEN Texts.WriteString(W, " (types in use in dynamic objects)")
       ELSIF Modules.res = 3 THEN Texts.WriteString(W, " (procedures in use in dynamic objects)")
       ELSIF Modules.res = 4 THEN Texts.WriteString(W, " (procedures in use in static objects)")
@@ -381,14 +381,14 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.9.17*)
     EndLine
   END WriteFreeMsg;
 
-  PROCEDURE Free1(this, clients, imports, shrink, allowhiding: BOOLEAN; exclude: ARRAY OF CHAR);
+  PROCEDURE Free1(this, clients, imports, shrink, hide: BOOLEAN; exclude: ARRAY OF CHAR);
   BEGIN Modules.SelectAll(FALSE); Select1(TRUE, this, clients, imports);
     IF exclude[0] # 0X THEN Modules.Select(exclude, FALSE, TRUE, FALSE, TRUE);
       Texts.WriteString(W, " ("); Texts.WriteString(W, exclude); Texts.WriteString(W, " and its clients excluded)")
     END ;
     EndLine;
     IF shrink THEN Modules.ShrinkSelection END ;
-    IF WriteSelection() THEN Modules.FreeSelection(allowhiding); WriteFreeMsg(allowhiding); Oberon.Collect(0) END
+    IF WriteSelection() THEN Modules.FreeSelection(hide); WriteFreeMsg(hide); Oberon.Collect(0) END
   END Free1;
 
   (*Unload various subsets of modules from memory or hide them from module list*)
@@ -421,7 +421,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.9.17*)
   (*Unload various subsets of modules from memory, but don't hide them from module list if refs exist*)
 
   PROCEDURE Unload*; (*unload modules as a group; module names are provided as parameters*)
-  BEGIN Texts.WriteString(W, "System.Unload"); Free1(TRUE, FALSE, FALSE, FALSE, FALSE, "System")
+  BEGIN Texts.WriteString(W, "System.Unload"); Free1(TRUE, FALSE, FALSE, FALSE, FALSE, "")
   END Unload;
 
   PROCEDURE UnloadSelection*; (*unload selected modules as a group*)
