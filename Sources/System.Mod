@@ -1,4 +1,4 @@
-MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 25.9.17*)
+MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.11.17*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules, Input, Fonts, Texts,
     Viewers, Oberon, MenuViewers, TextFrames;
 
@@ -85,7 +85,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 25.9.17*)
     VAR logV, toolV, menu, main: Viewers.Frame; X, Y: INTEGER;
   BEGIN
     IF Viewers.CurDisplay # NIL THEN
-      Texts.WriteString(W, "Oberon V6  NW 14.4.13 / AP 1.9.17  Display ");
+      Texts.WriteString(W, "Oberon V6  NW 14.4.13 / AP 1.11.17  Display ");
       Texts.WriteInt(W, Viewers.CurDisplay.id, 2); Texts.Write(W, " ");
       Texts.WriteString(W, Viewers.CurDisplay.name); EndLine;
       Oberon.AllocateSystemViewer(0, X, Y);
@@ -135,7 +135,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 25.9.17*)
           IF id = prev THEN Texts.WriteString(W, ". now in display "); Texts.WriteInt(W, Viewers.CurDisplay.id, 2) END
         END
       END
-    ELSE Texts.WriteString(W, " must provide a valid display number")
+    ELSE Texts.WriteString(W, " invalid display number")
     END ;
     EndLine
   END CloseDisplay;
@@ -152,7 +152,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 25.9.17*)
           Texts.WriteString(W,". to return to previous display:  System.SetDisplay "); Texts.WriteInt(W, prev, 2)
         END
       END
-    ELSE Texts.WriteString(W, " must provide a valid display number")
+    ELSE Texts.WriteString(W, " invalid display number")
     END ;
     EndLine
   END SetDisplay;
@@ -533,7 +533,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 25.9.17*)
     i := 0;
     WHILE ch > "!" DO pat[i] := ch; INC(i); Texts.Read(R, ch) END;
     pat[i] := 0X;
-    IF ch = "!" THEN pat[i+1] := "!" END ; (*directory option*)
+    IF ch = "!" THEN pat[i+1] := "!" ELSE pat[i+1] := 0X END ; (*directory option*)
     i := 0;
     WHILE pat[i] > "*" DO pre[i] := pat[i]; INC(i) END;
     pre[i] := 0X;
@@ -682,6 +682,127 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 25.9.17*)
     VAR resType, resProc: INTEGER;
   BEGIN Kernel.Scan(NIL, NIL, resType, resProc)
   END Unmark;
+
+  PROCEDURE Load*; (*module*)
+    VAR M: Modules.Module; S: Texts.Scanner;
+  BEGIN GetArg(S);
+    IF S.class = Texts.Name THEN Modules.Load(S.s, M) END
+  END Load;
+
+  PROCEDURE ExtractCode*(VAR R: Files.Rider; VAR code: ARRAY OF LONGINT; VAR size, start, nofimps, res: INTEGER);
+    VAR n, data: INTEGER; ch: CHAR; b: BYTE;                               (*size in words, start in bytes*)
+      name: ARRAY 32 OF CHAR;
+  BEGIN Files.ReadString(R, name); Files.ReadInt(R, data); (*key*)
+    Files.ReadByte(R, b); (*version*) Files.ReadInt(R, data); (*size*)
+    Files.ReadString(R, name); (*imports*) nofimps := 0;
+    WHILE ~R.eof & (name[0] # 0X) DO INC(nofimps); Files.ReadInt(R, data); (*key*) Files.ReadString(R, name) END ;
+    Files.ReadInt(R, n);
+    WHILE ~R.eof & (n > 0) DO Files.ReadInt(R, data); DEC(n, 4) END ; (*type descriptors*)
+    Files.ReadInt(R, n); (*variable space*)
+    Files.ReadInt(R, n);
+    WHILE ~R.eof & (n > 0) DO Files.Read(R, ch); DEC(n) END ; (*strings*)
+    Files.ReadInt(R, size); n := 0;
+    WHILE ~R.eof & (n < size) DO Files.ReadInt(R, data); code[n] := data; INC(n) END ; (*program code*)
+    Files.ReadString(R, name);
+    WHILE ~R.eof & (name[0] # 0X) DO Files.ReadInt(R, data); Files.ReadString(R, name) END ; (*commands*)
+    Files.ReadInt(R, n);
+    IF ~R.eof & (n > 0) THEN Files.ReadInt(R, start); DEC(n) END ; (*first entry, module initialization code*)
+    WHILE ~R.eof & (n > 0) DO Files.ReadInt(R, data); DEC(n) END ; (*subsequent entries*)
+    Files.ReadInt(R, data);
+    WHILE ~R.eof & (data >= 0) DO Files.ReadInt(R, data) END ; (*pointer references*)
+    Files.ReadInt(R, data);
+    WHILE ~R.eof & (data >= 0) DO Files.ReadInt(R, data) END ; (*procedure variables*)
+    Files.ReadInt(R, data); (*fixorgP*) Files.ReadInt(R, data); (*fixorgD*)
+    Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, data); (*entry*)
+    Files.Read(R, ch);
+    IF ch # "O" THEN (*corrupted file*) res := 1 ELSE res := 0 END
+  END ExtractCode;
+
+  PROCEDURE RunRsc*; (*load and execute code section of program  M.rsc*)
+    CONST maxCode = 8192;
+    TYPE Command = PROCEDURE;
+    VAR code: ARRAY maxCode OF LONGINT; size, start, nofimps, res: INTEGER;
+      F: Files.File; R: Files.Rider;
+      S: Texts.Scanner;
+      body: Command;
+  BEGIN GetArg(S);
+    Texts.WriteString(W, "System.RunRsc ");
+    IF S.class = Texts.Name THEN
+      Texts.WriteString(W, S.s); Texts.Append(Oberon.Log, W.buf);
+      F := Files.Old(S.s);
+      IF F # NIL THEN Files.Set(R, F, 0);
+        ExtractCode(R, code, size, start, nofimps, res);
+        IF res = 0 THEN
+          IF nofimps = 0 THEN
+            Texts.WriteInt(W, size*4, 6); Texts.WriteInt(W, start, 6); (*bytes*)
+            body := SYSTEM.VAL(Command, SYSTEM.ADR(code) + start);
+            body (*call module initialization body*)
+          ELSE Texts.WriteString(W, " imports not allowed")
+          END
+        ELSE Texts.WriteString(W, "  input file format error")
+        END
+      ELSE Texts.WriteString(W, " failed")
+      END ;
+      EndLine
+    END
+  END RunRsc;
+
+  PROCEDURE Trap1(VAR a: INTEGER; b: INTEGER); (*trap routine for M.bin*)
+    VAR u, v, w: INTEGER;
+  BEGIN u := SYSTEM.REG(15); SYSTEM.GET(u - 4, v); w := v DIV 10H MOD 10H; (*trap number*)
+    LED(w + 192); REPEAT UNTIL FALSE
+  END Trap1;
+
+  PROCEDURE RunBin*; (*load and execute pre-linked binary  M.bin*)
+    CONST maxCode = 8192; MT = 12;
+    TYPE Command = PROCEDURE;
+    VAR code: ARRAY maxCode OF INTEGER;
+      MTOrg, binStart, binMTOrg, root, i, x: INTEGER;
+      F: Files.File; R: Files.Rider;
+      S: Texts.Scanner;
+      body: Command;
+      mod, M: Modules.Module;
+  BEGIN GetArg(S);
+    Texts.WriteString(W, "System.RunBin ");
+    IF S.class = Texts.Name THEN
+      Texts.WriteString(W, S.s); Texts.Append(Oberon.Log, W.buf);
+      F := Files.Old(S.s);
+      IF F # NIL THEN Files.Set(R, F, 0); Files.ReadInt(R, x); i := 0;
+        WHILE ~R.eof DO code[i] := x; INC(i); Files.ReadInt(R, x) END ;
+        Texts.WriteInt(W, i*4, 6); (*bytes*) Texts.Append(Oberon.Log, W.buf);
+        binStart := SYSTEM.ADR(code);
+        binMTOrg := binStart + 32;  (*module table MT*)
+        root := code[5];  (*root of the links of loaded modules in Mem[20]*)
+        mod := SYSTEM.VAL(Modules.Module, root);
+        M := SYSTEM.VAL(Modules.Module, binStart + root);
+        WHILE mod # NIL DO (*fix up module chain of pointers, field next and imports*)
+          mod := M.next;
+          IF M.next # NIL THEN
+            M.next := SYSTEM.VAL(Modules.Module, SYSTEM.VAL(LONGINT, mod) + binStart)
+          END ;
+          M.data := M.data + binStart;
+          code[M.num + 8] := M.data; (*M's entry in the module table MT*)
+          M.code := M.code + binStart;
+          M.imp := M.imp + binStart;
+          M.cmd := M.cmd + binStart;
+          i := M.imp;
+          WHILE i < M.cmd DO SYSTEM.GET(i, x); SYSTEM.PUT(i, x + binStart); INC(i, 4) END ;
+          M.ent := M.ent + binStart;
+          M.ptr := M.ptr + binStart;
+          M.pvar := M.pvar + binStart;
+          M := M.next
+        END ;
+        Kernel.Install(SYSTEM.ADR(Trap1), binMTOrg); (*install trap in binMTOrg[0]*)
+        MTOrg := SYSTEM.REG(MT); (*save MT register*)
+        SYSTEM.LDREG(MT, binMTOrg);
+        body := SYSTEM.VAL(Command, binStart);
+        body; (*call module initialization body of the top module*)
+        SYSTEM.LDREG(MT, MTOrg); (*restore MT register*) 
+      ELSE Texts.WriteString(W, " failed")
+      END ;
+      EndLine
+    END
+  END RunBin;
 
   PROCEDURE InitMod(name: ARRAY OF CHAR);
     VAR mod: Modules.Module; body: Modules.Command; w: INTEGER;

@@ -1,6 +1,6 @@
-MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 1.9.17*)
+MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 1.11.17*)
   IMPORT SYSTEM, Files, Modules, Kernel, Texts, Oberon;
-  CONST versionkey = 1X; MT = 12; DescSize = 88;
+  CONST versionkey = 1X; versionkey0 = 0X; MT = 12; DescSize = 88;
 
   VAR binroot, M: Modules.Module;
     binMTOrg, binStart, binAllocPtr, res*: INTEGER;
@@ -60,7 +60,7 @@ MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 
         Files.Read(R, ch); Files.ReadInt(R, size);
         zero(importing);
         importing := name1;
-        IF ch = versionkey THEN
+        IF (ch = versionkey) OR (ch = versionkey0) THEN (*allow also standalone programs to be "linked"*)
           zero(impname);
           Files.ReadString(R, impname);   (*imports*)
           WHILE (impname[0] # 0X) & (res = 0) DO
@@ -198,7 +198,7 @@ MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 
     binStart := Modules.AllocPtr; binMTOrg := binStart + 32; binroot := NIL; res := 0;
     limit := Kernel.heapOrg; DEC(limit, 8000H);
     binAllocPtr :=  binStart+ 256; i:= 0;
-    WHILE i < 256+80 DO SYSTEM.PUT(binStart + i, 0); INC(i, 4) END ;
+    WHILE i < 256+DescSize DO SYSTEM.PUT(binStart + i, 0); INC(i, 4) END ;
     Texts.OpenWriter(W); Texts.WriteString(W, "  linking ");
     Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos);
     Texts.Scan(S);
@@ -230,6 +230,7 @@ MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 
           M.cmd := M.cmd - binStart;
           M.ent := M.ent - binStart;
           M.ptr := M.ptr - binStart;
+          M.pvar := M.pvar - binStart; (*procedure variable references*)
           SYSTEM.PUT(binStart + 20H + (4*M.num), M.data)
         END ;
         i := binStart;
@@ -250,6 +251,6 @@ MODULE Linker;  (*Link and create binary on RISC; NW 20.10.13 / CP 21.5.14 / AP 
   END Link;
 
 BEGIN
-  Texts.OpenWriter(W); Texts.WriteString(W, "OR Linker CP 22.05.14 / AP 1.9.17");
+  Texts.OpenWriter(W); Texts.WriteString(W, "OR Linker CP 22.05.14 / AP 1.11.17");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
 END Linker.
