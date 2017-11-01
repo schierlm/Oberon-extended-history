@@ -5,7 +5,7 @@ MODULE Builder; (*AP 1.11.17  System building tools for Experimental Oberon*)
  * Builder.WriteCode M.rsc M.code ~            ... extract code section from object fileand write it out with prefix (size, adr)
  * Builder.WriteStream M.bin M.stream 512 0 ~  ... convert build-up boot file to stream format used for booting over serial line
  *)
-  IMPORT Kernel, Files, Texts, Oberon;
+  IMPORT SYSTEM, Kernel, Files, Texts, Oberon;
   CONST beg = 2; end = 63; nofsecs = end - beg + 1; (*boot area = sectors 2-63 in Oberon 2013*)
     CR = 0DX; maxCode = 8000;
 
@@ -61,8 +61,8 @@ MODULE Builder; (*AP 1.11.17  System building tools for Experimental Oberon*)
     END
   END Load;
 
-  PROCEDURE ExtractCode*(VAR R: Files.Rider; VAR code: ARRAY OF LONGINT; VAR size, start, nofimps, res: INTEGER);
-    VAR n, data: INTEGER; ch: CHAR; b: BYTE;                               (*size in words, start in bytes*)
+  PROCEDURE LoadCode*(VAR R: Files.Rider; dst: INTEGER; VAR size, start, nofimps, res: INTEGER);
+    VAR n, data: INTEGER; ch: CHAR; b: BYTE;               (*size in words, start in bytes*)
       name: ARRAY 32 OF CHAR;
   BEGIN Files.ReadString(R, name); Files.ReadInt(R, data); (*key*)
     Files.ReadByte(R, b); (*version*) Files.ReadInt(R, data); (*size*)
@@ -74,7 +74,7 @@ MODULE Builder; (*AP 1.11.17  System building tools for Experimental Oberon*)
     Files.ReadInt(R, n);
     WHILE ~R.eof & (n > 0) DO Files.Read(R, ch); DEC(n) END ; (*strings*)
     Files.ReadInt(R, size); n := 0;
-    WHILE ~R.eof & (n < size) DO Files.ReadInt(R, data); code[n] := data; INC(n) END ; (*program code*)
+    WHILE ~R.eof & (n < size) DO Files.ReadInt(R, data); SYSTEM.PUT(dst, data); INC(n); INC(dst, 4) END ; (*code*)
     Files.ReadString(R, name);
     WHILE ~R.eof & (name[0] # 0X) DO Files.ReadInt(R, data); Files.ReadString(R, name) END ; (*commands*)
     Files.ReadInt(R, n);
@@ -88,7 +88,7 @@ MODULE Builder; (*AP 1.11.17  System building tools for Experimental Oberon*)
     Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, data); (*entry*)
     Files.Read(R, ch);
     IF ch # "O" THEN (*corrupted file*) res := 1 ELSE res := 0 END
-  END ExtractCode;
+  END LoadCode;
 
   PROCEDURE WriteCode*; (*extract code section from object file and write it to output file, with prefix (size, adr)*)
     VAR if, of: Files.File; ir, or: Files.Rider; (*input file, output file*)
@@ -100,7 +100,7 @@ MODULE Builder; (*AP 1.11.17  System building tools for Experimental Oberon*)
     IF S.class = Texts.Name THEN Texts.WriteString(W, S.s); if := Files.Old(S.s);
       IF if # NIL THEN Texts.Scan(S);
         IF S.class = Texts.Name THEN Texts.WriteString(W, " "); Texts.WriteString(W, S.s);
-          Files.Set(ir, if, 0); ExtractCode(ir, code, size, start, nofimps, res);
+          Files.Set(ir, if, 0); LoadCode(ir, SYSTEM.ADR(code), size, start, nofimps, res);
           IF res = 0 THEN
             IF nofimps = 0 THEN of := Files.New(S.s);
               IF of # NIL THEN Files.Set(or, of, 0); i := 0;
@@ -151,7 +151,7 @@ MODULE Builder; (*AP 1.11.17  System building tools for Experimental Oberon*)
         IF S.class = Texts.Int THEN len := S.i; Texts.WriteInt(W, len, 5);
           IF len > 0 THEN Texts.Scan(S);
             IF S.class = Texts.Name THEN Texts.WriteString(W, " "); Texts.WriteString(W, S.s);
-              Files.Set(ir, if, 0); ExtractCode(ir, code, size, start, nofimps, res);
+              Files.Set(ir, if, 0); LoadCode(ir, SYSTEM.ADR(code), size, start, nofimps, res);
               IF res = 0 THEN
                 IF nofimps = 0 THEN
                   IF size <= len THEN of := Files.New(S.s);
