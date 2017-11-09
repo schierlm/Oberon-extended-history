@@ -693,7 +693,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.11.17*)
     IF S.class = Texts.Name THEN Modules.Load(S.s, M) END
   END Load;
 
-  PROCEDURE LoadCode*(VAR R: Files.Rider; dst: INTEGER; VAR size, start, nofimps, res: INTEGER);
+  PROCEDURE LoadCode(VAR R: Files.Rider; VAR code: ARRAY OF LONGINT; VAR size, start, nofimps, res: INTEGER);
     VAR n, data: INTEGER; ch: CHAR; b: BYTE;               (*size in words, start in bytes*)
       name: ARRAY 32 OF CHAR;
   BEGIN Files.ReadString(R, name); Files.ReadInt(R, data); (*key*)
@@ -705,25 +705,27 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.11.17*)
     Files.ReadInt(R, n); (*variable space*)
     Files.ReadInt(R, n);
     WHILE ~R.eof & (n > 0) DO Files.Read(R, ch); DEC(n) END ; (*strings*)
-    Files.ReadInt(R, size); n := 0;
-    WHILE ~R.eof & (n < size) DO Files.ReadInt(R, data); SYSTEM.PUT(dst, data); INC(n); INC(dst, 4) END ; (*code*)
-    Files.ReadString(R, name);
-    WHILE ~R.eof & (name[0] # 0X) DO Files.ReadInt(R, data); Files.ReadString(R, name) END ; (*commands*)
-    Files.ReadInt(R, n);
-    IF ~R.eof & (n > 0) THEN Files.ReadInt(R, start); DEC(n) END ; (*first entry, module initialization code*)
-    WHILE ~R.eof & (n > 0) DO Files.ReadInt(R, data); DEC(n) END ; (*subsequent entries*)
-    Files.ReadInt(R, data);
-    WHILE ~R.eof & (data >= 0) DO Files.ReadInt(R, data) END ; (*pointer references*)
-    Files.ReadInt(R, data);
-    WHILE ~R.eof & (data >= 0) DO Files.ReadInt(R, data) END ; (*procedure variables*)
-    Files.ReadInt(R, data); (*fixorgP*) Files.ReadInt(R, data); (*fixorgD*)
-    Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, data); (*entry*)
-    Files.Read(R, ch);
-    IF ch # "O" THEN (*corrupted file*) res := 1 ELSE res := 0 END
+    Files.ReadInt(R, size);
+    IF size > LEN(code) THEN (*program too long*) res := 2
+    ELSE n := 0;
+      WHILE ~R.eof & (n < size) DO Files.ReadInt(R, data); code[n] := data; INC(n) END ; (*code*)
+      Files.ReadString(R, name);
+      WHILE ~R.eof & (name[0] # 0X) DO Files.ReadInt(R, data); Files.ReadString(R, name) END ; (*commands*)
+      Files.ReadInt(R, n);
+      WHILE ~R.eof & (n > 0) DO Files.ReadInt(R, data); DEC(n) END ; (*entries*)
+      Files.ReadInt(R, data);
+      WHILE ~R.eof & (data >= 0) DO Files.ReadInt(R, data) END ; (*pointer references*)
+      Files.ReadInt(R, data);
+      WHILE ~R.eof & (data >= 0) DO Files.ReadInt(R, data) END ; (*procedure variables*)
+      Files.ReadInt(R, data); (*fixorgP*) Files.ReadInt(R, data); (*fixorgD*)
+      Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, start); (*entry*)
+      Files.Read(R, ch);
+      IF ch # "O" THEN (*corrupted file*) res := 1 ELSE res := 0 END
+    END
   END LoadCode;
 
   PROCEDURE RunRsc*; (*extract, load and execute code section of program  M.rsc*)
-    CONST maxCode = 2000;
+    CONST maxCode = 8000;
     TYPE Command = PROCEDURE;
     VAR code: ARRAY maxCode OF LONGINT;
       size, start, nofimps, res: INTEGER;
@@ -736,7 +738,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.11.17*)
       Texts.WriteString(W, S.s); Texts.Append(Oberon.Log, W.buf);
       F := Files.Old(S.s);
       IF F # NIL THEN Files.Set(R, F, 0);
-        LoadCode(R, SYSTEM.ADR(code), size, start, nofimps, res);
+        LoadCode(R, code, size, start, nofimps, res);
         IF res = 0 THEN
           IF nofimps = 0 THEN
             Texts.WriteInt(W, size*4, 6); Texts.WriteInt(W, start, 6); (*bytes*)
@@ -744,7 +746,8 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.11.17*)
             body (*call module initialization body*)
           ELSE Texts.WriteString(W, " imports not allowed")
           END
-        ELSE Texts.WriteString(W, "  input file format error")
+        ELSIF res = 1 THEN Texts.WriteString(W, "  input file format error")
+        ELSIF res = 2 THEN Texts.WriteString(W, "  program too long")
         END
       ELSE Texts.WriteString(W, " failed")
       END ;

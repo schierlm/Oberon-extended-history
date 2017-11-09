@@ -1,11 +1,11 @@
-MODULE Builder; (*AP 1.11.17  System building tools for Experimental Oberon*)
+MODULE Builder; (*AP 1.11.17  System building tools for Experimenal Oberon*)
 (*
- * Builder.Load Modules ~                      ... load regular boot file (Modules.bin) onto boot area of local disk
- * Builder.WritePROM M.rsc 512 prom.mem ~      ... extract code section from object file and write it out in PROM (hex) format
- * Builder.WriteCode M.rsc M.code ~            ... extract code section from object fileand write it out with prefix (size, adr)
- * Builder.WriteStream M.bin M.stream 512 0 ~  ... convert build-up boot file to stream format used for booting over serial line
- *)
-  IMPORT SYSTEM, Kernel, Files, Texts, Oberon;
+  Builder.Load Modules ~                      ... load the regular boot file (Modules.bin) onto the boot area of the local disk
+  Builder.WritePROM M.rsc 512 prom.mem ~      ... extract the code section from an object file and write it out in PROM (hex) format
+  Builder.WriteCode M.rsc M.code ~            ... extract the code section from an object file and write it out in binary format with with a prefix (size, adr)
+  Builder.WriteStream M.bin M.stream 512 0 ~  ... convert a build-up boot file to the stream format used for booting over the data link
+*)
+  IMPORT Kernel, Files, Texts, Oberon;
   CONST beg = 2; end = 63; nofsecs = end - beg + 1; (*boot area = sectors 2-63 in Oberon 2013*)
     CR = 0DX; maxCode = 8000;
 
@@ -61,7 +61,7 @@ MODULE Builder; (*AP 1.11.17  System building tools for Experimental Oberon*)
     END
   END Load;
 
-  PROCEDURE LoadCode*(VAR R: Files.Rider; dst: INTEGER; VAR size, start, nofimps, res: INTEGER);
+  PROCEDURE LoadCode(VAR R: Files.Rider; VAR code: ARRAY OF LONGINT; VAR size, start, nofimps, res: INTEGER);
     VAR n, data: INTEGER; ch: CHAR; b: BYTE;               (*size in words, start in bytes*)
       name: ARRAY 32 OF CHAR;
   BEGIN Files.ReadString(R, name); Files.ReadInt(R, data); (*key*)
@@ -73,21 +73,23 @@ MODULE Builder; (*AP 1.11.17  System building tools for Experimental Oberon*)
     Files.ReadInt(R, n); (*variable space*)
     Files.ReadInt(R, n);
     WHILE ~R.eof & (n > 0) DO Files.Read(R, ch); DEC(n) END ; (*strings*)
-    Files.ReadInt(R, size); n := 0;
-    WHILE ~R.eof & (n < size) DO Files.ReadInt(R, data); SYSTEM.PUT(dst, data); INC(n); INC(dst, 4) END ; (*code*)
-    Files.ReadString(R, name);
-    WHILE ~R.eof & (name[0] # 0X) DO Files.ReadInt(R, data); Files.ReadString(R, name) END ; (*commands*)
-    Files.ReadInt(R, n);
-    IF ~R.eof & (n > 0) THEN Files.ReadInt(R, start); DEC(n) END ; (*first entry, module initialization code*)
-    WHILE ~R.eof & (n > 0) DO Files.ReadInt(R, data); DEC(n) END ; (*subsequent entries*)
-    Files.ReadInt(R, data);
-    WHILE ~R.eof & (data >= 0) DO Files.ReadInt(R, data) END ; (*pointer references*)
-    Files.ReadInt(R, data);
-    WHILE ~R.eof & (data >= 0) DO Files.ReadInt(R, data) END ; (*procedure variables*)
-    Files.ReadInt(R, data); (*fixorgP*) Files.ReadInt(R, data); (*fixorgD*)
-    Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, data); (*entry*)
-    Files.Read(R, ch);
-    IF ch # "O" THEN (*corrupted file*) res := 1 ELSE res := 0 END
+    Files.ReadInt(R, size);
+    IF size > LEN(code) THEN (*program too long*) res := 2
+    ELSE n := 0;
+      WHILE ~R.eof & (n < size) DO Files.ReadInt(R, data); code[n] := data; INC(n) END ; (*code*)
+      Files.ReadString(R, name);
+      WHILE ~R.eof & (name[0] # 0X) DO Files.ReadInt(R, data); Files.ReadString(R, name) END ; (*commands*)
+      Files.ReadInt(R, n);
+      WHILE ~R.eof & (n > 0) DO Files.ReadInt(R, data); DEC(n) END ; (*entries*)
+      Files.ReadInt(R, data);
+      WHILE ~R.eof & (data >= 0) DO Files.ReadInt(R, data) END ; (*pointer references*)
+      Files.ReadInt(R, data);
+      WHILE ~R.eof & (data >= 0) DO Files.ReadInt(R, data) END ; (*procedure variables*)
+      Files.ReadInt(R, data); (*fixorgP*) Files.ReadInt(R, data); (*fixorgD*)
+      Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, start); (*entry*)
+      Files.Read(R, ch);
+      IF ch # "O" THEN (*corrupted file*) res := 1 ELSE res := 0 END
+    END
   END LoadCode;
 
   PROCEDURE WriteCode*; (*extract code section from object file and write it to output file, with prefix (size, adr)*)
@@ -100,7 +102,7 @@ MODULE Builder; (*AP 1.11.17  System building tools for Experimental Oberon*)
     IF S.class = Texts.Name THEN Texts.WriteString(W, S.s); if := Files.Old(S.s);
       IF if # NIL THEN Texts.Scan(S);
         IF S.class = Texts.Name THEN Texts.WriteString(W, " "); Texts.WriteString(W, S.s);
-          Files.Set(ir, if, 0); LoadCode(ir, SYSTEM.ADR(code), size, start, nofimps, res);
+          Files.Set(ir, if, 0); LoadCode(ir, code, size, start, nofimps, res);
           IF res = 0 THEN
             IF nofimps = 0 THEN of := Files.New(S.s);
               IF of # NIL THEN Files.Set(or, of, 0); i := 0;
@@ -112,7 +114,8 @@ MODULE Builder; (*AP 1.11.17  System building tools for Experimental Oberon*)
               END
             ELSE Texts.WriteString(W, " imports not allowed")
             END
-          ELSE Texts.WriteString(W, "  input file format error")
+          ELSIF res = 1 THEN Texts.WriteString(W, "  input file format error")
+          ELSIF res = 2 THEN Texts.WriteString(W, "  program too long")
           END
         ELSE Texts.WriteString(W, "  must specify output file")
         END ;
@@ -151,7 +154,7 @@ MODULE Builder; (*AP 1.11.17  System building tools for Experimental Oberon*)
         IF S.class = Texts.Int THEN len := S.i; Texts.WriteInt(W, len, 5);
           IF len > 0 THEN Texts.Scan(S);
             IF S.class = Texts.Name THEN Texts.WriteString(W, " "); Texts.WriteString(W, S.s);
-              Files.Set(ir, if, 0); LoadCode(ir, SYSTEM.ADR(code), size, start, nofimps, res);
+              Files.Set(ir, if, 0); LoadCode(ir, code, size, start, nofimps, res);
               IF res = 0 THEN
                 IF nofimps = 0 THEN
                   IF size <= len THEN of := Files.New(S.s);
@@ -165,7 +168,8 @@ MODULE Builder; (*AP 1.11.17  System building tools for Experimental Oberon*)
                   END
                 ELSE Texts.WriteString(W, " imports not allowed")               
                 END
-              ELSE Texts.WriteString(W, "  input file format error")
+              ELSIF res = 1 THEN Texts.WriteString(W, "  input file format error")
+              ELSIF res = 2 THEN Texts.WriteString(W, "  program too long")
               END
             ELSE Texts.WriteString(W, "  must specify output file")
             END
