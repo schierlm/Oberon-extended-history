@@ -125,8 +125,8 @@ Do NOT recompile the Original Oberon file *Modules.Mod* at this stage!
 
 **Step 5b:** Link and load the modified version of the Oberon *inner core* onto the boot area of your local disk (using the linker and builder that are still loaded in main memory):
 
-     Linker.Link Modules ~     # create an "old" inner core with the new module interface (using the linker that was created from Linker0.Mod))
-     Builder.Load Modules ~    # load inner core (file Modules.bin) onto the boot area of the local disk (builder is already loaded)
+     Linker.Link Modules ~        # create an "old" inner core (Modules.bin) with the new module interface (using the linker that was created from Linker0.Mod))
+     Builder.Load Modules.bin ~   # load the inner core onto the boot area of the local disk (module Builder is already loaded)
 
 Do NOT reboot the system just yet!
 
@@ -256,7 +256,7 @@ Do NOT reboot the system just yet!
 In the second *ORP.Compile* command above, be sure to specify "Modules.Mod" (without the '0' at the end)! This will generate a new inner core that is based on the Experimental ("new") Oberon object file format.
 
     Linker.Link Modules ~
-    Builder.Load Modules ~    # load inner core (file Modules.bin) onto the boot area of the local disk
+    Builder.Load Modules.bin ~    # load inner core (Modules.bin) onto the boot area of the local disk
 
 You have now loaded an Experimental Oberon *inner core* onto the boot area of your system. Rebooting your system at this stage would fail, as all modules that depend on the inner core are still compiled in the Original Oberon version (and thus import module *Modules* with an old module key). To be able to reboot the Experimental Oberon system, we need to compile the outer core and the remaining modules required to start Experimental Oberon, as shown in the next step.
 

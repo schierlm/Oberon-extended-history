@@ -693,7 +693,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.11.17*)
     IF S.class = Texts.Name THEN Modules.Load(S.s, M) END
   END Load;
 
-  PROCEDURE LoadCode(VAR R: Files.Rider; VAR code: ARRAY OF LONGINT; VAR size, start, nofimps, res: INTEGER);
+  PROCEDURE ReadCode(VAR R: Files.Rider; VAR code: ARRAY OF LONGINT; VAR size, start, nofimps, res: INTEGER);
     VAR n, data: INTEGER; ch: CHAR; b: BYTE;               (*size in words, start in bytes*)
       name: ARRAY 32 OF CHAR;
   BEGIN Files.ReadString(R, name); Files.ReadInt(R, data); (*key*)
@@ -722,7 +722,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.11.17*)
       Files.Read(R, ch);
       IF ch # "O" THEN (*corrupted file*) res := 1 ELSE res := 0 END
     END
-  END LoadCode;
+  END ReadCode;
 
   PROCEDURE RunRsc*; (*extract, load and execute code section of program  M.rsc*)
     CONST maxCode = 8000;
@@ -738,13 +738,13 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.11.17*)
       Texts.WriteString(W, S.s); Texts.Append(Oberon.Log, W.buf);
       F := Files.Old(S.s);
       IF F # NIL THEN Files.Set(R, F, 0);
-        LoadCode(R, code, size, start, nofimps, res);
+        ReadCode(R, code, size, start, nofimps, res);
         IF res = 0 THEN
           IF nofimps = 0 THEN
             Texts.WriteInt(W, size*4, 6); Texts.WriteInt(W, start, 6); (*bytes*)
             body := SYSTEM.VAL(Command, SYSTEM.ADR(code) + start);
             body (*call module initialization body*)
-          ELSE Texts.WriteString(W, " imports not allowed")
+          ELSE Texts.WriteString(W, "  imports not allowed")
           END
         ELSIF res = 1 THEN Texts.WriteString(W, "  input file format error")
         ELSIF res = 2 THEN Texts.WriteString(W, "  program too long")

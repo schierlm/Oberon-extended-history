@@ -29,7 +29,7 @@ Tools.Recall  Tools.Clear
 ORP.Compile Linker.Mod/s Builder.Mod/s ~
 ORP.Compile Kernel.Mod/s FileDir.Mod/s Files.Mod Modules.Mod/s ~
 Linker.Link Modules ~              System.RunInit System ~
-Builder.Load Modules ~           System.Open Draw.Tool ~
+Builder.Load Modules.bin ~     System.Open Draw.Tool ~
 
 ORP.Compile Input.Mod Display.Mod/s Viewers.Mod/s ~
 ORP.Compile Fonts.Mod Texts.Mod ~
