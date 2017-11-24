@@ -1,6 +1,6 @@
-MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.11.17*)
-  IMPORT SYSTEM, Kernel, FileDir, Files, Modules, Input, Fonts, Texts,
-    Viewers, Oberon, MenuViewers, TextFrames;
+MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 11.11.17*)
+  IMPORT SYSTEM, Kernel, FileDir, Files, Modules,
+    Input, Fonts, Texts, Viewers, Oberon, MenuViewers, TextFrames;
 
   CONST StandardMenu = "System.Close System.Copy System.Grow Edit.Search Edit.Store | System.Expand System.Clone";
     LogMenu = "Edit.Locate Edit.Search System.Copy System.Grow System.Clear | System.Expand System.Clone";
@@ -85,7 +85,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.11.17*)
     VAR logV, toolV, menu, main: Viewers.Frame; X, Y: INTEGER;
   BEGIN
     IF Viewers.CurDisplay # NIL THEN
-      Texts.WriteString(W, "Oberon V6  NW 14.4.13 / AP 1.11.17  Display ");
+      Texts.WriteString(W, "Oberon V6  NW 14.4.13 / AP 11.11.17  Display ");
       Texts.WriteInt(W, Viewers.CurDisplay.id, 2); Texts.Write(W, " ");
       Texts.WriteString(W, Viewers.CurDisplay.name); EndLine;
       Oberon.AllocateSystemViewer(0, X, Y);
@@ -522,7 +522,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.11.17*)
       beg, end, time: LONGINT;
       pre: ARRAY 32 OF CHAR;
   BEGIN Texts.OpenReader(R, Oberon.Par.text, Oberon.Par.pos); Texts.Read(R, ch);
-    WHILE ch = " " DO Texts.Read(R, ch) END;
+    WHILE ch = " " DO Texts.Read(R, ch) END ;
     IF (ch = "^") OR (ch = 0DX) THEN
       Oberon.GetSelection(T, beg, end, time);
       IF time >= 0 THEN
@@ -531,16 +531,15 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.11.17*)
       END
     END ;
     i := 0;
-    WHILE ch > " " DO
-      IF ch = "!" THEN pat[i] := 0X; pat[i+1] := "!"; INC(i, 2) (*directory option*) 
-      ELSE pat[i] := ch; INC(i)
-      END ;
+    WHILE ch > " " DO (*pattern*)
+      IF ch = "!" THEN pat[i] := 0X; INC(i) END ; (*directory option*)
+      pat[i] := ch; INC(i);
       Texts.Read(R, ch)
     END ;
-    pat[i] := 0X;
+    WHILE i < LEN(pat) DO pat[i] := 0X; INC(i) END ;
     i := 0;
-    WHILE pat[i] > "*" DO pre[i] := pat[i]; INC(i) END;
-    pre[i] := 0X;
+    WHILE pat[i] > "*" DO pre[i] := pat[i]; INC(i) END ; (*prefix*)
+    WHILE i < LEN(pre) DO pre[i] := 0X; INC(i) END ;
     Oberon.AllocateSystemViewer(Oberon.Par.vwr.X, X, Y); t := TextFrames.Text("");
     V := MenuViewers.New(
       TextFrames.NewMenu("System.Directory", StandardMenu),

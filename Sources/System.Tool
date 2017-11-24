@@ -26,7 +26,7 @@ Tools.Recall  Tools.Clear
 
 # ------------ rebuilding the system ----------------
 
-ORP.Compile Linker.Mod/s Builder.Mod/s ~
+ORP.Compile Linker.Mod/s Builder.Mod/s ~     Edit.Open Builder.Tool
 ORP.Compile Kernel.Mod/s FileDir.Mod/s Files.Mod Modules.Mod/s ~
 Linker.Link Modules ~              System.RunInit System ~
 Builder.Load Modules.bin ~     System.Open Draw.Tool ~
