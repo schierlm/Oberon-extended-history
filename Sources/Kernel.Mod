@@ -1,4 +1,4 @@
-MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.8.17*)
+MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 11.11.17*)
   IMPORT SYSTEM;
   CONST SectorLength* = 1024;
     timer = -64; spiData = -48; spiCtrl = -44;
@@ -85,19 +85,20 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.8.17*)
   PROCEDURE Mark*(pref: LONGINT);
     VAR pvadr, offadr, offset, tag, p, q, r: LONGINT;
   BEGIN SYSTEM.GET(pref, pvadr); (*pointers < heapOrg considered NIL*)
-    WHILE pvadr # 0 DO
-      SYSTEM.GET(pvadr, p); SYSTEM.GET(p-4, offadr);
-      IF (p >= heapOrg) & (offadr = 0) THEN q := p;   (*mark elements in data structure with root p*)
-        REPEAT SYSTEM.GET(p-4, offadr);
-          IF offadr = 0 THEN SYSTEM.GET(p-8, tag); offadr := tag + 16 ELSE INC(offadr, 4) END ;
-          SYSTEM.PUT(p-4, offadr); SYSTEM.GET(offadr, offset);
-          IF offset # -1 THEN (*down*)
-            SYSTEM.GET(p+offset, r); SYSTEM.GET(r-4, offadr);
-            IF (r >= heapOrg) & (offadr = 0) THEN SYSTEM.PUT(p+offset, q); q := p; p := r END
-          ELSE (*up*) SYSTEM.GET(q-4, offadr); SYSTEM.GET(offadr, offset);
-            IF p # q THEN SYSTEM.GET(q+offset, r); SYSTEM.PUT(q+offset, p); p := q; q := r END
-          END
-        UNTIL (p = q) & (offset = -1)
+    WHILE pvadr # 0 DO SYSTEM.GET(pvadr, p);
+      IF p >= heapOrg THEN SYSTEM.GET(p-4, offadr);
+        IF offadr = 0 THEN q := p; (*mark elements in data structure with root p*)
+          REPEAT SYSTEM.GET(p-4, offadr);
+            IF offadr = 0 THEN SYSTEM.GET(p-8, tag); offadr := tag + 16 ELSE INC(offadr, 4) END ;
+            SYSTEM.PUT(p-4, offadr); SYSTEM.GET(offadr, offset);
+            IF offset # -1 THEN (*down*)
+              SYSTEM.GET(p+offset, r); SYSTEM.GET(r-4, offadr);
+              IF (r >= heapOrg) & (offadr = 0) THEN SYSTEM.PUT(p+offset, q); q := p; p := r END
+            ELSE (*up*) SYSTEM.GET(q-4, offadr); SYSTEM.GET(offadr, offset);
+              IF p # q THEN SYSTEM.GET(q+offset, r); SYSTEM.PUT(q+offset, p); p := q; q := r END
+            END
+          UNTIL (p = q) & (offset = -1)
+        END
       END ;
       INC(pref, 4); SYSTEM.GET(pref, pvadr)
     END

@@ -1,6 +1,6 @@
 MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 11.11.17*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules,
-    Input, Fonts, Texts, Viewers, Oberon, MenuViewers, TextFrames;
+    Input, Viewers, Fonts, Texts, Oberon, MenuViewers, TextFrames;
 
   CONST StandardMenu = "System.Close System.Copy System.Grow Edit.Search Edit.Store | System.Expand System.Clone";
     LogMenu = "Edit.Locate Edit.Search System.Copy System.Grow System.Clear | System.Expand System.Clone";
@@ -319,7 +319,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 11.11.17*)
 
   (* ------------- Toolbox for module management ---------------*)
 
-  PROCEDURE Select1(on, this, clients, imports: BOOLEAN); (*modules, clients, imports*)
+  PROCEDURE Select(on, this, clients, imports: BOOLEAN); (*modules, clients, imports*)
     VAR T: Texts.Text;
       beg, end, time: LONGINT;
       S: Texts.Scanner;
@@ -339,144 +339,99 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 11.11.17*)
         Modules.Select(S.s, on, this, clients, imports); Texts.Scan(S)
       END
     END
-  END Select1;
-
-  PROCEDURE Select*; (*module names are provided as parameters*)
-  BEGIN Texts.WriteString(W, "System.Select"); Select1(TRUE, TRUE, FALSE, FALSE); EndLine
   END Select;
 
-  PROCEDURE SelectAll*;
-  BEGIN Modules.SelectAll(TRUE)
-  END SelectAll;
-
-  PROCEDURE DeselectAll*;
-  BEGIN Modules.SelectAll(FALSE)
-  END DeselectAll;
-
-  PROCEDURE WriteSelection(): BOOLEAN; (*in log viewer*)
+  PROCEDURE Handle(this, clients, imports, shrink, free, hide: BOOLEAN; command, exclude: ARRAY OF CHAR);
     VAR mod: Modules.Module; hasSel: BOOLEAN;
-  BEGIN mod := Modules.root; hasSel := FALSE;
-    WHILE mod # NIL DO
+  BEGIN Texts.WriteString(W, "System."); Texts.WriteString(W, command);
+    Modules.SelectAll(FALSE); Select(TRUE, this, clients, imports); EndLine;
+    IF exclude[0] # 0X THEN Modules.Select(exclude, FALSE, TRUE, FALSE, TRUE) END ; (*deselect exclude & its clients*)
+    IF shrink THEN Modules.ShrinkSelection END ;
+    mod := Modules.root; hasSel := FALSE;
+    WHILE mod # NIL DO (*write selection*)
       IF (mod.name[0] # 0X) & Modules.Selected(mod) THEN
         IF ~hasSel THEN Texts.Write(W, " "); hasSel := TRUE END ;
         Texts.Write(W, " "); Texts.WriteString(W, mod.name)
       END ;
       mod := mod.next
     END ;
-    IF hasSel THEN Texts.Append(Oberon.Log, W.buf) END
-    RETURN hasSel
-  END WriteSelection;
-
-  PROCEDURE WriteFreeMsg(hide: BOOLEAN);
-  BEGIN
-    IF Modules.res = 0 THEN Texts.WriteString(W, " unloading")
-    ELSIF Modules.res = 1 THEN Texts.WriteString(W, " unloading failed (clients exist)")
-    ELSIF Modules.res < 5 THEN
-      IF hide THEN Texts.WriteString(W, " removing") ELSE Texts.WriteString(W, " unloading failed") END ;
-      IF Modules.res = 2 THEN Texts.WriteString(W, " (types in use in dynamic objects)")
-      ELSIF Modules.res = 3 THEN Texts.WriteString(W, " (procedures in use in dynamic objects)")
-      ELSIF Modules.res = 4 THEN Texts.WriteString(W, " (procedures in use in static objects)")
-      END
+    IF hasSel THEN
+      IF free THEN (*free selection*) Modules.FreeSelection(hide);
+        IF Modules.res = 0 THEN Texts.WriteString(W, " unloading")
+        ELSIF Modules.res = 1 THEN Texts.WriteString(W, " unloading failed (clients exist)")
+        ELSIF Modules.res < 5 THEN
+          IF hide THEN Texts.WriteString(W, " removing") ELSE Texts.WriteString(W, " unloading failed") END ;
+          IF Modules.res = 2 THEN Texts.WriteString(W, " (types in use in dynamic objects)")
+          ELSIF Modules.res = 3 THEN Texts.WriteString(W, " (procedures in use in dynamic objects)")
+          ELSIF Modules.res = 4 THEN Texts.WriteString(W, " (procedures in use in static objects)")
+          END
+        END ;
+        Oberon.Collect(0)
+      END ;
+      EndLine
     END ;
-    EndLine
-  END WriteFreeMsg;
-
-  PROCEDURE Free1(this, clients, imports, shrink, hide: BOOLEAN; exclude: ARRAY OF CHAR);
-  BEGIN Modules.SelectAll(FALSE); Select1(TRUE, this, clients, imports);
-    IF exclude[0] # 0X THEN Modules.Select(exclude, FALSE, TRUE, FALSE, TRUE);
-      Texts.WriteString(W, " ("); Texts.WriteString(W, exclude); Texts.WriteString(W, " and its clients excluded)")
-    END ;
-    EndLine;
-    IF shrink THEN Modules.ShrinkSelection END ;
-    IF WriteSelection() THEN Modules.FreeSelection(hide); WriteFreeMsg(hide); Oberon.Collect(0) END
-  END Free1;
-
-  (*Unload various subsets of modules from memory or hide them from module list*)
-
-  PROCEDURE Free*; (*free modules as a group; module names are provided as parameters*)
-  BEGIN Texts.WriteString(W, "System.Free"); Free1(TRUE, FALSE, FALSE, FALSE, TRUE, "")
-  END Free;
-
-  PROCEDURE FreeSelection*; (*free selected modules as a group*)
-  BEGIN Texts.WriteString(W, "System.FreeSelection"); EndLine;
-    IF WriteSelection() THEN Modules.FreeSelection(TRUE); WriteFreeMsg(TRUE); Oberon.Collect(0) END
-  END FreeSelection;
-
-  PROCEDURE FreeImports*; (*free modules and their imports; module names are provided as parameters*)
-  BEGIN Texts.WriteString(W, "System.FreeImports"); Free1(TRUE, FALSE, TRUE, FALSE, TRUE, "System")
-  END FreeImports;
-
-  PROCEDURE FreeClients*; (*free modules and their clients; module names are provided as parameters*)
-  BEGIN Texts.WriteString(W, "System.FreeClients"); Free1(TRUE, TRUE, FALSE, FALSE, TRUE, "System")
-  END FreeClients;
-
-  PROCEDURE FreeRemovableImports*; (*free the removable subset of the specifed modules and their imports*)
-  BEGIN Texts.WriteString(W, "System.FreeRemovableImports"); Free1(TRUE, FALSE, TRUE, TRUE, TRUE, "System")
-  END FreeRemovableImports;
-
-  PROCEDURE FreeRemovableClients*; (*free the removable subset of the specifed modules and their clients*)
-  BEGIN Texts.WriteString(W, "System.FreeRemovableClients"); Free1(TRUE, TRUE, FALSE, TRUE, TRUE, "System")
-  END FreeRemovableClients;
-
-  (*Unload various subsets of modules from memory, but don't hide them from module list if refs exist*)
-
-  PROCEDURE Unload*; (*unload modules as a group; module names are provided as parameters*)
-  BEGIN Texts.WriteString(W, "System.Unload"); Free1(TRUE, FALSE, FALSE, FALSE, FALSE, "")
-  END Unload;
-
-  PROCEDURE UnloadSelection*; (*unload selected modules as a group*)
-  BEGIN Texts.WriteString(W, "System.UnloadSelection"); EndLine;
-    IF WriteSelection() THEN Modules.FreeSelection(FALSE); WriteFreeMsg(FALSE); Oberon.Collect(0) END
-  END UnloadSelection;
-
-  PROCEDURE UnloadImports*; (*unload modules and their imports; module names are provided as parameters*)
-  BEGIN Texts.WriteString(W, "System.UnloadImports"); Free1(TRUE, FALSE, TRUE, FALSE, FALSE, "System")
-  END UnloadImports;
-
-  PROCEDURE UnloadClients*; (*unload modules and their clients; module names are provided as parameters*)
-  BEGIN Texts.WriteString(W, "System.UnloadClients"); Free1(TRUE, TRUE, FALSE, FALSE, FALSE, "System")
-  END UnloadClients;
-
-  PROCEDURE UnloadRemovableImports*; (*unload the removable subset of the specifed modules and their imports*)
-  BEGIN Texts.WriteString(W, "System.UnloadRemovableImports"); Free1(TRUE, FALSE, TRUE, TRUE, FALSE, "System")
-  END UnloadRemovableImports;
-
-  PROCEDURE UnloadRemovableClients*; (*unload the removable subset of the specifed modules and their clients*)
-  BEGIN Texts.WriteString(W, "System.FreeRemovableClients"); Free1(TRUE, TRUE, FALSE, TRUE, FALSE, "System")
-  END UnloadRemovableClients;
-
-  (*Show various subsets of modules*)
-
-  PROCEDURE Show1(this, clients, imports, shrink: BOOLEAN; exclude: ARRAY OF CHAR);
-  BEGIN Modules.SelectAll(FALSE); Select1(TRUE, this, clients, imports);
-    IF exclude[0] # 0X THEN Modules.Select(exclude, FALSE, TRUE, FALSE, TRUE);
-      Texts.WriteString(W, " ("); Texts.WriteString(W, exclude); Texts.WriteString(W, " and its clients excluded)")
-    END ;
-    EndLine;
-    IF shrink THEN Modules.ShrinkSelection END ;
-    IF WriteSelection() THEN EndLine; Modules.SelectAll(FALSE) END
-  END Show1;
-
-  PROCEDURE ShowSelection*; (*show selected modules*)
-  BEGIN Texts.WriteString(W, "System.ShowSelection"); EndLine;
-    IF WriteSelection() THEN Texts.WriteString(W, " selected"); EndLine END
-  END ShowSelection;
+    Modules.SelectAll(FALSE)
+  END Handle;
 
   PROCEDURE ShowImports*; (*show modules and their imports; module names are provided as parameters*)
-  BEGIN Texts.WriteString(W, "System.ShowImports"); Show1(TRUE, FALSE, TRUE, FALSE, "")
+  BEGIN Handle(TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, "ShowImports", "")
   END ShowImports;
 
   PROCEDURE ShowClients*; (*show modules and their clients; module names are provided as parameters*)
-  BEGIN Texts.WriteString(W, "System.ShowClients"); Show1(TRUE, TRUE, FALSE, FALSE, "")
+  BEGIN Handle(TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, "ShowClients", "")
   END ShowClients;
 
   PROCEDURE ShowRemovableImports*; (*show the removable subset of the specifed modules and their imports*)
-  BEGIN Texts.WriteString(W, "System.ShowRemovableImports"); Show1(TRUE, FALSE, TRUE, TRUE, "System")
+  BEGIN Handle(TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, "ShowRemovableImports", "System")
   END ShowRemovableImports;
 
   PROCEDURE ShowRemovableClients*; (*show the removable subset of the specifed modules and their clients*)
-  BEGIN Texts.WriteString(W, "System.ShowRemovableClients"); Show1(TRUE, TRUE, FALSE, TRUE, "System")
+  BEGIN Handle(TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, "ShowRemovableClients", "System")
   END ShowRemovableClients;
+
+  (*Remove various subsets of modules from memory OR hide them from module list*)
+
+  PROCEDURE Free*; (*free modules as a group; module names are provided as parameters*)
+  BEGIN Handle(TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, "Free", "System")
+  END Free;
+
+  PROCEDURE FreeImports*; (*free modules and their imports; module names are provided as parameters*)
+  BEGIN Handle(TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, "FreeImports", "System")
+  END FreeImports;
+
+  PROCEDURE FreeClients*; (*free modules and their clients; module names are provided as parameters*)
+  BEGIN Handle(TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, "FreeClients", "System")
+  END FreeClients;
+
+  PROCEDURE FreeRemovableImports*; (*free the removable subset of the specifed modules and their imports*)
+  BEGIN Handle(TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, "FreeRemovableImports", "System")
+  END FreeRemovableImports;
+
+  PROCEDURE FreeRemovableClients*; (*free the removable subset of the specifed modules and their clients*)
+  BEGIN Handle(TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, "FreeRemovableClients", "System")
+  END FreeRemovableClients;
+
+  (*Unload various subsets of modules if possible, but don't hide them from module list if references exist*)
+
+  PROCEDURE Unload*; (*unload modules as a group; module names are provided as parameters*)
+  BEGIN Handle(TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, "Unload", "System")
+  END Unload;
+
+  PROCEDURE UnloadImports*; (*unload modules and their imports; module names are provided as parameters*)
+  BEGIN Handle(TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, "UnloadImports", "System")
+  END UnloadImports;
+
+  PROCEDURE UnloadClients*; (*unload modules and their clients; module names are provided as parameters*)
+  BEGIN Handle(TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, "UnloadClients", "System")
+  END UnloadClients;
+
+  PROCEDURE UnloadRemovableImports*; (*unload the removable subset of the specifed modules and their imports*)
+  BEGIN Handle(TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, "UnloadRemovableImports", "System")
+  END UnloadRemovableImports;
+
+  PROCEDURE UnloadRemovableClients*; (*unload the removable subset of the specifed modules and their clients*)
+  BEGIN Handle(TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, "System.FreeRemovableClients", "System")
+  END UnloadRemovableClients;
 
   PROCEDURE FreeFonts*;
   BEGIN Texts.WriteString(W, "System.FreeFonts"); Fonts.Free; EndLine

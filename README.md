@@ -1,4 +1,5 @@
-# Experimental Oberon (full version)
+# The Experimental Oberon operating system
+Experimental Oberon is a revision of the Original Oberon operating system (www.projectoberon.com), containing a number of enhancements including continuous fractional line scrolling with variable line spaces, multiple logical displays, enhanced viewer management, safe module unloading and a minimal version of the Oberon system building tools.
 
 **Documentation:** [**The-Experimental-Oberon-System.pdf**](Documentation/The-Experimental-Oberon-System.pdf)
 
@@ -20,13 +21,13 @@ Youtube: **https://youtu.be/t8n_nkuKn3o**
 
 ------------------------------------------------------
 
-# Instructions for converting an existing Original Oberon system to Experimental Oberon (full)
+# Instructions for converting an existing Original Oberon system to Experimental Oberon
 
 **NOTE**: If you run Oberon in an emulator (e.g., https://github.com/pdewacht/oberon-risc-emu), you can simply backup your existing S3RISCinstall directory, download the compressed archive [**S3RISCinstall.tar.gz**](Documentation/S3RISCinstall.tar.gz) from this repository (containing Experimental Oberon) to your emulator directory, run the command *tar xvzf S3RISCinstall.tar.gz* in that directory and then start the emulator, instead of going through the instructions outlined below.
 
 ------------------------------------------------------
 
-**PREREQUISITES**: A working Original Oberon 2013 operating system and compiler, current as of September 23, 2017 or later (see www.inf.ethz.ch/personal/wirth/news.txt for the change log of the Oberon system and the compiler). If you run an older version of Original Oberon, please upgrade to the latest version first.
+**PREREQUISITES**: A working Original Oberon 2013 operating system and compiler, current as of November 11, 2017 or later (see www.inf.ethz.ch/personal/wirth/news.txt for the change log of the Original Oberon 2013 operating system and the Oberon compiler). If you run an older version of Original Oberon 2013, please upgrade to the latest version first.
 
 ------------------------------------------------------
 
@@ -314,7 +315,7 @@ You are now running Experimental Oberon.
 
 ------------------------------------------------------
 
-**STEP 16**: Enjoy Experimental Oberon (full version).
+**STEP 16**: Enjoy Experimental Oberon
 
 You can now compile any other modules that you may have on your system, to generate object files that are compatible with Experimental Oberon.
 

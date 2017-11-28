@@ -6,7 +6,7 @@ Edit.ChangeFont Oberon16.Scn.Fnt         System.SetDisplay 1
 Edit.ChangeFont Times24.Scn.Fnt            System.CloseDisplay 1
 
 System.Directory ^
-  *.Mod  *.Bak  *.Tool  *.Text  *.Scn.Fnt  *.smb  *.rsc
+  *.Mod  *.Bak  *.Tool  *.Text  *.Scn.Fnt  *.smb  *.rsc  *.bin
 
 ORP.Compile @  ORP.Compile @/s  ORP.Compile ^/s ORP.Compile ~
 System.Free ~   # unload modules as a group
