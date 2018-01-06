@@ -1,9 +1,9 @@
-MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 11.11.17*)
+MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 22.12.17*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules,
     Input, Viewers, Fonts, Texts, Oberon, MenuViewers, TextFrames;
 
-  CONST StandardMenu = "System.Close System.Copy System.Grow Edit.Search Edit.Store | System.Expand System.Clone";
-    LogMenu = "Edit.Locate Edit.Search System.Copy System.Grow System.Clear | System.Expand System.Clone";
+  CONST StandardMenu = "System.Close System.Copy System.Grow Edit.Search Edit.Store | System.Expand System.Spread System.Clone";
+    LogMenu = "Edit.Locate Edit.Search System.Copy System.Grow System.Clear | System.Expand System.Spread System.Clone";
 
   VAR W: Texts.Writer;
     pat: ARRAY 32 OF CHAR;
@@ -85,7 +85,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 11.11.17*)
     VAR logV, toolV, menu, main: Viewers.Frame; X, Y: INTEGER;
   BEGIN
     IF Viewers.CurDisplay # NIL THEN
-      Texts.WriteString(W, "Oberon V6  NW 14.4.13 / AP 11.11.17  Display ");
+      Texts.WriteString(W, "Oberon V6  NW 14.4.13 / AP 22.12.17  Display ");
       Texts.WriteInt(W, Viewers.CurDisplay.id, 2); Texts.Write(W, " ");
       Texts.WriteString(W, Viewers.CurDisplay.name); EndLine;
       Oberon.AllocateSystemViewer(0, X, Y);
@@ -293,11 +293,16 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 11.11.17*)
     EndLine
   END Clone;
 
-  PROCEDURE Expand*; (*expand the viewer in the current display as much as possible*)
+  PROCEDURE Expand*; (*expand the viewer vertically as much as possible*)
     VAR V: Viewers.Viewer; y, h: INTEGER;
   BEGIN V := Oberon.Par.vwr; y := 0; h := Oberon.DisplayHeight(0);
     Viewers.Validate(V, y, h); Viewers.Change(V, y, h)
   END Expand;
+
+  PROCEDURE Spread*; (*redistribute viewers vertically*)
+    VAR D: Viewers.Display; V: Viewers.Viewer;
+  BEGIN V := Oberon.Par.vwr; D := Viewers.ThisDisplay(V); Viewers.Spread(D, V.X, V.W)
+  END Spread;
 
   PROCEDURE ExtendDisplay*; (*extend the current display to the right*)
     VAR V: Viewers.Viewer; curDisplay: Viewers.Display;
@@ -319,7 +324,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 11.11.17*)
 
   (* ------------- Toolbox for module management ---------------*)
 
-  PROCEDURE Select(on, this, clients, imports: BOOLEAN); (*modules, clients, imports*)
+  PROCEDURE Select(on, this, clients, imports: BOOLEAN): BOOLEAN; (*modules, clients, imports*)
     VAR T: Texts.Text;
       beg, end, time: LONGINT;
       S: Texts.Scanner;
@@ -335,17 +340,22 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 11.11.17*)
       END
     ELSE
       WHILE (S.class = Texts.Name) OR (S.class = Texts.String) DO
-	Texts.Write(W, " "); Texts.WriteString(W, S.s);
+        Texts.Write(W, " "); Texts.WriteString(W, S.s);
         Modules.Select(S.s, on, this, clients, imports); Texts.Scan(S)
       END
-    END
+    END ;
+    RETURN (S.class = Texts.Char) & (S.c = "/") & (S.nextCh = "f") (*force option*)
   END Select;
 
-  PROCEDURE Handle(this, clients, imports, shrink, free, hide: BOOLEAN; command, exclude: ARRAY OF CHAR);
-    VAR mod: Modules.Module; hasSel: BOOLEAN;
+  PROCEDURE Deselect*; (*all modules*)
+  BEGIN Modules.SelectAll(FALSE)
+  END Deselect;
+
+  PROCEDURE Do(this, clients, imports, shrink, free: BOOLEAN; command, exclude: ARRAY OF CHAR);
+    VAR mod: Modules.Module; hide, hasSel: BOOLEAN;
   BEGIN Texts.WriteString(W, "System."); Texts.WriteString(W, command);
-    Modules.SelectAll(FALSE); Select(TRUE, this, clients, imports); EndLine;
-    IF exclude[0] # 0X THEN Modules.Select(exclude, FALSE, TRUE, FALSE, TRUE) END ; (*deselect exclude & its clients*)
+    Modules.SelectAll(FALSE); hide := Select(TRUE, this, clients, imports); EndLine;
+    IF exclude[0] # 0X THEN Modules.Select(exclude, FALSE, TRUE, FALSE, TRUE) END ; (*deselect exclude and its clients*)
     IF shrink THEN Modules.ShrinkSelection END ;
     mod := Modules.root; hasSel := FALSE;
     WHILE mod # NIL DO (*write selection*)
@@ -360,78 +370,59 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 11.11.17*)
         IF Modules.res = 0 THEN Texts.WriteString(W, " unloading")
         ELSIF Modules.res = 1 THEN Texts.WriteString(W, " unloading failed (clients exist)")
         ELSIF Modules.res < 5 THEN
-          IF hide THEN Texts.WriteString(W, " removing") ELSE Texts.WriteString(W, " unloading failed") END ;
-          IF Modules.res = 2 THEN Texts.WriteString(W, " (types in use in dynamic objects)")
-          ELSIF Modules.res = 3 THEN Texts.WriteString(W, " (procedures in use in dynamic objects)")
-          ELSIF Modules.res = 4 THEN Texts.WriteString(W, " (procedures in use in static objects)")
-          END
+          IF hide THEN Texts.WriteString(W, " removing from module list") ELSE Texts.WriteString(W, " unloading failed") END ;
+          IF Modules.res = 2 THEN Texts.WriteString(W, " (types in use in dynamic objects")
+          ELSIF Modules.res = 3 THEN Texts.WriteString(W, " (procedures in use in dynamic objects")
+          ELSIF Modules.res = 4 THEN Texts.WriteString(W, " (procedures in use in static objects")
+          END ;
+          IF hide THEN Texts.Write(W, ")") ELSE Texts.WriteString(W, ", /f hides modules if refs exist)") END
         END ;
         Oberon.Collect(0)
       END ;
       EndLine
     END ;
     Modules.SelectAll(FALSE)
-  END Handle;
+  END Do;
 
-  PROCEDURE ShowImports*; (*show modules and their imports; module names are provided as parameters*)
-  BEGIN Handle(TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, "ShowImports", "")
+  (*show various subsets of modules; module names are provided as parameters*)
+
+  PROCEDURE ShowImports*; (*show the specified modules and their imports*)
+  BEGIN Do(TRUE, FALSE, TRUE, FALSE, FALSE, "ShowImports", "")
   END ShowImports;
 
-  PROCEDURE ShowClients*; (*show modules and their clients; module names are provided as parameters*)
-  BEGIN Handle(TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, "ShowClients", "")
+  PROCEDURE ShowClients*; (*show the specified modules and their clients*)
+  BEGIN Do(TRUE, TRUE, FALSE, FALSE, FALSE, "ShowClients", "")
   END ShowClients;
 
-  PROCEDURE ShowRemovableImports*; (*show the removable subset of the specifed modules and their imports*)
-  BEGIN Handle(TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, "ShowRemovableImports", "System")
+  PROCEDURE ShowRemovableImports*; (*show the removable subset of the specified modules and their imports*)
+  BEGIN Do(TRUE, FALSE, TRUE, FALSE, FALSE, "ShowRemovableImports", "System")
   END ShowRemovableImports;
 
-  PROCEDURE ShowRemovableClients*; (*show the removable subset of the specifed modules and their clients*)
-  BEGIN Handle(TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, "ShowRemovableClients", "System")
+  PROCEDURE ShowRemovableClients*; (*show the removable subset of the specified modules and their clients*)
+  BEGIN Do(TRUE, TRUE, FALSE, FALSE, FALSE, "ShowRemovableClients", "System")
   END ShowRemovableClients;
 
-  (*Remove various subsets of modules from memory OR hide them from module list*)
+  (*free various subsets of modules; module names are provided as parameters; /f hides modules from module list if refs exist*)
 
-  PROCEDURE Free*; (*free modules as a group; module names are provided as parameters*)
-  BEGIN Handle(TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, "Free", "System")
+  PROCEDURE Free*; (*free the specified modules as a group*)
+  BEGIN Do(TRUE, FALSE, FALSE, FALSE, TRUE, "Free", "System")
   END Free;
 
-  PROCEDURE FreeImports*; (*free modules and their imports; module names are provided as parameters*)
-  BEGIN Handle(TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, "FreeImports", "System")
+  PROCEDURE FreeImports*; (*free the specified modules and their imports*)
+  BEGIN Do(TRUE, FALSE, TRUE, FALSE, TRUE, "FreeImports", "System")
   END FreeImports;
 
-  PROCEDURE FreeClients*; (*free modules and their clients; module names are provided as parameters*)
-  BEGIN Handle(TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, "FreeClients", "System")
+  PROCEDURE FreeClients*; (*free specified modules and their clients*)
+  BEGIN Do(TRUE, TRUE, FALSE, FALSE, TRUE, "FreeClients", "System")
   END FreeClients;
 
-  PROCEDURE FreeRemovableImports*; (*free the removable subset of the specifed modules and their imports*)
-  BEGIN Handle(TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, "FreeRemovableImports", "System")
+  PROCEDURE FreeRemovableImports*; (*free the removable subset of the specified modules and their imports*)
+  BEGIN Do(TRUE, FALSE, TRUE, TRUE, TRUE, "FreeRemovableImports", "System")
   END FreeRemovableImports;
 
-  PROCEDURE FreeRemovableClients*; (*free the removable subset of the specifed modules and their clients*)
-  BEGIN Handle(TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, "FreeRemovableClients", "System")
+  PROCEDURE FreeRemovableClients*; (*free the removable subset of the specified modules and their clients*)
+  BEGIN Do(TRUE, TRUE, FALSE, TRUE, TRUE, "FreeRemovableClients", "System")
   END FreeRemovableClients;
-
-  (*Unload various subsets of modules if possible, but don't hide them from module list if references exist*)
-
-  PROCEDURE Unload*; (*unload modules as a group; module names are provided as parameters*)
-  BEGIN Handle(TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, "Unload", "System")
-  END Unload;
-
-  PROCEDURE UnloadImports*; (*unload modules and their imports; module names are provided as parameters*)
-  BEGIN Handle(TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, "UnloadImports", "System")
-  END UnloadImports;
-
-  PROCEDURE UnloadClients*; (*unload modules and their clients; module names are provided as parameters*)
-  BEGIN Handle(TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, "UnloadClients", "System")
-  END UnloadClients;
-
-  PROCEDURE UnloadRemovableImports*; (*unload the removable subset of the specifed modules and their imports*)
-  BEGIN Handle(TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, "UnloadRemovableImports", "System")
-  END UnloadRemovableImports;
-
-  PROCEDURE UnloadRemovableClients*; (*unload the removable subset of the specifed modules and their clients*)
-  BEGIN Handle(TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, "System.FreeRemovableClients", "System")
-  END UnloadRemovableClients;
 
   PROCEDURE FreeFonts*;
   BEGIN Texts.WriteString(W, "System.FreeFonts"); Fonts.Free; EndLine

@@ -1,7 +1,7 @@
-MODULE Sierpinski;  (*NW 15.1.13 / AP 1.6.17*)
+MODULE Sierpinski;  (*NW 15.1.13 / AP 12.12.17*)
   IMPORT Display, Viewers, Oberon, MenuViewers, TextFrames;
 
-  CONST Menu = "System.Close System.Copy System.Grow | System.Expand System.Clone";
+  CONST Menu = "System.Close System.Copy System.Grow | System.Expand System.Spread System.Clone";
 
   VAR x, y, d: INTEGER;
     A, B, C, D: PROCEDURE (i: INTEGER);

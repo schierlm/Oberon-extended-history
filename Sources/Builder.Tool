@@ -2,16 +2,15 @@
 #  Generate the necessary binaries for the build-up boot process
 # -----------------------------------------------------------------------------------------
 
-ORP.Compile Kernel.Mod FileDir.Mod Files.Mod Modules.Mod ~           # modules for the "regular" boot file
-ORP.Compile RS232.Mod Oberon0.Mod ~                                  # additional modules for the "build-up" boot file
-ORP.Compile ORC.Mod/s Oberon0Tool.Mod/s ~                            # partner program ORC and Oberon0 tool module
-ORP.Compile Linker.Mod/s Builder.Mod/s ~
+ORP.Compile Kernel.Mod FileDir.Mod Files.Mod Modules.Mod ~   # modules for the "regular" boot file
+ORP.Compile RS232.Mod Oberon0.Mod ~                          # additional modules for the "build-up" boot file
+ORP.Compile ORC.Mod/s Oberon0Tool.Mod/s ~                    # partner program ORC and Oberon0 tool module
 
 ORP.Compile BootLoadDisk.Mod/s ~      # generate a boot loader for booting the target system from the local disk
 ORP.Compile BootLoadLine.Mod/s ~      # generate a boot loader for booting the target system over the data link
 
-Linker.Link Modules ~                 # generate a prelinked binary file of the "regular" boot file (Modules.bin)
-Linker.Link Oberon0 ~                 # generate a prelinked binary file of the "build-up" boot file (Oberon0.bin)
+Linker.Link Modules ~                 # generate a pre-linked binary file of the "regular" boot file (Modules.bin)
+Linker.Link Oberon0 ~                 # generate a pre-linked binary file of the "build-up" boot file (Oberon0.bin)
 
 Builder.Load Modules.bin ~            # load the "regular" boot file onto the boot area of the local disk
 
@@ -19,26 +18,29 @@ Builder.Load Modules.bin ~            # load the "regular" boot file onto the bo
 #  Build a new Oberon system on a bare metal target system (restart the target system over the data link first)
 # -----------------------------------------------------------------------------------------
 
-ORC.Load Oberon0.bin     # load the Oberon-0 command interpreter over the serial link to the target system & start it
-ORC.SR 0 1234 ~          # test whether the Oberon-0 command interpreter is running (send and mirror integer s)
- 
-ORC.SR 101 ~             # clear the file directory on the target system
+ORC.Load Oberon0.bin             # load the Oberon-0 command interpreter over the serial link to the target system and start it
+ORC.SR 0 1234 ~                  # test whether the Oberon-0 command interpreter is running (send and mirror integer s)
 
-ORC.Send Input.rsc Display.rsc Viewers.rsc ~
-ORC.Send Fonts.rsc Texts.rsc Oberon.rsc ~
-ORC.Send MenuViewers.rsc TextFrames.rsc ~
-ORC.Send System.rsc System.Tool Oberon10.Scn.Fnt ~   # send the required files to start Oberon from the local disk
-ORC.Send RS232.rsc Oberon0.rsc Oberon0Tool.rsc ~     # send additional files to the target system (optional)
-ORC.Send Linker.rsc Builder.rsc ~                    # send additional files to the target system (optional)
-ORC.Send Edit.rsc PCLink1.rsc ~                      # send additional files to the target system (optional)
+ORC.SR 101 ~                     # clear the file directory on the target system
 
-ORC.Send Modules.bin ~           # send the regular boot file "Modules.bin" to the target system
+ORC.Send Input.rsc Display.rsc Viewers.rsc
+      Fonts.rsc Texts.rsc Oberon.rsc
+      MenuViewers.rsc TextFrames.rsc
+      System.rsc System.Tool
+      Oberon10.Scn.Fnt ~         # send the required files to start Oberon from the local disk of the target system
+
+ORC.Send Modules.bin
+      BootLoadDisk.rsc ~         # send the regular boot file and the boot loader for booting from the local disk of the target system
+
+ORC.Send RS232.rsc
+      Oberon0.rsc Oberon0Tool.rsc
+      Linker.rsc Builder.rsc
+      Edit.rsc PCLink1.rsc ~     # send additional files to the target system (optional)
+
 ORC.SR 100 Modules.bin ~         # load the regular boot file onto the boot area of the local disk of the target system
-
-ORC.Send BootLoadDisk.rsc ~      # send the boot loader for booting from the local disk of the target system
 ORC.SR 102 BootLoadDisk.rsc ~    # reboot the target system from the local disk (initiates the "regular" boot process)
 
-ORC.SR 20 Oberon ~               # load module "Oberon" on the target system (this will also load module "System")
+ORC.SR 20 Oberon ~               # load module "Oberon" on the target system (this will also load module "System" and its imports)
 
 # -----------------------------------------------------------------------------------------
 #  Other Oberon-0 commands that can be executed via the partner program ORC running on the host system

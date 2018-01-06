@@ -324,7 +324,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.6.17*)
       IF dY < 0 THEN dY := -dY;
         IF dY <= F.voff THEN ScrollDown(F, F.org, F.voff - dY, dY)
         ELSE NewLine(F, L); done := FALSE;
-          q := Max(F.org - len*(1 + (dY - F.voff - 1) DIV lsp), 0); (*first guess*)
+          q := Max(F.org - len*((dY + lsp - F.voff - 1) DIV lsp), 0); (*first guess*)
           REPEAT org := q; Validate(F.text, org); k := 0; dy := 0;
             Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
             WHILE (org < F.org) & (k < P) DO PrepareLine(L, R);

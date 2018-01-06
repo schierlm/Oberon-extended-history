@@ -1,4 +1,4 @@
-MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 1.6.17*)
+MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 11.11.17*)
   IMPORT SYSTEM, Kernel, Files, Modules, Input, Display, Viewers, Fonts, Texts;
 
   CONST off = 0; idle = 1; active = 2; (*task states*)
@@ -215,9 +215,12 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 1.6.
       IF (M.id = Viewers.restore) & (V.W > 0) & (V.H > 0) THEN
         RemoveMarks(V.X, V.Y, V.W, V.H);
         Display.ReplConst(Display.black, V.X, V.Y, V.W, V.H, Display.replace)
-      ELSIF (M.id = Viewers.modify) & (M.Y < V.Y) THEN
-        RemoveMarks(V.X, M.Y, V.W, V.Y - M.Y);
-        Display.ReplConst(Display.black, V.X, M.Y, V.W, V.Y - M.Y, Display.replace)
+      ELSIF M.id = Viewers.modify THEN
+        IF M.Y < V.Y THEN
+          RemoveMarks(V.X, M.Y, V.W, V.Y - M.Y);
+          Display.ReplConst(Display.black, V.X, M.Y, V.W, V.Y - M.Y, Display.replace)
+        ELSIF M.Y > V.Y THEN RemoveMarks(V.X, V.Y, V.W, M.Y - V.Y)
+        END
       END
     END
   END HandleFiller;

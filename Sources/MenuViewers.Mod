@@ -95,11 +95,11 @@ MODULE MenuViewers; (*JG 26.8.90 / 16.9.93 / NW 10.3.13 / AP 12.6.17*)
     END
   END Change;
 
-  PROCEDURE Grow (V: Viewers.Viewer);
+  PROCEDURE Expand (V: Viewers.Viewer);
     VAR D: Viewers.Display; Y, H: INTEGER;
   BEGIN D := Viewers.ThisDisplay(V); Y := 0; H := D.H;
     Viewers.Validate(V, Y, H); Viewers.Change(V, Y, H)
-  END Grow;
+  END Expand;
 
   PROCEDURE Copy (V: Viewer; VAR V1: Viewer);
     VAR Menu, Main: Viewers.Frame; M: Viewers.CopyMsg;
@@ -130,7 +130,7 @@ MODULE MenuViewers; (*JG 26.8.90 / 16.9.93 / NW 10.3.13 / AP 12.6.17*)
               IF 2 IN M.keys THEN Change(V(Viewer), X, Y, M.keys) ELSE Menu.handle(Menu, M) END
             ELSIF 1 IN M.keys THEN Menu.handle(Menu, M)
             ELSIF 2 IN M.keys THEN Move(V(Viewer), X, Y, M.keys)
-            ELSIF M.keys = {0} THEN Grow(V)
+            ELSIF M.keys = {0} THEN Expand(V)
             ELSE Oberon.DrawMouseStar(X, Y)
             END
           ELSE Oberon.DrawMouseArrow(X, Y)

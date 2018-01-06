@@ -1,7 +1,7 @@
-MODULE Hilbert;  (*NW 8.1.13 for RISC / AP 1.6.17*)
+MODULE Hilbert;  (*NW 8.1.13 for RISC / AP 12.12.17*)
   IMPORT Display, Viewers, Texts, Oberon, MenuViewers, TextFrames;
 
-  CONST Menu = "System.Close System.Copy System.Grow | System.Expand System.Clone";
+  CONST Menu = "System.Close System.Copy System.Grow | System.Expand System.Spread System.Clone";
 
   VAR x, y, d: INTEGER;
     A, B, C, D: PROCEDURE (i: INTEGER);

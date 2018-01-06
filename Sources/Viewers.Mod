@@ -1,4 +1,4 @@
-MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.6.17*)
+MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.17*)
   CONST restore* = 0; modify* = 1; suspend* = 2; consume* = 3; track* = 4;
     defocus* = 5; neutralize* = 6; mark* = 7; inf = 65535; DnLength* = 24;
 
@@ -8,7 +8,7 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.6.17*)
     FrameDesc* = RECORD next*, dsc*, parent, prev: Frame;
       X*, Y*, W*, H*, minH*: INTEGER;
       handle*: Handler;
-      state*: INTEGER (*>1: displayed; 1: filler; 0: closed; -1: track; <-1: suspended*)
+      state*: INTEGER (*>1: displayed;  1: filler;  0: closed;  -1: track or suspended filler viewer;  <-1: suspended*)
     END;
 
     Viewer* = POINTER TO ViewerDesc;
@@ -129,27 +129,25 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.6.17*)
 
   PROCEDURE Change* (V: Viewer; Y, H: INTEGER);
     CONST none = 0; self = 1; above = 2; below = 3;
-    VAR v: Frame; a, b: BOOLEAN; i, y, dY: INTEGER; m: ARRAY 3 OF INTEGER;
-  BEGIN (*Y,H validated*)
+    VAR v: Frame; i, y, dY: INTEGER; m: ARRAY 3 OF INTEGER; up, down: BOOLEAN;
+  BEGIN (*Y, H validated*)
     IF V.state > 1 THEN
       m[0] := none; m[1] := self; m[2] := none;
-      a := Y + H > V.Y + V.H; b := Y + H < V.Y + V.H;
+      up := Y + H > V.Y + V.H; down := Y + H < V.Y + V.H;
       IF Y < V.Y THEN m[0] := below;
-        IF a THEN  m[1] := above; m[2] := self ELSIF b THEN m[2] := above END
+        IF up THEN m[1] := above; m[2] := self ELSIF down THEN m[2] := above END
       ELSIF Y > V.Y THEN m[2] := below;
-        IF a THEN m[0] := above ELSIF b THEN m[0] := self; m[1] := above END
+        IF up THEN m[0] := above ELSIF down THEN m[0] := self; m[1] := above END
       ELSE
-        IF a THEN m[0] := above ELSIF b THEN m[2] := above ELSE m[1] := none END
+        IF up THEN m[0] := above ELSIF down THEN m[2] := above ELSE m[1] := none END
       END;
       FOR i := 0 TO 2 DO
         IF m[i] = self THEN Adjust(V, modify, Y, H)
         ELSIF m[i] = above THEN v := V.next;
-          IF a THEN dY := Y + H - V.Y - V.H;
+          IF up THEN dY := Y + H - V.Y - V.H;
             WHILE (v.state > 1) & (dY > v.H - v.minH) DO dY := dY - v.H + v.minH; v := v.next END;
-            y := v.Y;
-            IF v.state > 1 THEN Adjust(v, modify, y + dY, v.H - dY); v := v.prev; y := y + dY - v.minH
-            ELSE v.Y := v.Y + dY; v.H := v.H - dY; v := v.prev; y := y + dY - v.minH
-            END;
+            y := v.Y + dY;
+            Adjust(v, modify, y, v.H - dY); v := v.prev; y := y - v.minH;
             WHILE v # V DO Adjust(v, modify, y, v.minH); v := v.prev; y := y - v.minH END
           ELSE Adjust(v, modify, Y + H, v.Y + v.H - Y - H)
           END
@@ -168,13 +166,34 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.6.17*)
     END
   END Change;
 
+  PROCEDURE Spread* (D: Display; X, W: INTEGER); (*redistribute viewers vertically*)
+    VAR T, t, v, fil: Frame; M: ViewerMsg; Y, H: INTEGER;
+  BEGIN
+    IF X < inf THEN
+      T := D.dsc.next;
+      WHILE X >= T.X + T.W DO T := T.next END;
+      t := T.prev;
+      WHILE X + W > T.X + T.W DO T := T.next END;
+      M.id := restore;
+      REPEAT t := t.next; fil := t.dsc; v := fil.next;
+        IF v # fil THEN H := 0;
+          REPEAT INC(H); v := v.next UNTIL v = fil;
+          H := D.H DIV H; v := fil; Y := 0;
+          REPEAT v := v.next; v.Y := Y;
+            IF v.next = fil THEN v.H := D.H - Y; H := 0 ELSE v.H := H END;
+            v.handle(v, M); Y := Y + v.H
+          UNTIL v = fil
+        END
+      UNTIL t = T
+    END
+  END Spread;
+
   PROCEDURE RestoreTrack (S: Frame);
     VAR T, t, v: Frame; M: ViewerMsg;
-  BEGIN t := S.next;
-    WHILE t.next # S DO t := t.next END;
-    T := S(Track).under;
+  BEGIN t := S.prev; T := S(Track).under;
     WHILE T.next # NIL DO T := T.next END;
-    t.next := S(Track).under; T.next := S.next; M.id := restore;
+    t.next := S(Track).under; t.next.prev := t; T.next := S.next; T.next.prev := T;
+    M.id := restore;
     REPEAT t := t.next; v := t.dsc;
       REPEAT v := v.next; v.handle(v, M); v.state := - v.state
       UNTIL v = t.dsc
@@ -231,14 +250,14 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.6.17*)
     END
   END Locate;
 
-  PROCEDURE Install* (parent, F: Frame); (*install frame F as a subframe into parent frame*)
+  PROCEDURE Install* (parent, F: Frame); (*frame F as a subframe into parent frame*)
   BEGIN F.parent := parent; F.next := NIL;
     IF parent.dsc = NIL THEN parent.dsc := F; F.prev := F
     ELSE F.prev := parent.dsc.prev; F.prev.next := F; parent.dsc.prev := F
     END
   END Install;
 
-  PROCEDURE Remove* (F: Frame); (*remove subframe F from its parent frame*)
+  PROCEDURE Remove* (F: Frame); (*subframe F from its parent frame*)
   BEGIN
     IF F = F.parent.dsc THEN F.parent.dsc := F.next ELSE F.prev.next := F.next END;
     IF F.next # NIL THEN F.next.prev := F.prev

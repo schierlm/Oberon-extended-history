@@ -15,8 +15,10 @@
 #   dos2oberon   (converts a DOS file back to Oberon format)
 #
 # Notes:
-#   CR = 13 (decimal) = 0D (hex) = \r (Perl) 
-#   LF = 10 (decimal) = 0A (hex) = \n (Perl)
+#   CR  = 13 (decimal) = 0D (hex) = 15C (octal) = \r (Perl) 
+#   LF  = 10 (decimal) = 0A (hex) = 12C (octal) = \n (Perl)
+#   SUB = 26 (decimal) = 1A (hex) = 32C (octal) = ?  (Perl)
+#
 #   We use Perl, because on some host systems (e.g., MacOS), the corresponding sed command does not work
 #
 # Author: Andreas Pirklbauer

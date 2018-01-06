@@ -36,7 +36,7 @@ MODULE Builder; (*System building tools for Experimenal Oberon; AP 11.11.17*)
   END Load;
 
   PROCEDURE ReadCode(VAR R: Files.Rider; VAR code: ARRAY OF LONGINT; VAR size, start, nofimps, res: INTEGER);
-    VAR n, data: INTEGER; ch: CHAR; b: BYTE;       (*size is returned in words, start in bytes*)
+    VAR n, data: INTEGER; ch: CHAR; b: BYTE;               (*size in words, start in bytes*)
       name: ARRAY 32 OF CHAR;
   BEGIN Files.ReadString(R, name); Files.ReadInt(R, data); (*key*)
     Files.ReadByte(R, b); (*version*) Files.ReadInt(R, data); (*size*)

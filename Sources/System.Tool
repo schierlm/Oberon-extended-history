@@ -9,7 +9,7 @@ System.Directory ^
   *.Mod  *.Bak  *.Tool  *.Text  *.Scn.Fnt  *.smb  *.rsc  *.bin
 
 ORP.Compile @  ORP.Compile @/s  ORP.Compile ^/s ORP.Compile ~
-System.Free ~   # unload modules as a group
+System.Free ~  # free modules as a group, /f hides modules if refs exist
 System.Open Draw.Tool
 System.CopyFiles ~
 System.RenameFiles ~         Stars.Open Stars.Run System.Free Stars~

@@ -149,7 +149,7 @@ MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 11.11
       pre: ARRAY 32 OF CHAR;
 
     PROCEDURE List(name: FileDir.FileName; adr: LONGINT; VAR cont: BOOLEAN);
-      VAR i0, i, j0, j: INTEGER; hp: FileDir.FileHeader; ch: CHAR;
+      VAR i0, i, j0, j: INTEGER; hp: FileDir.FileHeader;
     BEGIN i := 0;
       WHILE (pat[i] > "*") & (pat[i] = name[i]) DO INC(i) END ;
       IF (pat[i] = 0X) & (name[i] = 0X) THEN i0 := i; j0 := i
