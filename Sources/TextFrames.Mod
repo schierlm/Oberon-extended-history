@@ -1,4 +1,4 @@
-MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.6.17*)
+MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 11.11.17*)
   IMPORT Input, Display, Viewers, Fonts, Texts, Oberon;
 
   CONST replace* = 0; insert* = 1; delete* = 2; unmark* = 3; (*message ids*)
