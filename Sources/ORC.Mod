@@ -45,7 +45,7 @@ MODULE  ORC; (*Connection to RISC; NW 11.11.2013 / AP 11.11.17 RISC*)
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END TestReq;
 
-  (*------------ load prelinked build-up boot file  F.bin ------------*)
+  (*------------ load prelinked build-up boot file ------------*)
 
   PROCEDURE Load*;
     VAR i, m, n, w: LONGINT;

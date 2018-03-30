@@ -1,4 +1,4 @@
-MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 22.12.17*)
+MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 29.12.17*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules,
     Input, Viewers, Fonts, Texts, Oberon, MenuViewers, TextFrames;
 
@@ -700,59 +700,56 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 22.12.17*)
     END
   END RunRsc;
 
-  PROCEDURE Trap1(VAR a: INTEGER; b: INTEGER); (*trap routine for M.bin*)
+  PROCEDURE Trap1(VAR a: INTEGER; b: INTEGER); (*trap routine for RunBin*)
     VAR u, v, w: INTEGER;
   BEGIN u := SYSTEM.REG(15); SYSTEM.GET(u - 4, v); w := v DIV 10H MOD 10H; (*trap number*)
     LED(w + 192); REPEAT UNTIL FALSE
   END Trap1;
 
-  PROCEDURE RunBin*; (*load and execute pre-linked binary  M.bin*)
+  PROCEDURE RunBin*; (*load and execute pre-linked binary*)
     CONST maxBin = 16000; MT = 12;
     TYPE Command = PROCEDURE;
     VAR bin: ARRAY maxBin OF INTEGER;
-      MTOrg, binStart, binMTOrg, root, x, i: INTEGER;
       F: Files.File; R: Files.Rider;
-      S: Texts.Scanner;
+      M, p: Modules.Module;
+      MTOrg, Start, i, x: INTEGER;
       body: Command;
-      mod, M: Modules.Module;
+      S: Texts.Scanner;
   BEGIN GetArg(S);
     Texts.WriteString(W, "System.RunBin ");
     IF S.class = Texts.Name THEN
       Texts.WriteString(W, S.s); Texts.Append(Oberon.Log, W.buf);
       F := Files.Old(S.s);
       IF F # NIL THEN
-        IF Files.Length(F) < maxBin*4 THEN
+        IF Files.Length(F) < maxBin * 4 THEN
           Files.Set(R, F, 0); Files.ReadInt(R, x); i := 0;
           WHILE ~R.eof DO bin[i] := x; INC(i); Files.ReadInt(R, x) END ;
           Texts.WriteInt(W, i*4, 6); (*bytes*) Texts.Append(Oberon.Log, W.buf);
-          binStart := SYSTEM.ADR(bin);
-          binMTOrg := binStart + 32;  (*module table MT*)
-          root := bin[5];  (*root of the links of loaded modules*)
-          mod := SYSTEM.VAL(Modules.Module, root);
-          M := SYSTEM.VAL(Modules.Module, binStart + root);
-          WHILE mod # NIL DO (*fix up module chain of pointers*)
-            M.data := M.data + binStart;
-            bin[M.num + 8] := M.data;
-            M.code := M.code + binStart;
-            M.imp := M.imp + binStart;
-            M.cmd := M.cmd + binStart;
-            i := M.imp;
-            WHILE i < M.cmd DO SYSTEM.GET(i, x); SYSTEM.PUT(i, x + binStart); INC(i, 4) END ;
-            M.ent := M.ent + binStart;
-            M.ptr := M.ptr + binStart;
-            M.pvar := M.pvar + binStart;
-            mod := M.next;
+          Start := SYSTEM.ADR(bin);
+          MTOrg := Start + 32;  (*module table MT*)
+          p := SYSTEM.VAL(Modules.Module, Start + bin[5]); (*root of the links of loaded modules*)
+          WHILE p # NIL DO (*fix up module chain of pointers*)
+            M := p; p := p.next;
             IF M.next # NIL THEN
-              M.next := SYSTEM.VAL(Modules.Module, SYSTEM.VAL(LONGINT, M.next) + binStart)
+              M.next := SYSTEM.VAL(Modules.Module, SYSTEM.VAL(INTEGER, M.next) + Start)
             END ;
-            M := M.next
+            M.data := M.data + Start;
+            bin[M.num + 8] := M.data; (*module table entry*)
+            M.code := M.code + Start;
+            M.imp := M.imp + Start;
+            M.cmd := M.cmd + Start;
+            i := M.imp;
+            WHILE i < M.cmd DO SYSTEM.GET(i, x); SYSTEM.PUT(i, x + Start); INC(i, 4) END ;
+            M.ent := M.ent + Start;
+            M.ptr := M.ptr + Start;
+            M.pvar := M.pvar + Start
           END ;
-          Kernel.Install(SYSTEM.ADR(Trap1), binMTOrg); (*install trap in binMTOrg[0]*)
-          MTOrg := SYSTEM.REG(MT); (*save MT register*)
-          SYSTEM.LDREG(MT, binMTOrg);
-          body := SYSTEM.VAL(Command, binStart);
+          Kernel.Install(SYSTEM.ADR(Trap1), MTOrg); (*install trap in MTOrg[0]*)
+          x := SYSTEM.REG(MT); (*save MT register*)
+          SYSTEM.LDREG(MT, MTOrg);
+          body := SYSTEM.VAL(Command, Start);
           body; (*call module initialization body of the top module*)
-          SYSTEM.LDREG(MT, MTOrg) (*restore MT register*) 
+          SYSTEM.LDREG(MT, x) (*restore MT register*)
         ELSE Texts.WriteString(W, " program too long")
         END
       ELSE Texts.WriteString(W, " failed")

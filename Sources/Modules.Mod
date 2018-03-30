@@ -70,8 +70,8 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 22.12.17
           Files.ReadString(R, impname);   (*imports*)
           WHILE (impname[0] # 0X) & (res = 0) DO
             Files.ReadInt(R, impkey);
-            Load(impname, impmod); import[nofimps] := impmod; importing := name1;
-            IF res = 0 THEN
+            Load(impname, impmod); import[nofimps] := impmod;
+            IF res = 0 THEN importing := name1;
               IF impmod.key = impkey THEN INC(impmod.refcnt); INC(nofimps)
               ELSE error(3, name1); imported := impname
               END
@@ -212,7 +212,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 22.12.17
 
   PROCEDURE Mark(mod: Module; clients, imports: BOOLEAN);
     VAR imp, m: Module; p, q: INTEGER;
-  BEGIN (*~mod.marked*) mod.marked := TRUE;
+  BEGIN (*~mod.marked & mod.name[0] # 0X*) mod.marked := TRUE;
     IF clients THEN m := root;
       WHILE m # NIL DO
         IF (m.name[0] # 0X) & (m # mod) & ~m.marked THEN p := m.imp; q := m.cmd;
@@ -441,7 +441,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 22.12.17
           END
         END
       END ;
-      IF NofSelected > 0 THEN (*restore selection without reselecting unloaded hidden modules*)
+      IF NofSelected > 0 THEN (*restore selection without re-selecting unloaded hidden modules*)
         mod := root; NofSelected := 0;
         WHILE mod # NIL DO
           IF mod.marked & (mod.name[0] # 0X) THEN mod.selected := TRUE; INC(NofSelected)
@@ -455,7 +455,10 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 22.12.17
           mod := mod.next
         END
       END
-    END
+    END ;
+    mod := root;
+    WHILE (mod # NIL) & (mod.name[0] = 0X) DO mod := mod.next END ;
+    IF mod # root THEN (*return free blocks*) AllocPtr := SYSTEM.VAL(LONGINT, mod) + mod.size; root := mod END
   END Collect;
 
   PROCEDURE Init*;

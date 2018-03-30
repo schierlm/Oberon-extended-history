@@ -9,16 +9,16 @@ ORP.Compile ORC.Mod/s Oberon0Tool.Mod/s ~                    # partner program O
 ORP.Compile BootLoadDisk.Mod/s ~      # generate a boot loader for booting the target system from the local disk
 ORP.Compile BootLoadLine.Mod/s ~      # generate a boot loader for booting the target system over the data link
 
-Linker.Link Modules ~                 # generate a pre-linked binary file of the "regular" boot file (Modules.bin)
-Linker.Link Oberon0 ~                 # generate a pre-linked binary file of the "build-up" boot file (Oberon0.bin)
+Boot.Link Modules RISC2013.Boot ~     # generate a pre-linked binary file of the "regular" boot file
+Boot.Link Oberon0 RISC2013.Boot0 ~    # generate a pre-linked binary file of the "build-up" boot file
 
-Builder.Load Modules.bin ~            # load the "regular" boot file onto the boot area of the local disk
+Boot.Load RISC2013.Boot ~             # load the "regular" boot file onto the boot area of the local disk
 
 # -----------------------------------------------------------------------------------------
 #  Build a new Oberon system on a bare metal target system (restart the target system over the data link first)
 # -----------------------------------------------------------------------------------------
 
-ORC.Load Oberon0.bin             # load the Oberon-0 command interpreter over the serial link to the target system and start it
+ORC.Load RISC2013.Boot0          # load the Oberon-0 command interpreter over the serial link to the target system and start it
 ORC.SR 0 1234 ~                  # test whether the Oberon-0 command interpreter is running (send and mirror integer s)
 
 ORC.SR 101 ~                     # clear the file directory on the target system
@@ -27,17 +27,16 @@ ORC.Send Input.rsc Display.rsc Viewers.rsc
       Fonts.rsc Texts.rsc Oberon.rsc
       MenuViewers.rsc TextFrames.rsc
       System.rsc System.Tool
-      Oberon10.Scn.Fnt ~         # send the required files to start Oberon from the local disk of the target system
-
-ORC.Send Modules.bin
-      BootLoadDisk.rsc ~         # send the regular boot file and the boot loader for booting from the local disk of the target system
+      Oberon10.Scn.Fnt
+      RISC2013.Boot
+      BootLoadDisk.rsc ~         # send the required files to start Oberon from the local disk of the target system
 
 ORC.Send RS232.rsc
       Oberon0.rsc Oberon0Tool.rsc
-      Linker.rsc Builder.rsc
+      Boot.rsc
       Edit.rsc PCLink1.rsc ~     # send additional files to the target system (optional)
 
-ORC.SR 100 Modules.bin ~         # load the regular boot file onto the boot area of the local disk of the target system
+ORC.SR 100 RISC2013.Boot ~       # load the regular boot file onto the boot area of the local disk of the target system
 ORC.SR 102 BootLoadDisk.rsc ~    # reboot the target system from the local disk (initiates the "regular" boot process)
 
 ORC.SR 20 Oberon ~               # load module "Oberon" on the target system (this will also load module "System" and its imports)
@@ -48,15 +47,15 @@ ORC.SR 20 Oberon ~               # load module "Oberon" on the target system (th
 
 Rebooting
 
-  ORC.Send Modules.bin ~         # send the regular boot file "Modules.bin" to the target system
-  ORC.SR 100 Modules.bin ~       # load the regular boot file onto the boot area of the local disk of the target system
+  ORC.Send RISC2013.Boot ~       # send the regular boot file "RISC2013.Boot" to the target system
+  ORC.SR 100 RISC2013.Boot ~     # load the regular boot file onto the boot area of the local disk of the target system
 
   ORC.Send BootLoadDisk.rsc ~    # send the boot loader for booting from the local disk of the target system
   ORC.SR 102 BootLoadDisk.rsc ~  # reboot from the boot area of the local disk ("regular" boot process)
 
   ORC.Send BootLoadLine.rsc ~    # send the boot loader for booting the target system over the serial link
   ORC.SR 102 BootLoadLine.rsc ~  # reboot the target system over the serial link ("build-up" boot process)
-  ORC.Load Oberon0.bin ~         # after booting over the data link, one needs to run ORC.Load Oberon0.bin again
+  ORC.Load RISC2013.Boot0 ~      # after booting over the data link, one needs to run ORC.Load RISC2013.Boot0 again
 
 System
 
@@ -71,7 +70,7 @@ Files
 
   ORC.SR 12 "*.rsc" ~            # list files matching the specified prefix
   ORC.SR 12 "*.Mod!" ~           # list files matching the specified prefix and the directory option set
-  ORC.SR 4 Builder.Tool ~        # show the contents of the specified file
+  ORC.SR 4 Boot.Tool ~           # show the contents of the specified file
 
 Modules
 
@@ -106,19 +105,18 @@ Display
 
 # STEP 1: On the host system execute the following commands:
 ORP.Compile Fonts1.Mod Oberon1.Mod System1.Mod/s ~   # compile the files needed to include an entire Oberon system in a boot file
-Linker.Link System ~                                 # generate a new boot file containing the entire Oberon system (System.bin)
+Boot.Link System RISC2013.Boot1~                     # generate a new boot file containing the entire Oberon system
 
-ORC.Load System.bin ~                                # load the entire Oberon system over the data link to the target system and start it
+ORC.Load RISC2013.Boot1 ~                            # load the entire Oberon system over the data link to the target system and start it
 
 ORC.Send Input.rsc Display.rsc Viewers.rsc ~         # {Fonts,Oberon,System}.rsc created from {Fonts1,Oberon1,System1}.Mod
 ORC.Send Fonts.rsc Texts.rsc Oberon.rsc ~
 ORC.Send MenuViewers.rsc TextFrames.rsc ~
 ORC.Send System.rsc System.Tool Oberon10.Scn.Fnt ~   # send the required files to start Oberon from the local disk
 ORC.Send RS232.rsc Oberon0.rsc Oberon0Tool.rsc ~     # send additional files to the target system (optional)
-ORC.Send Linker.rsc Builder.rsc ~                    # send additional files to the target system (optional)
-ORC.Send Edit.rsc PCLink1.rsc ~                      # send additional files to the target system (optional)
+ORC.Send Boot.rsc Edit.rsc PCLink1.rsc ~             # send additional files to the target system (optional)
 
-ORC.Send Modules.bin ~                               # send the regular boot file "Modules.bin" to the target system
+ORC.Send RISC2013.Boot1 ~                            # send the regular boot file "RISC2013.Boot1" to the target system
 ORC.Send BootLoadDisk.rsc ~                          # send the boot loader for booting from the local disk of the target system
 
 # STEP 2: On the target system execute the following commands:
@@ -126,7 +124,7 @@ PCLink1.Stop                     # stop the PCLink1 background task on the targe
 Oberon0Tool.Run                  # start the Oberon0 background task on the target system
 
 # STEP 3: Back on the host system execute the following commands:
-ORC.SR 100 Modules.bin ~         # load the regular boot file onto the boot area of the local disk of the target system
+ORC.SR 100 RISC2013.Boot1 ~      # load the regular boot file onto the boot area of the local disk of the target system
 ORC.SR 102 BootLoadDisk.rsc ~    # reboot the target system from the local disk (initiates the "regular" boot process)
 
-As an alternative to the first command, one can execute the command Builder.Load Modules.bin on the target system.
+As an alternative to the first command, one can execute the command Boot.Load RISC2013.Boot1 on the target system.
