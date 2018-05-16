@@ -1,4 +1,4 @@
-MODULE ORG; (* NW  18.4.2016 / 17.9.2016 / AP 1.6.17  code generator in Oberon-07 for RISC*)
+MODULE ORG; (* NW  18.4.2016 / 17.9.2016 / AP 22.12.17  code generator in Oberon-07 for RISC / AP 7.5.18*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser OSAP; result in array "code".
@@ -1043,14 +1043,14 @@ MODULE ORG; (* NW  18.4.2016 / 17.9.2016 / AP 1.6.17  code generator in Oberon-0
 
   PROCEDURE Close*(VAR modid: ORS.Ident; key, nofent: LONGINT);
     VAR obj: ORB.Object;
-      i, comsize, nofimps, nofptrs, nofpvars, size: LONGINT;
+      i, comsize, nofimps, nofptrs, nofpvrs, size: LONGINT;
       name: ORS.Ident;
       F: Files.File; R: Files.Rider;
   BEGIN  (*exit code*)
     IF version = 0 THEN Put1(Mov, 0, 0, 0); Put3(BR, 7, 0)  (*RISC-0*)
     ELSE Put2(Ldr, LNK, SP, 0); Put1(Add, SP, SP, 4); Put3(BR, 7, LNK)
     END ;
-    obj := ORB.topScope.next; nofimps := 0; comsize := 4; nofptrs := 0; nofpvars := 0;
+    obj := ORB.topScope.next; nofimps := 0; comsize := 4; nofptrs := 0; nofpvrs := 0;
     WHILE obj # NIL DO
       IF (obj.class = ORB.Mod) & (obj.dsc # ORB.system) THEN INC(nofimps) (*count imports*)
       ELSIF (obj.exno # 0) & (obj.class = ORB.Const) & (obj.type.form = ORB.Proc)
@@ -1058,12 +1058,11 @@ MODULE ORG; (* NW  18.4.2016 / 17.9.2016 / AP 1.6.17  code generator in Oberon-0
         WHILE obj.name[i] # 0X DO INC(i) END ;
         i := (i+4) DIV 4 * 4; INC(comsize, i+4)
       ELSIF obj.class = ORB.Var THEN INC(nofptrs, NofRefs(ORB.Pointer, obj.type)); (*count pointers*)
-        INC(nofpvars, NofRefs(ORB.Proc, obj.type)) (*count procedure variables*)
+        INC(nofpvrs, NofRefs(ORB.Proc, obj.type)) (*count procedure variable references*)
       END ;
       obj := obj.next
     END ;
-    size := varsize + strx + comsize + (pc + nofimps + nofent + nofptrs + nofpvars + 1)*4; (*varsize includes type descriptors*)
-
+    size := varsize + strx + comsize + (pc + nofimps + nofent + nofptrs + nofpvrs + 2)*4; (*varsize includes type descriptors*)
     ORB.MakeFileName(name, modid, ".rsc"); (*write code file*)
     F := Files.New(name); Files.Set(R, F, 0); Files.WriteString(R, modid); Files.WriteInt(R, key); Files.WriteByte(R, version);
     Files.WriteInt(R, size);

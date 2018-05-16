@@ -1,4 +1,4 @@
-MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.17*)
+MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 4.4.18*)
   CONST restore* = 0; modify* = 1; suspend* = 2; consume* = 3; track* = 4;
     defocus* = 5; neutralize* = 6; mark* = 7; inf = 65535; DnLength* = 24;
 
@@ -215,6 +215,7 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.17*)
         U.handle(U, M); U.state := 0; D.backup := V;
         RestoreTrack(T)
       END;
+      V.next := NIL; V.prev := NIL; (*make other viewers unreachable from V*)
       IF D.focus = V THEN SetFocus(D, This(D, 0, 0)) END
     END
   END Close;
@@ -298,7 +299,7 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.12.17*)
       InitFiller(S.next.X, 0, T.X + T.W - S.next.X, D.H, 0, Filler); Filler.dsc := NIL;
       NEW(newT); newT.dsc := Filler; Filler.parent := newT; newT.parent := D;
       newT.X := Filler.X; newT.Y := 0; newT.W := Filler.W; newT.H := D.H; newT.minH := 0;
-      newT.state := -1; (*track*) newT.under := S.next; 
+      newT.state := -1; (*track*) newT.under := S.next; S.next.prev := NIL;
       newT.next := T.next; newT.prev := S; S.next := newT; T.next.prev := newT; T.next := NIL
     END
   END OpenTrack;

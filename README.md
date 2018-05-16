@@ -1,23 +1,12 @@
 # The Experimental Oberon operating system
-Experimental Oberon is a revision of the Original Oberon operating system (www.projectoberon.com), containing a number of enhancements including continuous fractional line scrolling with variable line spaces, multiple logical displays, enhanced viewer management, safe module unloading and a minimal version of the Oberon system building tools.
+Experimental Oberon is a revision of the Original Oberon operating system (www.projectoberon.com), containing:
 
-**Documentation:** [**The-Experimental-Oberon-System.pdf**](Documentation/The-Experimental-Oberon-System.pdf)
+* continuous fractional line scrolling with variable line spaces
+* multiple logical displays ("virtual displays")
+* safe module unloading
+* system building tools
 
-**Demo video 1:** 
-download: [**DemoMultipleVirtualDisplays.mov**](Documentation/DemoMultipleVirtualDisplays.mov)
-Youtube: **https://youtu.be/eLsHM4QncbY**
-
-**Demo video 2:** 
-download: [**DemoFractionalLineScrollVariableLineSpace.mov**](Documentation/DemoFractionalLineScrollVariableLineSpace.mov)
-Youtube: **https://youtu.be/mXWHtTZL4R0**
-
-**Demo video 3:**
-download: [**DemoCloningViewersIntoNewVirtualDisplays.mov**](Documentation/DemoCloningViewersIntoNewVirtualDisplays.mov)
-Youtube: **https://youtu.be/t8n_nkuKn3o**
-
-**Compressed archive** of Experimental Oberon (S3RISCinstall directory) for the Oberon emulator: [**S3RISCinstall.tar.gz**](Documentation/S3RISCinstall.tar.gz)
-
-*(if you see an error message "Sorry about that, but we can’t show files that are this big right now" or similar, click on the "Raw" button on the page showing the error message to download the file to your computer)*
+*Note:* The latest version of Experimental Oberon is always at http://github.com/andreaspirklbauer/Oberon-experimental. All other repositories at http://github.com/andreaspirklbauer are just a series of small experiments that people are free to use, but without ANY guarantee that they will be kept current or in sync with Experimental Oberon.
 
 ------------------------------------------------------
 
@@ -61,46 +50,27 @@ Open the Experimental Oberon version of the [**System.Tool**](Sources/System.Too
 
 Compile the *inner core* of Experimental Oberon and load it onto the boot area of the local disk:
 
-     ORP.Compile Kernel.Mod/s FileDir.Mod/s Files.Mod/s Modules.Mod/s ~   # compile the inner core modules of Experimental Oberon
-     Boot.Link Modules RISC2013.Boot ~                                    # generate a pre-linked binary of the "regular" boot file
-     Boot.Load RISC2013.Boot ~                                            # load the boot file onto the boot area of the local disk
+     ORP.Compile Kernel.Mod FileDir.Mod Files.Mod Modules.Mod ~    # modules for the "regular" boot file for Experimental Oberon
+     Boot.Link Modules ~                                           # generate a pre-linked binary file of the "regular" boot file (Modules.bin)
+     Boot.Load Modules.bin ~                                       # load the "regular" boot file onto the boot area of the local disk
 
 This step is possible, because module *Boot* is written such that it can be executed on both the Original Oberon 2013 and the Experimental Oberon system. It produces output using the Experimental Oberon module and object file format.
 
 Compile the remaining modules of Experimental Oberon:
 
      ORP.Compile Input.Mod Display.Mod/s Viewers.Mod/s ~
-     ORP.Compile Fonts.Mod/s Texts.Mod/s ~
-     ORP.Compile Oberon.Mod/s ~
-     ORP.Compile MenuViewers.Mod/s ~
-     ORP.Compile TextFrames.Mod/s ~
-     ORP.Compile System.Mod/s ~
-     ORP.Compile Edit.Mod/s ~
-     ORP.Compile Tools.Mod/s ~
+     ORP.Compile Fonts.Mod/s Texts.Mod/s Oberon.Mod/s ~
+     ORP.Compile MenuViewers.Mod/s TextFrames.Mod/s ~
+     ORP.Compile System.Mod/s Edit.Mod/s Tools.Mod/s ~
 
 Re-compile the Oberon compiler itself before (!) restarting the system:
 
-    ORP.Compile ORS.Mod/s ORB.Mod/s ORG.Mod/s ORP.Mod/s ORTool.Mod/s ~
+    ORP.Compile ORS.Mod/s ORB.Mod/s ORG.Mod/s ORP.Mod/s ORTool.Mod/s Boot.Mod/s ~
 
-The last step is necessary because Experimental Oberon uses a different Oberon object file format. The currently loaded Experimental Oberon compiler runs under Original Oberon, but wouldn't be able to execute under Experimental Oberon.
+The last step is necessary because Experimental Oberon uses a different Oberon object file format (the currently loaded Experimental Oberon compiler runs under Original Oberon, but wouldn't be able to execute under Experimental Oberon).
 
 ------------------------------------------------------
 
 **STEP 4:** Restart the Oberon system
 
-You are now running Experimental Oberon.
-
-Re-compile any other modules that you may have on your system, e.g.,
-
-     ORP.Compile Boot.Mod/s BootLoad.Mod BootLoadDisk.Mod ~
-     ORP.Compile PCLink1.Mod RS232.Mod Clipboard.Mod ~
-     ORP.Compile SCC.Mod/s Net.Mod/s ~
-
-     ORP.Compile Graphics.Mod/s ~
-     ORP.Compile GraphicFrames.Mod/s ~
-     ORP.Compile GraphTool.Mod Draw.Mod ~
-
-     ORP.Compile Curves.Mod/s ~
-     ORP.Compile Sierpinski.Mod ~
-     ORP.Compile Hilbert.Mod Stars.Mod Blink.Mod ~
-     ORP.Compile Rectangles.Mod/s Checkers.Mod ~
+You are now running Experimental Oberon. Re-compile any other modules that you may have on your system.

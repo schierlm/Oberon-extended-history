@@ -153,14 +153,14 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 11.11.17*)
 
   PROCEDURE DisplayLine (F: Frame; L: Line; (*pass 2*)
     VAR R: Texts.Reader; X, Y, topY, botY: INTEGER; len: LONGINT);
-    VAR patadr, NX, dx, x, y, w, h, y0, t, b: INTEGER;
+    VAR patadr, NX, dx, x, y, w, h, t, b: INTEGER;
   BEGIN NX := F.X + F.W - F.right;
     WHILE (nextCh # CR) & (R.fnt # NIL) DO
       Fonts.GetPat(R.fnt, nextCh, dx, x, y, w, h, patadr);
-      IF (X + x + w <= NX) & (h # 0) THEN y0 := Y + y;
-        IF y0 + h <= topY THEN t := 0 ELSIF y0 >= topY THEN t := h ELSE t := y0 + h - topY END;
-        IF y0 >= botY THEN b := 0 ELSIF y0 + h <= botY THEN b := h ELSE b := botY - y0 END;
-        IF t + b < h THEN Display.CopyPattern(R.col, patadr, X + x, y0, t, b, Display.invert) END
+      IF (X + x + w <= NX) & (h # 0) THEN y := Y + y;
+        IF y + h <= topY THEN t := 0 ELSIF y >= topY THEN t := h ELSE t := y + h - topY END;
+        IF y >= botY THEN b := 0 ELSIF y + h <= botY THEN b := h ELSE b := botY - y END;
+        IF t + b < h THEN Display.CopyPattern(R.col, patadr, X + x, y, t, b, Display.invert) END
       END;
       X := X + dx; INC(len); Texts.Read(R, nextCh)
     END;

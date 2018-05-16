@@ -1,4 +1,4 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 22.12.17*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 7.5.18*)
   IMPORT SYSTEM, Kernel, Files;
   CONST versionkey = 1X; MT = 12; DescSize = 88;
 
@@ -10,7 +10,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 22.12.17
       name*: ModuleName;
       next*: Module;
       key*, num*, size*, refcnt*: INTEGER;
-      data*, code*, imp*, cmd*, ent*, ptr*, pvar*: INTEGER;  (*addresses*)
+      data*, code*, imp*, cmd*, ent*, ptr*, pvr*: INTEGER;  (*addresses*)
       selected, hidden, marked, unused: BOOLEAN;
       count: INTEGER
     END ;
@@ -18,7 +18,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 22.12.17
   VAR root*, M: Module;
     MTOrg*, AllocPtr*, res*: INTEGER;
     importing*, imported*: ModuleName;
-    limit, NofSelected, NofHidden: INTEGER;
+    limit, NofSelected*, NofHidden*: INTEGER;
 
   PROCEDURE ThisFile(name: ARRAY OF CHAR): Files.File;
     VAR i: INTEGER;
@@ -87,9 +87,8 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 22.12.17
         WHILE (mod # NIL) & ~((mod.name[0] = 0X) & (mod.size >= size)) DO mod := mod.next END ;
         IF mod = NIL THEN (*no large enough hole was found*)
           IF AllocPtr + size < limit THEN (*allocate*)
-            p := AllocPtr; mod := SYSTEM.VAL(Module, p);
-            AllocPtr := (p + size + 100H) DIV 20H * 20H; mod.size := AllocPtr - p; mod.num := root.num + 1;
-            mod.next := root; root := mod
+            p := AllocPtr; AllocPtr := p + size; mod := SYSTEM.VAL(Module, p); mod.size := size;
+            mod.num := root.num + 1; mod.next := root; root := mod
           ELSE error(7, name1)
           END
         ELSE (*fill hole*) p := SYSTEM.VAL(INTEGER, mod)
@@ -128,7 +127,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 22.12.17
         Files.ReadInt(R, w);
         WHILE w >= 0 DO SYSTEM.PUT(p, mod.data + w); INC(p, 4); Files.ReadInt(R, w) END ;
         SYSTEM.PUT(p, 0); INC(p, 4);
-        mod.pvar := p;  (*procedure variable references*)
+        mod.pvr := p;  (*procedure variable references*)
         Files.ReadInt(R, w);
         WHILE w >= 0 DO SYSTEM.PUT(p, mod.data + w); INC(p, 4); Files.ReadInt(R, w) END ;
         SYSTEM.PUT(p, 0); INC(p, 4);
@@ -333,7 +332,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 22.12.17
       ELSE mod := root; continue := TRUE;
         WHILE continue & (mod # NIL) DO (*check static procedure references*)
           IF (mod.name[0] # 0X) & ~mod.selected THEN
-            pref := mod.pvar; SYSTEM.GET(pref, pvadr);
+            pref := mod.pvr; SYSTEM.GET(pref, pvadr);
             WHILE continue & (pvadr # 0) DO SYSTEM.GET(pvadr, r);
               IF ChkSel(r, continue) > 0 THEN res := 4 END ;
               INC(pref, 4); SYSTEM.GET(pref, pvadr)
@@ -456,9 +455,9 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 22.12.17
         END
       END
     END ;
-    mod := root;
-    WHILE (mod # NIL) & (mod.name[0] = 0X) DO mod := mod.next END ;
-    IF mod # root THEN (*return free blocks*) AllocPtr := SYSTEM.VAL(LONGINT, mod) + mod.size; root := mod END
+    mod := root; k := 0;
+    WHILE (mod # NIL) & (mod.name[0] = 0X) DO INC(k, mod.size); mod := mod.next END ;
+    IF k > 0 THEN AllocPtr := AllocPtr - k; root := mod END
   END Collect;
 
   PROCEDURE Init*;

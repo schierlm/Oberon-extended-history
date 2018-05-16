@@ -1,17 +1,19 @@
-MODULE Tools;   (*NW 22.2.14 / AP 12.12.17*)
+MODULE Tools;   (*NW 22.2.14 / AP 4.4.18*)
   IMPORT SYSTEM, Kernel, Files, Modules, Input, Texts, Viewers, Oberon, MenuViewers, TextFrames;
 
-  CONST StandardMenu = "System.Close System.Copy System.Grow Edit.Search Edit.Store | System.Expand System.Spread System.Clone";
+  CONST StandardMenu = "Tools.Close System.Copy System.Grow Edit.Search Edit.Store | System.Expand System.Spread System.Clone";
 
-  VAR T: Texts.Text; V: MenuViewers.Viewer; W: Texts.Writer;
+  VAR T: Texts.Text; W: Texts.Writer; open: BOOLEAN;
 
   PROCEDURE OpenViewer(T: Texts.Text; title: ARRAY OF CHAR);
-    VAR X, Y: INTEGER;
-  BEGIN 
-    Oberon.AllocateUserViewer(0, X, Y);
-    V := MenuViewers.New(
-        TextFrames.NewMenu(title, StandardMenu),
-        TextFrames.NewText(T, 0), TextFrames.menuH, X, Y)
+    VAR X, Y: INTEGER; V: MenuViewers.Viewer; (*V is declared local to make other viewers unreachable from V*)
+  BEGIN
+    IF ~open THEN open := TRUE;
+      Oberon.AllocateUserViewer(0, X, Y);
+      V := MenuViewers.New(
+          TextFrames.NewMenu(title, StandardMenu),
+          TextFrames.NewText(T, 0), TextFrames.menuH, X, Y)
+    END
   END OpenViewer;
 
   PROCEDURE Clear*;  (*used to clear output*)
@@ -19,12 +21,15 @@ MODULE Tools;   (*NW 22.2.14 / AP 12.12.17*)
   BEGIN NEW(buf); Texts.OpenBuf(buf); Texts.Delete(T, 0, T.len, buf)
   END Clear;
 
+  PROCEDURE Close*;
+    VAR V: Viewers.Viewer;
+  BEGIN open := FALSE;
+    IF Oberon.Par.frame = Oberon.Par.vwr.dsc THEN V := Oberon.Par.vwr ELSE V := Oberon.MarkedViewer() END;
+    Viewers.Close(V)
+  END Close;
+
   PROCEDURE Recall*;
-    VAR M: Viewers.ViewerMsg;
-  BEGIN
-    IF (V # NIL) & (V.state = 0) THEN
-      Viewers.Open(Viewers.CurDisplay, V, V.X, V.Y + V.H); M.id := Viewers.restore; V.handle(V, M)
-    END
+  BEGIN OpenViewer(T, "Tools.Text") (*consecutive calls to Recall will open output only once*)
   END Recall;
 
   PROCEDURE Inspect*;
@@ -107,7 +112,7 @@ MODULE Tools;   (*NW 22.2.14 / AP 12.12.17*)
   BEGIN Texts.WriteHex(W, SYSTEM.H(1)); Texts.WriteLn(W); Texts.Append(T, W.buf)
   END Id;
 
-BEGIN Texts.OpenWriter(W); T := TextFrames.Text(""); OpenViewer(T, "Tools.Text")
+BEGIN Texts.OpenWriter(W); T := TextFrames.Text(""); open := FALSE; OpenViewer(T, "Tools.Text")
 END Tools.
 
 Tools.Clear  (clear tool viewer)
