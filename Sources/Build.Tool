@@ -3,15 +3,16 @@
 # -------------------------------------------------------------------------------------------------
 
 ORP.Compile Kernel.Mod FileDir.Mod Files.Mod Modules.Mod ~       # modules for the "regular" boot file
-ORP.Compile RS232.Mod Oberon0.Mod ~                              # additional modules for the "build-up" boot file
-ORP.Compile ORC.Mod/s Oberon0Tool.Mod/s ~                        # partner program ORC and Oberon0 tool module
-ORP.Compile Boot.Mod/s ~                                         # boot linker/loader and system building tool
+ORP.Compile RS232.Mod Oberon0.Mod ~               # additional modules for the "build-up" boot file
+ORP.Compile ORC.Mod/s Oberon0Tool.Mod/s ~     # partner program ORC and Oberon0 tool module
 
-ORP.Compile BootLoadDisk.Mod/s ~      # generate a boot loader for booting the target system from the local disk
-ORP.Compile BootLoadLine.Mod/s ~      # generate a boot loader for booting the target system over the data link
+ORP.Compile Boot.Mod/s ~    # boot linker/loader and system building tool
 
-Boot.Link Modules ~                   # generate a pre-linked binary file of the "regular" boot file (Modules.bin)
-Boot.Link Oberon0 ~                   # generate a pre-linked binary file of the "build-up" boot file (Oberon0.bin)
+Boot.Link Modules ~                # generate a pre-linked binary file of the "regular" boot file (Modules.bin)
+Boot.Link Oberon0 ~               # generate a pre-linked binary file of the "build-up" boot file (Oberon0.bin)
+
+ORP.Compile BootLoadDisk.Mod/s ~    # generate a boot loader for booting the target system from the local disk
+ORP.Compile BootLoadLine.Mod/s ~    # generate a boot loader for booting the target system over the data link
 
 # -------------------------------------------------------------------------------------------------
 #  Build Oberon on the target system by executing the following commands on the host system.
@@ -28,13 +29,11 @@ ORC.Send Input.rsc Display.rsc Viewers.rsc
       System.rsc System.Tool
       Oberon10.Scn.Fnt
       Modules.bin
-      BootLoadDisk.rsc ~              # send the required files to build the target system
-
-ORC.Send RS232.rsc
+      BootLoadDisk.rsc
       Oberon0.rsc Oberon0Tool.rsc
       Edit.rsc PCLink1.rsc
       ORP.rsc ORG.rsc
-      ORB.rsc ORS.rsc ORTool.rsc ~    # send additional files to the target system (optional, but recommended)
+      ORB.rsc ORS.rsc ORTool.rsc ~    # send the required (plus some additional) files to the target system
 
 ORC.SR 100 Modules.bin ~              # load the "regular" boot file onto the boot area of the local disk of the target system
 ORC.SR 102 BootLoadDisk.rsc ~         # reboot the target system from the local disk (i.e. initiate the "regular" boot process)
@@ -131,9 +130,7 @@ ORC.Load System.bin ~                                            # load the enti
 
 ORC.Send System.bin System.Tool
       BootLoadDisk.rsc RS232.rsc
-      Oberon0.rsc Oberon0Tool.rsc
-      ORP.rsc ORG.rsc
-      ORB.rsc ORS.rsc ORTool.rsc ~                               # send the required files to the target system
+      Oberon0.rsc Oberon0Tool.rsc                                # send the required files to the target system
 
 # STEP 2: On the target system execute the following commands:
 

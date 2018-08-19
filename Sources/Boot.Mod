@@ -1,9 +1,9 @@
-MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 7.5.18 Experimental Oberon*)
+MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 15.8.18 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, Files, Modules, Texts, Oberon;
-  CONST versionkey = 1X; versionkey0 = 0X; MT = 12; DescSize = 88;
+  CONST versionkey = 1X; versionkey0 = 0X; MT = 12; DescSize = 84;
     MemLim = 0E7EF0H; stackOrg = 80000H; maxCode = 8000; CR = 0DX;
 
-  TYPE (*copied from Modules to allow module Boot to be used as a cross linker/loader on other versions of the Oberon system*)
+  TYPE (*copied from Modules for use as cross linker/loader*)
     Module* = POINTER TO ModDesc;
     Command* = PROCEDURE;
     ModuleName* = ARRAY 32 OF CHAR;
@@ -12,8 +12,7 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 7.5.18 Experimental Obero
       next*: Module;
       key*, num*, size*, refcnt*: INTEGER;
       data*, code*, imp*, cmd*, ent*, ptr*, pvr*: INTEGER;  (*addresses*)
-      selected, hidden, marked, unused: BOOLEAN;
-      count: INTEGER
+      selected, hidden, marked, unused: BOOLEAN
     END ;
 
   VAR root: Module;
@@ -83,9 +82,8 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 7.5.18 Experimental Obero
       IF res = 0 THEN
         INC(size, DescSize);
         IF AllocPtr + size < limit THEN (*allocate*)
-          p := AllocPtr; AllocPtr := p + size; i := p;
-          WHILE i < p + DescSize DO SYSTEM.PUT(i, 0); INC(i, 4) END ;
-          mod := SYSTEM.VAL(Module, p); mod.size := size;
+          p := AllocPtr; mod := SYSTEM.VAL(Module, p);
+          AllocPtr := (p + size + 3) DIV 4 * 4; mod.size := AllocPtr - p;
           IF root = NIL THEN mod.num := 1 ELSE mod.num := root.num + 1 END ;
           mod.next := root; root := mod
         ELSE error(7, name1)
@@ -93,7 +91,8 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 7.5.18 Experimental Obero
       END ;
       IF res = 0 THEN (*read file*)
         INC(p, DescSize); (*allocate descriptor*)
-        mod.name := name; mod.key := key; mod.refcnt := 0; mod.selected := FALSE; mod.hidden := FALSE;
+        mod.name := name; mod.key := key; mod.refcnt := 0;
+        mod.selected := FALSE; mod.hidden := FALSE; mod.marked := FALSE; mod.unused := FALSE;
         mod.data := p;  (*data*)
         SYSTEM.PUT(mod.num * 4 + MTOrg, p);  (*module table entry*)
         Files.ReadInt(R, n);
@@ -376,38 +375,38 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 7.5.18 Experimental Obero
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END WriteCode;
 
-  PROCEDURE MakeStream(VAR ir, or: Files.Rider; blocksize, destadr: INTEGER);
+  PROCEDURE MakeStream(VAR ir, or: Files.Rider; blksize, destadr: INTEGER);
     VAR i, a: INTEGER; b: BYTE;
   BEGIN Files.ReadByte(ir, b); i := 0; a := destadr;
     WHILE ~ir.eof DO
-      IF (i MOD blocksize = 0) THEN i := 0;
-        Files.WriteInt(or, blocksize); Files.WriteInt(or, a); INC(a, blocksize)
+      IF i MOD blksize = 0 THEN i := 0;
+        Files.WriteInt(or, blksize); Files.WriteInt(or, a); INC(a, blksize)
       END ;
       Files.WriteByte(or, b); INC(i); Files.ReadByte(ir, b)
     END ;
-    WHILE i < blocksize DO Files.WriteByte(or, 0); INC(i) END ;
+    WHILE i < blksize DO Files.WriteByte(or, 0); INC(i) END ;
     Files.WriteInt(or, 0)  (*size of last block*)
   END MakeStream;
 
-  PROCEDURE WriteStream*; (*convert boot file to stream format with specified blocksize and dest adr*)
+  PROCEDURE WriteStream*; (*convert boot file to stream format with specified block size and dest adr*)
     VAR if, of: Files.File; ir, or: Files.Rider;
-      len, blocksize, res: INTEGER;
+      len, blksize, res: INTEGER;
       name, name1: ARRAY 32 OF CHAR;
       S: Texts.Scanner;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S); res := -1;
     IF (S.class = Texts.Name) OR (S.class = Texts.String) THEN name := S.s; Texts.Scan(S);
       IF (S.class = Texts.Name) OR (S.class = Texts.String) THEN name1 := S.s; Texts.Scan(S);
-        IF S.class = Texts.Int THEN blocksize := S.i; Texts.Scan(S);
+        IF S.class = Texts.Int THEN blksize := S.i; Texts.Scan(S);
           IF S.class = Texts.Int THEN res := 0; Texts.WriteString(W, "  WriteStream ");
             Texts.WriteString(W, name); Texts.Write(W, " "); Texts.WriteString(W, name1);
-            Texts.WriteInt(W, blocksize, 5); Texts.WriteInt(W, S.i, 5);
-            IF blocksize >= 0 THEN
+            Texts.WriteInt(W, blksize, 5); Texts.WriteInt(W, S.i, 5);
+            IF blksize >= 0 THEN
               IF S.i >= 0 THEN if := Files.Old(name);
                 IF if # NIL THEN len := Files.Length(if);
                   IF len > 0 THEN of := Files.New(name1);
                     IF of # NIL THEN
-                      IF blocksize = 0 THEN blocksize := len END ;
-                      Files.Set(ir, if, 0); Files.Set(or, of, 0); MakeStream(ir, or, blocksize, S.i);
+                      IF blksize = 0 THEN blksize := len END ;
+                      Files.Set(ir, if, 0); Files.Set(or, of, 0); MakeStream(ir, or, blksize, S.i);
                       Files.Register(of); Texts.WriteString(W, "  done")
                     END
                   ELSE Texts.WriteString(W, "  input file empty")
@@ -426,6 +425,6 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 7.5.18 Experimental Obero
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END WriteStream;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader / AP 7.5.18"); Texts.WriteLn(W);
-  Texts.Append(Oberon.Log, W.buf); limit := Kernel.heapOrg; DEC(limit, 8000H)
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 15.8.18 Experimental Oberon");
+  Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); limit := Kernel.heapOrg; DEC(limit, 8000H)
 END Boot.

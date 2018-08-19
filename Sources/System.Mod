@@ -1,4 +1,4 @@
-MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 7.5.18*)
+MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 15.8.18 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules,
     Input, Viewers, Fonts, Texts, Oberon, MenuViewers, TextFrames;
 
@@ -6,10 +6,12 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 7.5.18*)
     StandardMenu = "System.Close System.Copy System.Grow Edit.Search Edit.Store | System.Expand System.Spread System.Clone";
     LogMenu = "Edit.Locate Edit.Search System.Copy System.Grow System.Clear | System.Expand System.Spread System.Clone";
 
-  TYPE Handler = PROCEDURE(name: ARRAY OF CHAR);
+  TYPE Mod = POINTER TO ModDesc;
+    ModDesc = RECORD mod: Modules.Module; next: Mod END ;
+    Handler = PROCEDURE(name: ARRAY OF CHAR);
 
   VAR W: Texts.Writer;
-    M: Modules.Module;
+    M: Modules.Module; M0: Mod;
     pat: ARRAY 32 OF CHAR;
 
   PROCEDURE GetArg(VAR S: Texts.Scanner);
@@ -89,7 +91,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 7.5.18*)
     VAR logV, toolV, menu, main: Viewers.Frame; X, Y: INTEGER;
   BEGIN
     IF Viewers.CurDisplay # NIL THEN
-      Texts.WriteString(W, "Oberon V6  NW 14.4.13 / AP 7.5.18  Display ");
+      Texts.WriteString(W, "Experimental Oberon  AP 15.8.18 / Display ");
       Texts.WriteInt(W, Viewers.CurDisplay.id, 2); Texts.Write(W, " ");
       Texts.WriteString(W, Viewers.CurDisplay.name); EndLine;
       Oberon.AllocateSystemViewer(0, X, Y);
@@ -347,7 +349,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 7.5.18*)
     END
   END Select;
 
-  PROCEDURE WriteName(name: ARRAY OF CHAR);
+  PROCEDURE WriteName(name: ARRAY OF CHAR); (*handler for Select*)
   BEGIN Texts.Write(W, " "); Texts.WriteString(W, name)
   END WriteName;
 
@@ -360,133 +362,132 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 7.5.18*)
     END
   END WriteSelection;
 
-  PROCEDURE ShowMods(this, clients, imports, shrink: BOOLEAN; exclude: ARRAY OF CHAR);
-    VAR S: Texts.Scanner;
-  BEGIN Modules.SelectAll(FALSE); Select(S, TRUE, this, clients, imports, WriteName); EndLine;
-    IF exclude[0] # 0X THEN Modules.Select(exclude, FALSE, TRUE, FALSE, TRUE) END ; (*deselect exclude and its clients*)
-    IF shrink THEN Modules.ShrinkSelection END ; (*shrink selection until no outside clients exist*)
-    IF Modules.NofSelected > 0 THEN Texts.Write(W, " "); WriteSelection; EndLine; Modules.SelectAll(FALSE) END
-  END ShowMods;
+  PROCEDURE HandleClient(client, mod: Modules.Module; VAR continue: BOOLEAN): INTEGER;
+  BEGIN (*client imports mod*)
+    IF M = mod THEN Texts.WriteString(W, " "); Texts.WriteString(W, client.name)
+    ELSE (*next imported module*)
+      IF M # NIL THEN Texts.WriteLn(W) END ;
+      Texts.WriteString(W, "  "); Texts.WriteString(W, mod.name);
+      Texts.WriteString(W, " imported by "); Texts.WriteString(W, client.name); M := mod
+    END ;
+    RETURN 1
+  END HandleClient;
 
-  PROCEDURE Show*; (*show the specified modules if they are loaded*)
-  BEGIN Texts.WriteString(W, "System.Show"); ShowMods(TRUE, FALSE, FALSE, FALSE, "")
-  END Show;
+  PROCEDURE WriteClients; (*write external clients of selected modules*)
+    VAR res: INTEGER;
+  BEGIN M := NIL; Modules.FindClients(HandleClient, res);
+    IF M # NIL THEN Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf) END
+  END WriteClients;
 
-  PROCEDURE ShowImports*; (*show the specified modules and their imports*)
-  BEGIN Texts.WriteString(W, "System.ShowImports"); ShowMods(TRUE, FALSE, TRUE, FALSE, "")
-  END ShowImports;
+  PROCEDURE unmarked(mod: Modules.Module): BOOLEAN;
+    VAR m: Mod;
+  BEGIN m := M0;
+    WHILE (m # NIL) & (m.mod # mod) DO m := m.next END ;
+    RETURN m = NIL
+  END unmarked;
 
-  PROCEDURE ShowClients*; (*show the specified modules and their clients*)
-  BEGIN Texts.WriteString(W, "System.ShowClients"); ShowMods(TRUE, TRUE, FALSE, FALSE, "")
-  END ShowClients;
+  PROCEDURE mark(mod: Modules.Module);
+    VAR m: Mod;
+  BEGIN (*unmarked(mod)*) NEW(m); m.mod := mod; m.next := M0; M0 := m
+  END mark;
 
-  PROCEDURE ShowRemovableImports*; (*show the removable subset of the specified modules and their imports*)
-  BEGIN Texts.WriteString(W, "System.ShowRemovableImports"); ShowMods(TRUE, FALSE, TRUE, FALSE, "System")
-  END ShowRemovableImports;
+  PROCEDURE unmark;
+  BEGIN M0 := NIL
+  END unmark;
 
-  PROCEDURE ShowRemovableClients*; (*show the removable subset of the specified modules and their clients*)
-  BEGIN Texts.WriteString(W, "System.ShowRemovableClients"); ShowMods(TRUE, TRUE, FALSE, FALSE, "System")
-  END ShowRemovableClients;
-
-  PROCEDURE WriteRef(x: LONGINT; VAR continue: BOOLEAN): INTEGER; (*if x references any of the selected modules*)
+  PROCEDURE HandleRef(x: LONGINT; s: ARRAY OF CHAR; VAR continue: BOOLEAN): INTEGER;
     VAR mod: Modules.Module;
   BEGIN mod := Modules.root;
     WHILE mod # NIL DO
-      IF (mod.name[0] # 0X) & Modules.Selected(mod) & (mod.data <= x) & (x < mod.imp) THEN
-        IF x < mod.code THEN Texts.WriteString(W, "  types of ") ELSE Texts.WriteString(W, "  procedures of ") END ;
-        Texts.WriteString(W, mod.name); Texts.WriteString(W, " in use in ");
-        IF continue THEN Texts.WriteString(W, "dynamic objects reachable by ")
-        ELSE Texts.WriteString(W, "global procedures variables of ")
-        END ;
-        Texts.WriteString(W, M.name); Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
-      END ;
-      mod := mod.next
-    END ;
-    RETURN 0
-  END WriteRef;
-
-  PROCEDURE FindRefs; (*find references from unselected to selected modules*)
-    VAR mod: Modules.Module; continue: BOOLEAN;
-      pref, pvadr, r: LONGINT; res: INTEGER;
-  BEGIN Oberon.SetPar(NIL, NIL, 0); (*exclude viewers that are reachable ONLY via Oberon.Par.vwr*)
-    mod := Modules.root;
-    WHILE mod # NIL DO
-      IF (mod.name[0] # 0X) & ~Modules.Selected(mod) THEN
-        Kernel.Mark(mod.ptr); M := mod; (*mark heap records of each module M individually*)
-        Kernel.Scan(WriteRef, WriteRef, res, res) (*find dynamic type and procedure references from M*)
-      END ;
-      mod := mod.next
-    END ;
-    mod := Modules.root; continue := FALSE; (*"continue" here abused to indicate the reference origin*)
-    WHILE mod # NIL DO
-      IF (mod.name[0] # 0X) & ~Modules.Selected(mod) THEN
-        pref := mod.pvr; SYSTEM.GET(pref, pvadr); M := mod;
-        WHILE pvadr # 0 DO SYSTEM.GET(pvadr, r); (*scan global procedure variables of each module M*)
-          res := WriteRef(r, continue); (*find static procedure references from M*)
-          INC(pref, 4); SYSTEM.GET(pref, pvadr)
+      IF (mod.name[0] # 0X) & (mod.data <= x) & (x < mod.imp) & Modules.Selected(mod) THEN
+        IF s # pat THEN unmark END ;
+        IF unmarked(mod) THEN mark(mod); pat := s;
+          IF x < mod.code THEN Texts.WriteString(W, "  types of ") ELSE Texts.WriteString(W, "  procedures of ") END ;
+          Texts.WriteString(W, mod.name); Texts.WriteString(W, " in use in ");
+          IF M = NIL THEN Texts.WriteString(W, "global procedures variables of ")
+          ELSE Texts.WriteString(W, "dynamic objects rechable by ")
+          END ;
+          Texts.WriteString(W, s); Texts.WriteLn(W)
         END
       END ;
       mod := mod.next
-    END
-  END FindRefs;
+    END ;
+    RETURN 1
+  END HandleRef;
 
-  PROCEDURE WriteRefs(name: ARRAY OF CHAR);
-  BEGIN
-    IF Modules.NofSelected > 0 THEN FindRefs; Modules.SelectAll(FALSE) END
+  PROCEDURE WriteRefs; (*write references from each unselected module to the selected modules*)
+    VAR res: INTEGER;
+  BEGIN M := Modules.root; pat[0] := 0X; Oberon.SetPar(NIL, NIL, 0); (*exclude viewers reachable only via Oberon.Par.vwr*)
+    unmark; Modules.FindDynamicRefs(HandleRef, NIL, res, res, FALSE); (*dynamic type refs*)
+    unmark; Modules.FindDynamicRefs(NIL, HandleRef, res, res, FALSE); (*dynamic procedure variable refs*)
+    unmark; M := NIL; Modules.FindStaticRefs(HandleRef, res); (*static procedure variable refs*)
+    unmark; Texts.Append(Oberon.Log, W.buf) 
   END WriteRefs;
 
-  PROCEDURE ShowRefs*; (*show references to the specified modules individually*)
+  PROCEDURE ShowRef(name: ARRAY OF CHAR); (*handler for Select*)
+  BEGIN IF Modules.NofSelected > 0 THEN WriteRefs; Modules.Deselect END
+  END ShowRef;
+
+  PROCEDURE ShowRefs*; (*show references from ALL modules (individually) to the specified modules*)
     VAR S: Texts.Scanner;
-  BEGIN Texts.WriteString(W, "System.ShowRefs"); EndLine;
-    Modules.SelectAll(FALSE); Select(S, TRUE, TRUE, FALSE, FALSE, WriteRefs)
+  BEGIN Texts.WriteString(W, "System.ShowRefs"); EndLine; Modules.Deselect; Select(S, TRUE, TRUE, FALSE, FALSE, ShowRef)
   END ShowRefs;
 
-  PROCEDURE ShowGroupRefs*; (*show outside references to the specified modules as a group*)
+  PROCEDURE ShowExternalRefs*; (*show references from EXTERNAL modules (individually) to the specified modules*)
     VAR S: Texts.Scanner;
-  BEGIN Texts.WriteString(W, "System.ShowGroupRefs");
-    Modules.SelectAll(FALSE); Select(S, TRUE, TRUE, FALSE, FALSE, WriteName); EndLine;
-    IF Modules.NofSelected > 0 THEN FindRefs; Modules.SelectAll(FALSE) END
-  END ShowGroupRefs;
+  BEGIN Texts.WriteString(W, "System.ShowExternalRefs");
+    Modules.Deselect; Select(S, TRUE, TRUE, FALSE, FALSE, WriteName); EndLine;
+    IF Modules.NofSelected > 0 THEN WriteRefs; Modules.Deselect END
+  END ShowExternalRefs;
 
-  PROCEDURE FreeMods(this, clients, imports, shrink: BOOLEAN; exclude: ARRAY OF CHAR);
+  PROCEDURE ShowMods(this, clients, imports: BOOLEAN);
+    VAR S: Texts.Scanner;
+  BEGIN Modules.Deselect; Select(S, TRUE, this, clients, imports, WriteName); EndLine;
+    IF Modules.NofSelected > 0 THEN Texts.Write(W, " "); WriteSelection; EndLine; Modules.Deselect END
+  END ShowMods;
+
+  PROCEDURE FreeMods(this, clients, imports: BOOLEAN);
     VAR S: Texts.Scanner; hide: BOOLEAN;
-  BEGIN Modules.SelectAll(FALSE); Select(S, TRUE, this, clients, imports, WriteName); EndLine;
+  BEGIN Modules.Deselect; Select(S, TRUE, this, clients, imports, WriteName); EndLine;
     hide := (S.class = Texts.Char) & (S.c = "/") & (S.nextCh = "f"); (*force option*)
-    IF exclude[0] # 0X THEN Modules.Select(exclude, FALSE, TRUE, FALSE, TRUE) END ; (*deselect exclude and its clients*)
-    IF shrink THEN Modules.ShrinkSelection END ; (*shrink selection until no outside clients exist*)
+    Modules.Select("System", FALSE, TRUE, FALSE, TRUE); (*deselect "System" and its imports*)
     IF Modules.NofSelected > 0 THEN Texts.Write(W, " "); WriteSelection;
       Modules.FreeSelection(hide);
       IF Modules.res = 0 THEN Texts.WriteString(W, " unloading"); EndLine
-      ELSIF Modules.res = 1 THEN Texts.WriteString(W, " unloading failed (clients exist)"); EndLine
+      ELSIF Modules.res = 1 THEN Texts.WriteString(W, " unloading failed (external clients exist)"); EndLine; WriteClients
       ELSIF Modules.res < 5 THEN
         IF hide THEN Texts.WriteString(W, " removing from module list")
         ELSE Texts.WriteString(W, " unloading failed (references exist)")
         END ;
-        EndLine; FindRefs
+        EndLine; WriteRefs
       END ;
-      Modules.SelectAll(FALSE); Oberon.Collect(0)
+      Modules.Deselect; Oberon.Collect(0)
     END
   END FreeMods;
 
-  PROCEDURE Free*; (*free the specified modules as a group; the force option /f hides the modules if references exist*)
-  BEGIN Texts.WriteString(W, "System.Free"); FreeMods(TRUE, FALSE, FALSE, FALSE, "System")
+  PROCEDURE Show*; (*show the specified modules*)
+  BEGIN Texts.WriteString(W, "System.Show"); ShowMods(TRUE, FALSE, FALSE)
+  END Show;
+
+  PROCEDURE ShowImports*; (*show the specified modules and their imports*)
+  BEGIN Texts.WriteString(W, "System.ShowImports"); ShowMods(TRUE, FALSE, TRUE)
+  END ShowImports;
+
+  PROCEDURE ShowClients*; (*show the specified modules and their clients*)
+  BEGIN Texts.WriteString(W, "System.ShowClients"); ShowMods(TRUE, TRUE, FALSE)
+  END ShowClients;
+
+  PROCEDURE Free*; (*free the specified modules as a group; the force option /f hides the modules if refs exist*)
+  BEGIN Texts.WriteString(W, "System.Free"); FreeMods(TRUE, FALSE, FALSE)
   END Free;
 
   PROCEDURE FreeImports*; (*free the specified modules and their imports*)
-  BEGIN Texts.WriteString(W, "System.FreeImports"); FreeMods(TRUE, FALSE, TRUE, FALSE, "System")
+  BEGIN Texts.WriteString(W, "System.FreeImports"); FreeMods(TRUE, FALSE, TRUE)
   END FreeImports;
 
   PROCEDURE FreeClients*; (*free the specified modules and their clients*)
-  BEGIN Texts.WriteString(W, "System.FreeClients"); FreeMods(TRUE, TRUE, FALSE, FALSE, "System")
+  BEGIN Texts.WriteString(W, "System.FreeClients"); FreeMods(TRUE, TRUE, FALSE)
   END FreeClients;
-
-  PROCEDURE FreeRemovableImports*; (*free the removable subset of the specified modules and their imports*)
-  BEGIN Texts.WriteString(W, "System.FreeRemovableImports"); FreeMods(TRUE, FALSE, TRUE, TRUE, "System")
-  END FreeRemovableImports;
-
-  PROCEDURE FreeRemovableClients*; (*free the removable subset of the specified modules and their clients*)
-  BEGIN Texts.WriteString(W, "System.FreeRemovableClients"); FreeMods(TRUE, TRUE, FALSE, TRUE, "System")
-  END FreeRemovableClients;
 
   PROCEDURE FreeFonts*;
   BEGIN Texts.WriteString(W, "System.FreeFonts"); Fonts.Free; EndLine
@@ -496,8 +497,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 7.5.18*)
 
   PROCEDURE List(name: FileDir.FileName; adr: LONGINT; VAR cont: BOOLEAN);
     VAR i0, i, j0, j: INTEGER; hp: FileDir.FileHeader;
-  BEGIN
-    i := 0;
+  BEGIN i := 0;
     WHILE (pat[i] > "*") & (pat[i] = name[i]) DO INC(i) END ;
     IF (pat[i] = 0X) & (name[i] = 0X) THEN i0 := i; j0 := i
     ELSIF pat[i] = "*" THEN
@@ -693,7 +693,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 7.5.18*)
 
   PROCEDURE Unmark*; (*heap*)
     VAR resType, resProc: INTEGER;
-  BEGIN Kernel.Scan(NIL, NIL, resType, resProc)
+  BEGIN Kernel.Scan(NIL, NIL, "unmark", resType, resProc)
   END Unmark;
 
   PROCEDURE Load*; (*module*)
@@ -764,7 +764,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 7.5.18*)
     END
   END RunRsc;
 
-  PROCEDURE Trap1(VAR a: INTEGER; b: INTEGER); (*trap routine installed by RunBin*)
+  PROCEDURE Trap1(VAR a: INTEGER; b, c: INTEGER); (*trap routine installed by RunBin*)
     VAR u, v, w: INTEGER;
   BEGIN u := SYSTEM.REG(15); SYSTEM.GET(u - 4, v); w := v DIV 10H MOD 10H; (*trap number*)
     LED(w + 192); REPEAT UNTIL FALSE
@@ -835,10 +835,10 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 7.5.18*)
     IF S.class = Texts.Name THEN InitMod(S.s) END
   END RunInit;
 
-  PROCEDURE Trap(VAR a: INTEGER; b: INTEGER);
-    VAR u, v, w: INTEGER; mod: Modules.Module;
+  PROCEDURE Trap(VAR a: INTEGER; b, c: INTEGER);
+    VAR u, v, w: INTEGER; mod: Modules.Module; tag, size: LONGINT;
   BEGIN u := SYSTEM.REG(15); SYSTEM.GET(u - 4, v); w := v DIV 10H MOD 10H; (*trap number*)
-    IF w = 0 THEN Kernel.New(a, b)
+    IF w = 0 THEN Kernel.New1(a, b, c)
     ELSE (*trap*) Texts.WriteLn(W); Texts.WriteString(W, "  pos "); Texts.WriteInt(W, v DIV 100H MOD 10000H, 4);
       Texts.WriteString(W, "  TRAP"); Texts.WriteInt(W, w, 4); mod := Modules.root;
       WHILE (mod # NIL) & ((u < mod.code) OR (u >= mod.imp)) DO mod := mod.next END ;

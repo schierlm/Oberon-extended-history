@@ -1,4 +1,4 @@
-MODULE ORB;   (*NW 25.6.2014  / 12.4.2017  in Oberon-07 / AP 7.5.18*)
+MODULE ORB;   (*NW 25.6.2014  / 19.4.2017  in Oberon-07 / AP 15.8.18 Experimental Oberon*)
   IMPORT Files, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
@@ -9,11 +9,13 @@ MODULE ORB;   (*NW 25.6.2014  / 12.4.2017  in Oberon-07 / AP 7.5.18*)
 
   CONST versionkey* = 1; maxTypTab = 64;
     (* class values*) Head* = 0;
-      Const* = 1; Var* = 2; Par* = 3; Fld* = 4; Typ* = 5; SProc* = 6; SFunc* = 7; Mod* = 8;
+      Const* = 1; Var* = 2; Par* = 3; Fld* = 4; Typ* = 5;
+      SProc* = 6; SFunc* = 7; Mod* = 8;
 
     (* form values*)
-      Byte* = 1; Bool* = 2; Char* = 3; Int* = 4; Real* = 5; Set* = 6; Pointer* = 7;
-      NilTyp* = 8; NoTyp* = 9; Proc* = 10; String* = 11; Array* = 12; Record* = 13;
+      Byte* = 1; Bool* = 2; Char* = 3; Int* = 4; Real* = 5; Set* = 6;
+      Pointer* = 7; NilTyp* = 8; NoTyp* = 9; Proc* = 10;
+      String* = 11; Array* = 12; Record* = 13; Ptrs* = {Pointer, NilTyp}; Procs* = {Proc, NoTyp};
 
   TYPE Object* = POINTER TO ObjDesc;
     Module* = POINTER TO ModDesc;
@@ -119,10 +121,13 @@ MODULE ORB;   (*NW 25.6.2014  / 12.4.2017  in Oberon-07 / AP 7.5.18*)
 
   (*------------------------------- Import ---------------------------------*)
 
-  PROCEDURE MakeFileName*(VAR FName: ORS.Ident; name, ext: ARRAY OF CHAR);
+  PROCEDURE MakeFileName*(VAR FName: ORS.Ident; name, context, ext: ARRAY OF CHAR);
     VAR i, j: INTEGER;
   BEGIN i := 0; j := 0;  (*assume name suffix less than 4 characters*)
-    WHILE (i < ORS.IdLen-5) & (name[i] > 0X) DO FName[i] := name[i]; INC(i) END ;
+    WHILE (i < ORS.IdLen-6) & (context[i] > 0X) DO FName[i] := context[i]; INC(i) END ;
+    IF i > 0 THEN  FName[i] := "."; INC(i) END ;
+    WHILE (i < ORS.IdLen-5) & (name[j] > 0X) DO FName[i] := name[j]; INC(i); INC(j) END ;
+    j := 0;
     REPEAT FName[i]:= ext[j]; INC(i); INC(j) UNTIL ext[j] = 0X;
     FName[i] := 0X
   END MakeFileName;
@@ -164,14 +169,17 @@ MODULE ORB;   (*NW 25.6.2014  / 12.4.2017  in Oberon-07 / AP 7.5.18*)
       ELSIF form = Record THEN
         InType(R, thismod, t.base);
         IF t.base.form = NoTyp THEN t.base := NIL; obj := NIL ELSE obj := t.base.dsc END ;
-        Files.ReadNum(R, t.len);  (*TD adr/exno*)
+        Files.ReadNum(R, t.len); (*TD adr/exno*)
         Files.ReadNum(R, t.nofpar);  (*ext level*)
         Files.ReadNum(R, t.size);
         Read(R, class);
         WHILE class # 0 DO  (*fields*)
           NEW(fld); fld.class := class; Files.ReadString(R, fld.name);
-          IF fld.name[0] # 0X THEN fld.expo := TRUE; InType(R, thismod, fld.type) ELSE fld.expo := FALSE; fld.type := nilType END ;
-          Files.ReadNum(R, fld.val); fld.next := obj; obj := fld; Read(R, class)
+          IF fld.name[0] # 0X THEN fld.expo := TRUE; InType(R, thismod, fld.type); Files.ReadNum(R, fld.val) 
+          ELSE (*hidden*) fld.expo := FALSE; Files.ReadNum(R, fld.val);
+            IF fld.val < 0 THEN fld.val := -fld.val-1; fld.type := noType (*proc*) ELSE fld.type := nilType (*ptr*) END
+          END ;
+          fld.next := obj; obj := fld; Read(R, class)
         END ;
         t.dsc := obj
       ELSIF form = Proc THEN
@@ -198,8 +206,8 @@ MODULE ORB;   (*NW 25.6.2014  / 12.4.2017  in Oberon-07 / AP 7.5.18*)
       END
     END
   END InType;
-  
-  PROCEDURE Import*(VAR modid, modid1: ORS.Ident);
+
+  PROCEDURE Import*(VAR modid, modid1, context: ORS.Ident);
     VAR key: LONGINT; class: INTEGER;
       obj, thismod: Object;
       modname, fname: ORS.Ident;
@@ -208,7 +216,7 @@ MODULE ORB;   (*NW 25.6.2014  / 12.4.2017  in Oberon-07 / AP 7.5.18*)
     IF modid1 = "SYSTEM" THEN
       thismod := ThisModule(modid, modid1, TRUE, key); DEC(nofmod);
       thismod.lev := 0; thismod.dsc := system; thismod.rdo := TRUE
-    ELSE MakeFileName(fname, modid1, ".smb"); F := Files.Old(fname);
+    ELSE MakeFileName(fname, modid1, context, ".smb"); F := Files.Old(fname);
       IF F # NIL THEN
         Files.Set(R, F, 0); Files.ReadInt(R, key); Files.ReadInt(R, key); Files.ReadString(R, modname);
         thismod := ThisModule(modid, modid1, TRUE, key); thismod.rdo := TRUE;
@@ -219,7 +227,8 @@ MODULE ORB;   (*NW 25.6.2014  / 12.4.2017  in Oberon-07 / AP 7.5.18*)
           NEW(obj); obj.class := class; Files.ReadString(R, obj.name);
           InType(R, thismod, obj.type); obj.lev := -thismod.lev;
           IF class = Typ THEN obj.type.typobj := obj
-          ELSIF class = Const THEN Files.ReadNum(R, obj.val)
+          ELSIF class = Const THEN
+            IF obj.type.form = Real THEN Files.ReadInt(R, obj.val) ELSE Files.ReadNum(R, obj.val) END
           ELSIF class = Var THEN Files.ReadNum(R, obj.val); obj.rdo := TRUE
           END ;
           obj.next := thismod.dsc; thismod.dsc := obj; Read(R, class)
@@ -232,7 +241,7 @@ MODULE ORB;   (*NW 25.6.2014  / 12.4.2017  in Oberon-07 / AP 7.5.18*)
   (*-------------------------------- Export ---------------------------------*)
 
   PROCEDURE Write(VAR R: Files.Rider; x: INTEGER);
-  BEGIN Files.WriteByte(R, x)  (* -128 <= x < 128 *)
+  BEGIN Files.WriteByte(R, x)
   END Write;
 
   PROCEDURE OutType(VAR R: Files.Rider; t: Type);
@@ -249,16 +258,17 @@ MODULE ORB;   (*NW 25.6.2014  / 12.4.2017  in Oberon-07 / AP 7.5.18*)
       END
     END OutPar;
 
-    PROCEDURE FindHiddenPointers(VAR R: Files.Rider; typ: Type; offset: LONGINT);
-      VAR fld: Object; i, n: LONGINT;
+    PROCEDURE FindHiddenFields(VAR R: Files.Rider; typ: Type; off: LONGINT); (*pointers or procedures*)
+      VAR fld: Object; i, s: LONGINT;
     BEGIN
-      IF (typ.form = Pointer) OR (typ.form = NilTyp) THEN Write(R, Fld); Write(R, 0); Files.WriteNum(R, offset)
+      IF typ.form IN Ptrs THEN Write(R, Fld); Write(R, 0); Files.WriteNum(R, off)
+      ELSIF typ.form IN Procs THEN Write(R, Fld); Write(R, 0); Files.WriteNum(R, -off-1)
       ELSIF typ.form = Record THEN fld := typ.dsc;
-        WHILE fld # NIL DO FindHiddenPointers(R, fld.type, fld.val + offset); fld := fld.next END
-      ELSIF typ.form = Array THEN i := 0; n := typ.len;
-        WHILE i < n DO FindHiddenPointers(R, typ.base, typ.base.size * i + offset); INC(i) END
+        WHILE fld # NIL DO FindHiddenFields(R, fld.type, fld.val + off); fld := fld.next END
+      ELSIF typ.form = Array THEN s := typ.base.size;
+        FOR i := 0 TO typ.len-1 DO FindHiddenFields(R, typ.base, i*s + off) END
       END
-    END FindHiddenPointers;
+    END FindHiddenFields;
 
   BEGIN
     IF t.ref > 0 THEN (*type was already output*) Write(R, -t.ref)
@@ -275,7 +285,7 @@ MODULE ORB;   (*NW 25.6.2014  / 12.4.2017  in Oberon-07 / AP 7.5.18*)
         WHILE fld # NIL DO  (*fields*)
           IF fld.expo THEN
             Write(R, Fld); Files.WriteString(R, fld.name); OutType(R, fld.type); Files.WriteNum(R, fld.val)  (*offset*)
-          ELSE FindHiddenPointers(R, fld.type, fld.val)
+          ELSE FindHiddenFields(R, fld.type, fld.val)
           END ;
           fld := fld.next
         END ;
@@ -293,12 +303,12 @@ MODULE ORB;   (*NW 25.6.2014  / 12.4.2017  in Oberon-07 / AP 7.5.18*)
     END
   END OutType;
 
-  PROCEDURE Export*(VAR modid: ORS.Ident; VAR newSF: BOOLEAN; VAR key: LONGINT);
+  PROCEDURE Export*(VAR modid, context: ORS.Ident; VAR newSF: BOOLEAN; VAR key: LONGINT);
     VAR x, sum, oldkey: LONGINT;
       obj, obj0: Object;
       filename: ORS.Ident;
       F, F1: Files.File; R, R1: Files.Rider;
-  BEGIN Ref := Record + 1; MakeFileName(filename, modid, ".smb");
+  BEGIN Ref := Record + 1; MakeFileName(filename, modid, context, ".smb");
     F := Files.New(filename); Files.Set(R, F, 0);
     Files.WriteInt(R, 0); (*placeholder*)
     Files.WriteInt(R, 0); (*placeholder for key to be inserted at the end*)
@@ -309,7 +319,11 @@ MODULE ORB;   (*NW 25.6.2014  / 12.4.2017  in Oberon-07 / AP 7.5.18*)
         Write(R, obj.class); Files.WriteString(R, obj.name);
         OutType(R, obj.type);
         IF obj.class = Const THEN
-          IF obj.type.form = Proc THEN Files.WriteNum(R, obj.exno) ELSE Files.WriteNum(R, obj.val) END
+          IF obj.type.form = Proc THEN Files.WriteNum(R, obj.exno)
+          ELSIF obj.type.form = String THEN Files.WriteNum(R, obj.exno + obj.val DIV 100000H (*len*) * 100000H)
+          ELSIF obj.type.form = Real THEN Files.WriteInt(R, obj.val)
+          ELSE Files.WriteNum(R, obj.val)
+          END
         ELSIF obj.class = Var THEN Files.WriteNum(R, obj.exno)
         END
       END ;

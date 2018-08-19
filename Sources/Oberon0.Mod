@@ -1,4 +1,4 @@
-MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 4.4.18*)
+MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 4.7.18*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules, RS232;
   CONST swi = -60; (*switches*)
     stat = -52; (*RS-232*)
@@ -12,22 +12,28 @@ MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 4.4.1
   (*------------ send and receive files ------------*)
 
   PROCEDURE Receive; (*filename - receive file*)
-    VAR x, n, n0: INTEGER;
+    VAR x, n, i: INTEGER;
       name: ARRAY 32 OF CHAR;
       F: Files.File; R: Files.Rider;
-  BEGIN RS232.RecStr(name); RS232.Send(ACK);
-    F := Files.New(name); Files.Set(R, F, 0);
-    REPEAT (*receive packet*)
-      RS232.Rec(n); n0 := n;
-      WHILE n > 0 DO RS232.Rec(x); Files.Write(R, CHR(x)); DEC(n) END ;
-      RS232.Send(ACK)
-    UNTIL n0 < BlkLen;
-    Files.Register(F); RS232.Send(ACK)
+      buf: ARRAY 256 OF BYTE;
+  BEGIN RS232.RecStr(name); F := Files.New(name);
+    IF F # NIL THEN
+      Files.Set(R, F, 0); RS232.Send(ACK);
+      REPEAT (*receive packet*)
+        RS232.Rec(n); i := 0;
+        WHILE i < n DO RS232.Rec(x); buf[i] := x; INC(i) END ;
+        i := 0;
+        WHILE i < n DO Files.WriteByte(R, buf[i]); INC(i) END ;
+        RS232.Send(ACK)
+      UNTIL n < BlkLen;
+      Files.Register(F); RS232.Send(ACK)
+    ELSE RS232.Send(NAK)
+    END
   END Receive;
 
   PROCEDURE Send; (*filename - send file*)
     VAR ch: CHAR;
-      x, n, n0, L: INTEGER;
+      x, n, i, L: INTEGER;
       name: ARRAY 32 OF CHAR;
       F: Files.File; R: Files.Rider;
   BEGIN RS232.RecStr(name); F := Files.Old(name);
@@ -35,11 +41,11 @@ MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 4.4.1
       RS232.Send(ACK); L := Files.Length(F); Files.Set(R, F, 0);
       REPEAT (*send packet*)
         IF L > BlkLen THEN n := BlkLen ELSE n := L END ;
-        n0 := n; RS232.Send(n); DEC(L, n);
-        WHILE n > 0 DO Files.Read(R, ch); RS232.Send(ORD(ch)); DEC(n) END ;
+        RS232.Send(n); DEC(L, n); i := 0;
+        WHILE i < n DO Files.Read(R, ch); RS232.Send(ORD(ch)); INC(i) END ;
         RS232.Rec(x);
-        IF x # ACK THEN n0 := 0 END
-      UNTIL n0 < BlkLen;
+        IF x # ACK THEN n := 0 END
+      UNTIL n < BlkLen;
       RS232.Rec(x)
     ELSE RS232.Send(NAK)
     END
@@ -272,12 +278,12 @@ MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 4.4.1
     Kernel.PutSector(secno*29, buf)
   END ClearSector;
 
-  PROCEDURE LoadBootArea; (*filename - load boot file onto the boot area of the local disk, starting at sector 2*)
+  PROCEDURE LoadBoot; (*filename - load boot file onto the boot area of the local disk, starting at sector 2*)
     VAR i, secno: INTEGER; b: BYTE;
       F: Files.File; R: Files.Rider;
       buf: ARRAY Kernel.SectorLength OF BYTE;
       name: ARRAY 32 OF CHAR;
-  BEGIN RS232.RecStr(name); RS232.SendStr("LoadBootArea  ");
+  BEGIN RS232.RecStr(name); RS232.SendStr("LoadBoot  ");
     F := Files.Old(name);
     IF F # NIL THEN RS232.SendInt(Files.Length(F)); (*success*)
       secno := 2; i := 0; Files.Set(R, F, 0); Files.ReadByte(R, b);
@@ -291,7 +297,7 @@ MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 4.4.1
       END
     ELSE RS232.SendInt(-1) (*file not found*)
     END
-  END LoadBootArea;
+  END LoadBoot;
 
   PROCEDURE ClearDirectory; (*clear file directory (root page)*)
     VAR i: INTEGER;
@@ -387,7 +393,7 @@ MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 4.4.1
         ELSIF code = 51 THEN ClearMemory (*adr, n*)
         ELSIF code = 52 THEN WriteSector (*secno, n, list of n values*)
         ELSIF code = 53 THEN ClearSector (*secno, n*)
-        ELSIF code = 100 THEN LoadBootArea (*filename*)
+        ELSIF code = 100 THEN LoadBoot (*filename*)
         ELSIF code = 101 THEN ClearDirectory
         ELSIF code = 102 THEN Execute (*filename*)
         ELSE end := FALSE

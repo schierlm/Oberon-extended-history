@@ -16,20 +16,20 @@ System.RenameFiles ~         Stars.Open Stars.Run System.Free Stars~
 System.DeleteFiles ~           "13.ShowModules"  "*tars.Stop"
 
 System.ShowModules  System.ShowCommands ^  Modules.Collect
-System.ShowImports ORP~ System.ShowRemovableImports ORP~
-System.ShowClients Oberon~ System.ShowRemovableClients Oberon~
-                                System.ShowRefs Hilbert Sierpinski Stars ~
+System.ShowImports ORP~     System.ShowRefs Hilbert Sierpinski ~
+System.ShowClients Oberon~  System.ShowExternalRefs Hilbert Viewers ~
+                                
 PCLink1.Run
 Hilbert.Draw  Sierpinski.Draw  Blink.Run  Stars.Open
 Tools.Inspect 0  Tools.Sector 1  Tools.ShowFile
 Tools.Recall  Tools.Clear
 
-# ------------ rebuilding the system ----------------
+# ------------ rebuilding the system on the local machine ----------------
 
 ORP.Compile ORS.Mod/s ORB.Mod/s ~
 ORP.Compile ORG.Mod/s ORP.Mod/s ~
-ORP.Compile Boot.Mod/s ~                           Edit.Open Build.Tool ~
-System.Free ORP ORG ORB ORS Boot ~
+ORP.Compile Boot.Mod/s ORTool.Mod/s ~           Edit.Open Build.Tool ~
+System.Free ORTool Boot ORP ORG ORB ORS ~
 
 ORP.Compile Kernel.Mod/s FileDir.Mod/s Files.Mod/s Modules.Mod/s ~
 Boot.Link Modules ~
@@ -43,16 +43,29 @@ ORP.Compile TextFrames.Mod/s ~                Edit.Open TextFrames.Mod
 ORP.Compile System.Mod/s ~                       Edit.Open System.Mod
 ORP.Compile Edit.Mod/s Tools.Mod/s ~        Edit.Open Edit.Mod
 
-ORP.Compile ORS.Mod/s ORB.Mod/s ORG.Mod/s ORP.Mod/s ~
-ORP.Compile Boot.Mod/s ORTool.Mod/s ~
+ORP.Compile PCLink1.Mod/s Clipboard.Mod ~
+ORP.Compile RS232.Mod/s SCC.Mod/s Net.Mod/s ~
 
-ORP.Compile BootLoad.Mod BootLoadDisk.Mod ~
-ORP.Compile PCLink1.Mod RS232.Mod Clipboard.Mod ~
-ORP.Compile SCC.Mod/s Net.Mod/s ~
-
-ORP.Compile Graphics.Mod/s ~  ORP.Compile GraphicFrames.Mod/s ~
+ORP.Compile Graphics.Mod/s GraphicFrames.Mod/s ~
 ORP.Compile GraphTool.Mod Draw.Mod ~
 
-ORP.Compile Curves.Mod/s ~                  ORP.Compile Sierpinski.Mod ~
-ORP.Compile Hilbert.Mod Stars.Mod ~   ORP.Compile Blink.Mod ~
+ORP.Compile Curves.Mod/s Sierpinski.Mod ~
+ORP.Compile Hilbert.Mod Stars.Mod ~
 ORP.Compile Rectangles.Mod/s Checkers.Mod ~
+ORP.Compile Math.Mod/s PIO.Mod/s Blink.Mod/s ~
+
+ORP.Compile BootLoad.Mod ~     # regular Oberon boot loader
+
+# ------------ rebuilding the system on a remote target machine ----------------
+
+ORP.Compile Kernel.Mod FileDir.Mod Files.Mod Modules.Mod ~       # modules for the "regular" boot file
+ORP.Compile RS232.Mod Oberon0.Mod ~               # additional modules for the "build-up" boot file
+ORP.Compile ORC.Mod/s Oberon0Tool.Mod/s ~     # partner program ORC and Oberon0 tool module
+
+ORP.Compile Boot.Mod/s ~    # boot linker/loader and system building tool
+
+Boot.Link Modules ~                # generate a pre-linked binary file of the "regular" boot file (Modules.bin)
+Boot.Link Oberon0 ~               # generate a pre-linked binary file of the "build-up" boot file (Oberon0.bin)
+
+ORP.Compile BootLoadDisk.Mod/s ~    # generate a boot loader for booting the target system from the local disk
+ORP.Compile BootLoadLine.Mod/s ~    # generate a boot loader for booting the target system over the data link

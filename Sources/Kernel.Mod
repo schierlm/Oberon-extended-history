@@ -1,13 +1,24 @@
-MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 11.11.17*)
+MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 15.8.18 Experimental Oberon*)
   IMPORT SYSTEM;
   CONST SectorLength* = 1024;
     timer = -64; spiData = -48; spiCtrl = -44;
     CARD0 = 1; SPIFAST = 4;
     FSoffset = 80000H; (*256MB in 512-byte blocks*)
     mapsize = 10000H; (*1K sectors, 64MB*)
+    DescSize = 56; (*size of hidden type descriptor 'TypeDesc', as defined below*)
+    DescHeapSize = 64; (*size of hidden type descriptor including hidden prefix fields tag and mk*)
+    nextoffset = 52; (*offset of field 'next' in hidden type descriptor*)
 
   TYPE Sector* = ARRAY SectorLength OF BYTE;
-    Handler* = PROCEDURE(x: LONGINT; VAR continue: BOOLEAN): INTEGER;
+    Tag = POINTER TO TypeDesc;
+    TypeDesc = RECORD
+      size: LONGINT; (*size of heap record including hidden prefix fields tag and mk*)
+      ext: ARRAY 3 OF LONGINT; (*extension table containing tags of base types*)
+      off: ARRAY 8 OF LONGINT; (*pointer offsets, followed by procedure variable offsets*)
+      mark: LONGINT; (*used to collect hidden type descriptors*)
+      next: Tag
+    END ;
+    Handler* = PROCEDURE(x: LONGINT; s: ARRAY OF CHAR; VAR continue: BOOLEAN): INTEGER;
 
   VAR allocated*, NofSectors*: INTEGER;
     heapOrg*, heapLim*: INTEGER; 
@@ -16,6 +27,8 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 11.11.17*)
     list0, list1, list2, list3: INTEGER;  (*lists of free blocks of size n*256, 128, 64, 32 bytes*)
     data: INTEGER; (*SPI data in*)
     sectorMap: ARRAY mapsize DIV 32 OF SET;
+    root: Tag; (*list of hidden type descriptors created by NEW(ptr, size)*)
+    td: TypeDesc; (*used as type descriptor for list members*)
     
 (* ---------- New: heap allocation ----------*)
 
@@ -65,8 +78,8 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 11.11.17*)
     END
   END GetBlock32;
 
-   PROCEDURE New*(VAR ptr: LONGINT; tag: LONGINT);
-    (*called by NEW via MT[0]; ptr and tag are pointers*)
+  PROCEDURE New*(VAR ptr: LONGINT; tag: LONGINT);
+    (*called by NEW(ptr) via MT[0]; ptr and tag are pointers*)
     VAR p, size, lim: LONGINT;
   BEGIN SYSTEM.GET(tag, size);
     IF size = 32 THEN GetBlock32(p)
@@ -80,25 +93,48 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 11.11.17*)
     END
   END New;
 
+  PROCEDURE New1*(VAR ptr: LONGINT; tag, size: LONGINT);
+    (*called by NEW(ptr, size) via MT[0]; ptr and tag are pointers; size is in bytes*)
+    VAR t: Tag; p: LONGINT;
+  BEGIN
+    IF size < 0 THEN (*NEW(ptr)*) New(ptr, tag)
+    ELSE (*NEW(ptr, size)*)
+      IF size <= 24 THEN size := 32 ELSIF size <= 56 THEN size := 64 ELSIF size <= 120 THEN size := 128
+      ELSE size := (size+263) DIV 256 * 256
+      END ;
+      t := root;
+      WHILE (t # NIL) & (t.size # size) DO t := t.next END ;
+      IF t = NIL THEN (*allocate hidden type descriptor; DescHeapSize = 64 assumed*)
+        GetBlock64(p);
+        IF p = 0 THEN ptr := 0
+        ELSE SYSTEM.PUT(p, SYSTEM.ADR(td)); SYSTEM.PUT(p+4, 0); INC(allocated, DescHeapSize);
+          t := SYSTEM.VAL(Tag, p+8); t.next := root; root := t; t.size := size; t.mark := 0;
+          t.ext[0] := -1; t.ext[1] := -1; t.ext[2] := -1; t.off[0] := -1; (*ptr*) t.off[1] := -1; (*pvr*)
+          New(ptr, SYSTEM.ADR(t^))
+        END
+      ELSE New(ptr, SYSTEM.ADR(t^))
+      END
+    END
+  END New1;
+
 (* ---------- Garbage collector ----------*)
 
   PROCEDURE Mark*(pref: LONGINT);
     VAR pvadr, offadr, offset, tag, p, q, r: LONGINT;
   BEGIN SYSTEM.GET(pref, pvadr); (*pointers < heapOrg considered NIL*)
-    WHILE pvadr # 0 DO SYSTEM.GET(pvadr, p);
-      IF p >= heapOrg THEN SYSTEM.GET(p-4, offadr);
-        IF offadr = 0 THEN q := p; (*mark elements in data structure with root p*)
-          REPEAT SYSTEM.GET(p-4, offadr);
-            IF offadr = 0 THEN SYSTEM.GET(p-8, tag); offadr := tag + 16 ELSE INC(offadr, 4) END ;
-            SYSTEM.PUT(p-4, offadr); SYSTEM.GET(offadr, offset);
-            IF offset # -1 THEN (*down*)
-              SYSTEM.GET(p+offset, r); SYSTEM.GET(r-4, offadr);
-              IF (r >= heapOrg) & (offadr = 0) THEN SYSTEM.PUT(p+offset, q); q := p; p := r END
-            ELSE (*up*) SYSTEM.GET(q-4, offadr); SYSTEM.GET(offadr, offset);
-              IF p # q THEN SYSTEM.GET(q+offset, r); SYSTEM.PUT(q+offset, p); p := q; q := r END
-            END
-          UNTIL (p = q) & (offset = -1)
-        END
+    WHILE pvadr # 0 DO
+      SYSTEM.GET(pvadr, p); SYSTEM.GET(p-4, offadr);
+      IF (p >= heapOrg) & (offadr = 0) THEN q := p;   (*mark elements in data structure with root p*)
+        REPEAT SYSTEM.GET(p-4, offadr);
+          IF offadr = 0 THEN SYSTEM.GET(p-8, tag); offadr := tag + 16 ELSE INC(offadr, 4) END ;
+          SYSTEM.PUT(p-4, offadr); SYSTEM.GET(offadr, offset);
+          IF offset # -1 THEN (*down*)
+            SYSTEM.GET(p+offset, r); SYSTEM.GET(r-4, offadr);
+            IF (r >= heapOrg) & (offadr = 0) THEN SYSTEM.PUT(p+offset, q); q := p; p := r END
+          ELSE (*up*) SYSTEM.GET(q-4, offadr); SYSTEM.GET(offadr, offset);
+            IF p # q THEN SYSTEM.GET(q+offset, r); SYSTEM.PUT(q+offset, p); p := q; q := r END
+          END
+        UNTIL (p = q) & (offset = -1)
       END ;
       INC(pref, 4); SYSTEM.GET(pref, pvadr)
     END
@@ -106,6 +142,7 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 11.11.17*)
 
   PROCEDURE Collect*;
     VAR p, q, mark, tag, size: LONGINT;
+      t, prev: Tag; continue: BOOLEAN;
   BEGIN p := heapOrg;
     REPEAT SYSTEM.GET(p+4, mark); q := p;
       WHILE mark = 0 DO
@@ -126,27 +163,42 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 11.11.17*)
           SYSTEM.PUT(q, size); SYSTEM.PUT(q+4, -1); SYSTEM.PUT(q+8, list0); list0 := q; INC(q, size)
         END
       END ;
-      IF mark > 0 THEN SYSTEM.GET(p, tag); SYSTEM.GET(tag, size); SYSTEM.PUT(p+4, 0); INC(p, size)
+      IF mark > 0 THEN SYSTEM.GET(p, tag); SYSTEM.GET(tag, size); SYSTEM.PUT(p+4, 0); INC(p, size);
+        t := root; continue := TRUE;
+        WHILE continue & (t # NIL) DO (*mark referenced hidden type descriptors*)
+          IF SYSTEM.VAL(LONGINT, t) = tag THEN INC(t.mark); continue := FALSE END ;
+          t := t.next
+        END
       ELSE (*free*) SYSTEM.GET(p, size); INC(p, size)
       END
-    UNTIL p >= heapLim
+    UNTIL p >= heapLim;
+    t := root;
+    WHILE t # NIL DO (*remove no longer referenced hidden type descriptors for later collection by GC*)
+      IF t.mark > 0 THEN t.mark := 0; prev := t
+      ELSIF t = root THEN root := root.next
+      ELSE prev.next := t.next
+      END ;
+      t := t.next
+    END
   END Collect;
 
 (* ---------- Generic heap scan ----------*)
 
-  PROCEDURE Scan*(type, proc: Handler; VAR resType, resProc: INTEGER); (*returns sum of handler calls*)
+  PROCEDURE Scan*(type, proc: Handler; s: ARRAY OF CHAR; VAR resType, resProc: INTEGER);
     VAR p, r, mark, tag, size, offadr, offset: LONGINT; continue: BOOLEAN;
   BEGIN p := heapOrg; resType := 0; resProc := 0; continue := (type # NIL) OR (proc # NIL);
     REPEAT SYSTEM.GET(p+4, mark);
       IF mark < 0 THEN (*free*) SYSTEM.GET(p, size)
       ELSE (*allocated*) SYSTEM.GET(p, tag); SYSTEM.GET(tag, size);
-        IF mark > 0 THEN SYSTEM.PUT(p+4, 0); (*unmark*)
+        IF mark > 0 THEN (*marked*) SYSTEM.PUT(p+4, 0);
           IF continue THEN
-            IF type # NIL THEN INC(resType, type(tag, continue)) END ; (*call type for type tag*)
-            IF continue & (proc # NIL) THEN offadr := tag - 4; SYSTEM.GET(offadr, offset);
-              WHILE continue & (offset # -1) DO SYSTEM.GET(p+8+offset, r);
-                INC(resProc, proc(r, continue)); (*call proc for each procedure variable*)
-                DEC(offadr, 4); SYSTEM.GET(offadr, offset)
+            IF type # NIL THEN INC(resType, type(tag, s, continue)) END ;
+            IF continue & (proc # NIL) THEN offadr := tag + 16; SYSTEM.GET(offadr, offset);
+              WHILE offset # -1 DO (*pointers*) INC(offadr, 4); SYSTEM.GET(offadr, offset) END ;
+              INC(offadr, 4); SYSTEM.GET(offadr, offset);
+              WHILE continue & (offset # -1) DO (*procedures*) SYSTEM.GET(p+8+offset, r);
+                INC(resProc, proc(r, s, continue));
+                INC(offadr, 4); SYSTEM.GET(offadr, offset)
               END
             END
           END
@@ -277,13 +329,19 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 11.11.17*)
   BEGIN SYSTEM.PUT(at, 0E7000000H + (Padr - at) DIV 4 -1)
   END Install;
 
-  PROCEDURE Trap(VAR a: INTEGER; b: INTEGER);
+  PROCEDURE Trap(VAR a: INTEGER; b, c: INTEGER);
     VAR u, v, w: INTEGER;
   BEGIN u := SYSTEM.REG(15); SYSTEM.GET(u - 4, v); w := v DIV 10H MOD 10H; (*trap number*)
-    IF w = 0 THEN New(a, b)
+    IF w = 0 THEN New1(a, b, c)
     ELSE (*stop*) LED(w + 192); REPEAT UNTIL FALSE
     END
   END Trap;
+
+  PROCEDURE InitTD;
+  BEGIN root := NIL; td.next := NIL; td.size := DescHeapSize; td.mark := 0;
+    td.ext[0] := -1; td.ext[1] := -1; td.ext[2] := -1;
+    td.off[0] := nextoffset; td.off[1] := -1; (*ptr*) td.off[2] := -1 (*pvr*)
+  END InitTD;
 
   PROCEDURE Init*;
   BEGIN Install(SYSTEM.ADR(Trap), 20H);  (*install temporary trap*)
@@ -291,7 +349,7 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 11.11.17*)
     stackOrg := heapOrg; stackSize := 8000H; heapLim := MemLim;
     list1 := 0; list2 := 0; list3 := 0; list0 := heapOrg;
     SYSTEM.PUT(list0, heapLim - heapOrg); SYSTEM.PUT(list0+4, -1); SYSTEM.PUT(list0+8, 0);
-    allocated := 0; clock := 0; InitSecMap
+    allocated := 0; clock := 0; InitSecMap; InitTD
   END Init;
 
 END Kernel.
