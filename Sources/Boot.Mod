@@ -1,4 +1,4 @@
-MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 15.8.18 Experimental Oberon*)
+MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 1.9.18 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, Files, Modules, Texts, Oberon;
   CONST versionkey = 1X; versionkey0 = 0X; MT = 12; DescSize = 84;
     MemLim = 0E7EF0H; stackOrg = 80000H; maxCode = 8000; CR = 0DX;
@@ -83,7 +83,7 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 15.8.18 Experimental Ober
         INC(size, DescSize);
         IF AllocPtr + size < limit THEN (*allocate*)
           p := AllocPtr; mod := SYSTEM.VAL(Module, p);
-          AllocPtr := (p + size + 3) DIV 4 * 4; mod.size := AllocPtr - p;
+          AllocPtr := (p + size + 31) DIV 32 * 32; mod.size := AllocPtr - p;
           IF root = NIL THEN mod.num := 1 ELSE mod.num := root.num + 1 END ;
           mod.next := root; root := mod
         ELSE error(7, name1)
@@ -425,6 +425,6 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 15.8.18 Experimental Ober
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END WriteStream;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 15.8.18 Experimental Oberon");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 1.9.18 Experimental Oberon");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); limit := Kernel.heapOrg; DEC(limit, 8000H)
 END Boot.

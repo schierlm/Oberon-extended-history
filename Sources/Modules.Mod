@@ -1,4 +1,4 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 15.8.18 Experimental Oberon*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.9.19 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, Files;
   CONST versionkey = 1X; MT = 12; DescSize = 84; context = "EO";
 
@@ -94,7 +94,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 15.8.18 
         IF mod = NIL THEN (*no large enough hole was found*)
           IF AllocPtr + size < limit THEN (*allocate*)
             p := AllocPtr; mod := SYSTEM.VAL(Module, p);
-            AllocPtr := (p + size + 3) DIV 4 * 4; mod.size := AllocPtr - p;
+            AllocPtr := (p + size + 31) DIV 32 * 32; mod.size := AllocPtr - p;
             IF root = NIL THEN mod.num := 1 ELSE mod.num := root.num + 1 END ;
             mod.next := root; root := mod
           ELSE error(7, name1)

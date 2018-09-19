@@ -1,4 +1,4 @@
-MODULE ORB;   (*NW 25.6.2014  / 19.4.2017  in Oberon-07 / AP 15.8.18 Experimental Oberon*)
+MODULE ORB;   (*NW 25.6.2014  / 17.9.2018  in Oberon-07 / AP 18.9.18 Experimental Oberon*)
   IMPORT Files, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
@@ -295,7 +295,7 @@ MODULE ORB;   (*NW 25.6.2014  / 19.4.2017  in Oberon-07 / AP 15.8.18 Experimenta
       IF (t.mno > 0) & (obj # NIL) THEN  (*re-export, output name*)
         mod := topScope.next;
         WHILE (mod # NIL) & (mod.lev # t.mno) DO mod := mod.next END ;
-        IF mod # NIL THEN Files.WriteString(R, mod.name); Files.WriteInt(R, mod.val); Files.WriteString(R, obj.name)
+        IF mod # NIL THEN Files.WriteString(R, mod(Module).orgname); Files.WriteInt(R, mod.val); Files.WriteString(R, obj.name)
         ELSE ORS.Mark("re-export not found"); Write(R, 0)
         END
       ELSE Write(R, 0)
@@ -420,5 +420,5 @@ BEGIN
   enter("LDPSR", SProc, noType, 131);
   enter("COPY", SProc, noType, 123);
   enter("PUT", SProc, noType, 112);
-  enter("GET", SProc, noType, 102);
+  enter("GET", SProc, noType, 102)
 END ORB.

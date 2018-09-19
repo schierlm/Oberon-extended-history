@@ -1,4 +1,4 @@
-MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 22.7.2018  Oberon compiler; code generator for RISC / AP 15.8.18 Experimental Oberon*)
+MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 17.9.2018  Oberon compiler; code generator for RISC / AP 18.9.18 Experimental Oberon*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser OSAP; result in array "code".
@@ -91,7 +91,8 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 22.7.2018  Oberon compiler; code 
   PROCEDURE CheckRegs*;
   BEGIN
     IF RH # 0 THEN ORS.Mark("Reg Stack"); RH := 0 END ;
-    IF pc >= maxCode - 40 THEN ORS.Mark("program too long") END
+    IF pc >= maxCode - 40 THEN ORS.Mark("program too long") END ;
+    IF frame # 0 THEN ORS.Mark("frame error"); frame := 0 END
   END CheckRegs;
 
   PROCEDURE SetCC(VAR x: Item; n: LONGINT);
@@ -261,7 +262,6 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 22.7.2018  Oberon compiler; code 
   PROCEDURE MakeItem*(VAR x: Item; y: ORB.Object; curlev: LONGINT);
   BEGIN x.mode := y.class; x.type := y.type; x.a := y.val; x.rdo := y.rdo;
     IF y.class = ORB.Par THEN x.b := 0
-    ELSIF y.class = ORB.Typ THEN x.a := y.type.len; x.r := -y.lev
     ELSIF (y.class = ORB.Const) & (y.type.form = ORB.String) THEN x.r := y.lev;
       x.a := y.val MOD 100000H; (*strx / exno*) x.b := y.val DIV 100000H (*len*)
     ELSE x.r := y.lev
@@ -284,18 +284,18 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 22.7.2018  Oberon compiler; code 
   PROCEDURE Index*(VAR x, y: Item);   (* x := x[y] *)
     VAR s, lim: LONGINT;
   BEGIN s := x.type.base.size; lim := x.type.len;
+    IF (y.mode = ORB.Const) & (y.a < 0) THEN ORS.Mark("bad index") END ;
     IF (y.mode = ORB.Const) & (lim >= 0) THEN
-      IF (y.a < 0) OR (y.a >= lim) THEN ORS.Mark("bad index") END ;
+      IF y.a >= lim THEN ORS.Mark("bad index") END ;
       IF x.mode IN {ORB.Var, RegI} THEN x.a := y.a * s + x.a
       ELSIF x.mode = ORB.Par THEN x.b := y.a * s + x.b
       END
     ELSE load(y);
       IF check THEN  (*check array bounds*)
         IF lim >= 0 THEN Put1a(Cmp, RH, y.r, lim)
-        ELSE (*open array*)
-          IF x.mode IN {ORB.Var, ORB.Par} THEN Put2(Ldr, RH, SP, x.a+4+frame); Put0(Cmp, RH, y.r, RH)
-          ELSE ORS.Mark("error in Index")
-          END
+        ELSIF x.mode IN {ORB.Var, ORB.Par} THEN (*open array param*) Put2(Ldr, RH, SP, x.a+4+frame); Put0(Cmp, RH, y.r, RH)
+        ELSIF x.mode = RegI THEN (*dynamic open array*) Put2(Ldr, RH, x.r, -16); (*len*) Put0(Cmp, RH, y.r, RH)
+        ELSE ORS.Mark("error in Index")
         END ;
         Trap(10, 1)  (*BCC*)
       END ;
@@ -326,6 +326,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 22.7.2018  Oberon compiler; code 
     ELSIF x.mode = RegI THEN Put2(Ldr, x.r, x.r, x.a); NilCheck
     ELSIF x.mode # Reg THEN ORS.Mark("bad mode in DeRef")
     END ;
+    IF x.type.base.form = ORB.Array THEN Put1(Add, x.r, x.r, 16) END ; (*pointer to array*)
     x.mode := RegI; x.a := 0; x.b := 0
   END DeRef;
 
@@ -337,7 +338,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 22.7.2018  Oberon compiler; code 
     END
   END Q;
 
-  PROCEDURE FindRefFlds(ftyp: SET; typ: ORB.Type; off: LONGINT; VAR dcw: LONGINT); (*pointers or procedures*)
+  PROCEDURE FindRefFlds(ftyp: SET; typ: ORB.Type; off: LONGINT; VAR dcw: LONGINT);
     VAR fld: ORB.Object; i, s: LONGINT;
   BEGIN
     IF typ.form IN ftyp THEN data[dcw] := off; INC(dcw)
@@ -632,53 +633,55 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 22.7.2018  Oberon compiler; code 
 
   PROCEDURE StoreStruct*(VAR x, y: Item); (* x := y, frame = 0 *)
     VAR s, pc0: LONGINT;
-  BEGIN
-    IF y.type.size # 0 THEN
-      loadAdr(x); loadAdr(y);
-      IF (x.type.form = ORB.Array) &  (x.type.len > 0) THEN
-        IF y.type.len >= 0 THEN 
-          IF x.type.size = y.type.size THEN Put1a(Mov, RH, 0, (y.type.size+3) DIV 4)
-          ELSE ORS.Mark("different length/size, not implemented")
-          END
-        ELSE (*y  open array*) Put2(Ldr, RH, SP, y.a+4); s := y.type.base.size;  (*element size*)
-          pc0 := pc; Put3(BC, EQ, 0);
-          IF s = 1 THEN Put1(Add, RH, RH, 3); Put1(Asr, RH, RH, 2)
-          ELSIF s # 4 THEN Put1a(Mul, RH, RH, s DIV 4)
-          END ;
-          IF check THEN
-            Put1a(Mov, RH+1, 0, (x.type.size+3) DIV 4); Put0(Cmp, RH+1, RH, RH+1); Trap(GT, 3)
-          END ;
-          fix(pc0, pc + 5 - pc0)
+  BEGIN loadAdr(x); loadAdr(y);
+    IF (x.type.form = ORB.Array) & (x.type.len > 0) THEN
+      IF y.type.len >= 0 THEN
+        IF x.type.size = y.type.size THEN Put1a(Mov, RH, 0, (y.type.size+3) DIV 4)
+        ELSE ORS.Mark("different length/size, not implemented")
         END
-      ELSIF x.type.form = ORB.Record THEN Put1a(Mov, RH, 0, x.type.size DIV 4)
-      ELSE ORS.Mark("inadmissible assignment")
-      END ;
-      Put2(Ldr, RH+1, y.r, 0); Put1(Add, y.r, y.r, 4);
-      Put2(Str, RH+1, x.r, 0); Put1(Add, x.r, x.r, 4);
-      Put1(Sub, RH, RH, 1); Put3(BC, NE, -6)
+      ELSE (*y open array param or dynamic open array*)
+        IF y.type.size > 0 THEN Put2(Ldr, RH, SP, y.a+4) ELSE Put2(Ldr, RH, y.r, -16) END ; (*len*)
+        s := y.type.base.size;  (*element size*)
+        pc0 := pc; Put3(BC, EQ, 0);
+        IF s = 1 THEN Put1(Add, RH, RH, 3); Put1(Asr, RH, RH, 2)
+        ELSIF s # 4 THEN Put1a(Mul, RH, RH, s DIV 4)
+        END ;
+        IF check THEN (*check array lengths*)
+          Put1a(Mov, RH+1, 0, (x.type.size+3) DIV 4); Put0(Cmp, RH+1, RH, RH+1); Trap(GT, 3)
+        END ;
+        fix(pc0, pc + 5 - pc0)
+      END
+    ELSIF x.type.form = ORB.Record THEN Put1a(Mov, RH, 0, x.type.size DIV 4)
+    ELSE ORS.Mark("inadmissible assignment")
     END ;
-    RH := 0
+    Put2(Ldr, RH+1, y.r, 0); Put1(Add, y.r, y.r, 4);
+    Put2(Str, RH+1, x.r, 0); Put1(Add, x.r, x.r, 4);
+    Put1(Sub, RH, RH, 1); Put3(BC, NE, -6); RH := 0
   END StoreStruct;
 
-  PROCEDURE CopyString*(VAR x, y: Item);  (* x := y *) 
+  PROCEDURE CopyString*(VAR x, y: Item);  (* x := y, frame = 0 *) 
      VAR len: LONGINT;
    BEGIN loadAdr(x); len := x.type.len;
     IF len >= 0 THEN
       IF len <  y.b THEN ORS.Mark("string too long") END
-    ELSIF check THEN Put2(Ldr, RH, SP, x.a+4);  (*open array len, frame = 0*)
+    ELSIF check THEN (*x open array param or dynamic open array*)
+      IF x.type.size > 0 THEN Put2(Ldr, RH, SP, x.a+4) ELSE Put2(Ldr, RH, x.r, -16) END ; (*len*)
       Put1(Cmp,RH, RH, y.b); Trap(LT, 3)
     END ;
     loadStringAdr(y);
     Put2(Ldr, RH, y.r, 0); Put1(Add, y.r, y.r, 4);
     Put2(Str, RH, x.r, 0); Put1(Add, x.r, x.r, 4);
     Put1(Asr, RH, RH, 24); Put3(BC, NE,  -6);  RH := 0
-   END CopyString;
+  END CopyString;
 
   (* Code generation for parameters *)
 
   PROCEDURE OpenArrayParam*(VAR x: Item);
   BEGIN loadAdr(x);
-    IF x.type.len >= 0 THEN Put1a(Mov, RH, 0, x.type.len) ELSE Put2(Ldr, RH, SP, x.a+4+frame) END ;
+    IF x.type.len >= 0 THEN Put1a(Mov, RH, 0, x.type.len)
+    ELSIF x.type.size > 0 THEN (*open array param*) Put2(Ldr, RH, SP, x.a+4+frame)
+    ELSE (*dynamic open array*) Put2(Ldr, RH, x.r, -16) (*len*)
+    END ;
     incR
   END OpenArrayParam;
 
@@ -686,7 +689,10 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 22.7.2018  Oberon compiler; code 
     VAR xmd: INTEGER;
   BEGIN xmd := x.mode; loadAdr(x);
     IF (ftype.form = ORB.Array) & (ftype.len < 0) THEN (*open array*)
-      IF x.type.len >= 0 THEN Put1a(Mov, RH, 0, x.type.len) ELSE  Put2(Ldr, RH, SP, x.a+4+frame) END ;
+      IF x.type.len >= 0 THEN Put1a(Mov, RH, 0, x.type.len)
+      ELSIF x.type.size > 0 THEN (*open array param*) Put2(Ldr, RH, SP, x.a+4+frame)
+      ELSE (*dynamic open array*) Put2(Ldr, RH, x.r, -16) (*len*)
+      END ;
       incR
     ELSIF ftype.form = ORB.Record THEN
       IF xmd = ORB.Par THEN Put2(Ldr, RH, SP, x.a+4+frame); incR ELSE loadTypTagAdr(x.type) END
@@ -830,9 +836,9 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 22.7.2018  Oberon compiler; code 
 
   PROCEDURE CaseHead*(VAR x: Item; VAR L0, L1: LONGINT);
   BEGIN load(x);
-    L0 := pc; Put1(Sub, RH, x.r, 0); (*higher bound fixed up in CaseTail*)
+    L0 := pc; Put1(Sub, RH, x.r, 0); (*fixed up in CaseTail*)
     Trap(10, 1); (*BCC*) GetSB(0);
-    L1 := pc; Put1(Add, RH, RH, 0); (*jump table adr fixed up in CaseTail and again in Close*)
+    L1 := pc; Put1(Add, RH, RH, 0); (*fixed up in CaseTail and again in Close*)
     Put1(Lsl, x.r, x.r, 2); Put0(Add, RH, RH, x.r); Put3(BR, 7, RH); DEC(RH);
     IF casex < maxCase THEN case[casex] := L1; INC(casex) ELSE ORS.Mark("too many cases") END
   END CaseHead;
@@ -891,9 +897,22 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 22.7.2018  Oberon compiler; code 
   END Assert; 
 
   PROCEDURE New*(VAR x, y: Item);
-  BEGIN 
-    IF y.type = ORB.noType THEN y.mode := ORB.Const; y.type := ORB.intType; y.a := -1 END ;
-    loadAdr(x); loadTypTagAdr(x.type.base); load(y); Trap(7, 0); RH := 0
+    VAR z: Item; xt: ORB.Type; xf: INTEGER;
+  BEGIN loadAdr(x); z.mode := ORB.Const; z.type := ORB.intType;
+    IF y.type = ORB.noType THEN (*record*) xt:= x.type.base; z.a := xt.size;
+      loadTypTagAdr(xt); Put1(Mov, RH, 0, -1); incR
+    ELSE (*array*) xt:= x.type.base.base; z.a := xt.size; xf := xt.form;
+      IF xf = ORB.Record THEN loadTypTagAdr(xt)  (*tag > 7*)
+      ELSIF xf = ORB.Pointer THEN Put1(Mov, RH, 0, 2); incR
+      ELSIF xf < ORB.Pointer THEN Put1(Mov, RH, 0, 3); incR  (*basic type*)
+      ELSIF xf = ORB.Proc THEN Put1(Mov, RH, 0, 7); incR
+      ELSE ORS.Mark("no valid ptr base type")
+      END ;
+      IF (y.mode = ORB.Const) & (y.a <= 0) THEN ORS.Mark("not a valid dyn array length") END ;
+      load(y); (*len*)
+      IF check THEN Trap(LE, 1) END
+    END ;
+    load(z); (*elemsize*) Trap(7, 0); RH := 0
   END New;
 
   PROCEDURE Pack*(VAR x, y: Item);
@@ -979,7 +998,9 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 22.7.2018  Oberon compiler; code 
     IF x.type.len >= 0 THEN
       IF x.mode = RegI THEN DEC(RH) END ;
       x.mode := ORB.Const; x.a := x.type.len
-    ELSE (*open array*) Put2(Ldr, RH, SP, x.a + 4 + frame); x.mode := Reg; x.r := RH; incR
+    ELSIF x.type.size > 0 THEN (*open array param*)
+      Put2(Ldr, RH, SP, x.a + 4 + frame); x.mode := Reg; x.r := RH; incR
+    ELSE (*dynamic open array*) Put2(Ldr, x.r, x.r, -16); (*len*) x.mode := Reg
     END 
   END Len;
 
@@ -1053,19 +1074,19 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 22.7.2018  Oberon compiler; code 
     END
   END Header;
 
-  PROCEDURE NofRefs*(typ: ORB.Type): LONGINT; (*pointers or procedures*)
+  PROCEDURE NofRefs*(ftyp: SET; typ: ORB.Type): LONGINT;
     VAR fld: ORB.Object; n: LONGINT;
   BEGIN
-    IF typ.form IN ORB.Ptrs + ORB.Procs THEN n := 1
+    IF typ.form IN ftyp THEN n := 1
     ELSIF typ.form = ORB.Record THEN fld := typ.dsc; n := 0;
-      WHILE fld # NIL DO n := NofRefs(fld.type) + n; fld := fld.next END
-    ELSIF typ.form = ORB.Array THEN n := NofRefs(typ.base) * typ.len
+      WHILE fld # NIL DO n := NofRefs(ftyp, fld.type) + n; fld := fld.next END
+    ELSIF typ.form = ORB.Array THEN n := NofRefs(ftyp, typ.base) * typ.len
     ELSE n := 0
     END ;
     RETURN n
   END NofRefs;
 
-  PROCEDURE FindRefs(VAR R: Files.Rider; ftyp: SET; typ: ORB.Type; off: LONGINT); (*pointers or procedures*)
+  PROCEDURE FindRefs(VAR R: Files.Rider; ftyp: SET; typ: ORB.Type; off: LONGINT);
     VAR fld: ORB.Object; i, s: LONGINT;
   BEGIN
     IF typ.form IN ftyp THEN Files.WriteInt(R, off)
@@ -1096,7 +1117,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 22.7.2018  Oberon compiler; code 
           & (obj.type.nofpar = 0) & (obj.type.base = ORB.noType) THEN i := 0; (*count commands*)
         WHILE obj.name[i] # 0X DO INC(i) END ;
         i := (i+4) DIV 4 * 4; INC(comsize, i+4)
-      ELSIF obj.class = ORB.Var THEN INC(nofrefs, NofRefs(obj.type)) (*count pointers and procedure variables*)
+      ELSIF obj.class = ORB.Var THEN INC(nofrefs, NofRefs(ORB.Ptrs + ORB.Procs, obj.type)) (*count pointers and procedure variables*)
       END ;
       obj := obj.next
     END ;

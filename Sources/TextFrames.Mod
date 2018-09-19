@@ -105,18 +105,19 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 11.11.17*)
   END FlipSM;
 
   PROCEDURE UpdateMark (F: Frame); (*in scroll bar*)
-    VAR oldH: INTEGER;
-  BEGIN oldH := F.markH; F.markH := F.org * F.H DIV (F.text.len + 1);
-    IF F.hasMark & (F.left >= barW) & (F.markH # oldH) THEN
-      Display.ReplConst(Display.white, F.X + 1, F.Y + F.H - 1 - oldH, markW, 1, Display.invert);
-      Display.ReplConst(Display.white, F.X + 1, F.Y + F.H - 1 - F.markH, markW, 1, Display.invert)
+    VAR h, oldH: INTEGER;
+  BEGIN oldH := F.markH; h := Min(F.H - 2, 20); F.markH := Max(F.org * F.H DIV (F.text.len + 1), 1);
+    IF (h > 0) & F.hasMark & (F.left >= barW) & (F.markH # oldH) THEN
+      Display.ReplConst(Display.white, F.X + 2, Max(F.Y + F.H - 1 - oldH - h, F.Y + 1), markW, h, Display.invert);
+      Display.ReplConst(Display.white, F.X + 2, Max(F.Y + F.H - 1 - F.markH - h, F.Y + 1), markW, h, Display.invert)
     END
   END UpdateMark;
 
   PROCEDURE Mark* (F: Frame; on: BOOLEAN); (*in scroll bar*)
-  BEGIN
+    VAR h: INTEGER;
+  BEGIN h := Min(F.H - 2, 20);
     IF (F.H > 0) & (F.left >= barW) & ((F.hasMark & ~on) OR (~F.hasMark & on)) THEN
-      Display.ReplConst(Display.white, F.X + 1, F.Y + F.H - 1 - F.markH, markW, 1, Display.invert)
+      Display.ReplConst(Display.white, F.X + 2, Max(F.Y + F.H - 1 - F.markH - h, F.Y + 1), markW, h, Display.invert)
     END;
     F.hasMark := on
   END Mark;
@@ -1050,13 +1051,13 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 11.11.17*)
 
 BEGIN NEW(TBuf); NEW(DelBuf);
   Texts.OpenBuf(TBuf); Texts.OpenBuf(DelBuf);
-  lsp := Fonts.Default.height; menuH := lsp + 2; barW := menuH;
+  lsp := Fonts.Default.height; menuH := lsp + 2; barW := lsp - 2;
   left := barW + lsp DIV 2;
   right := lsp DIV 2;
   top := lsp DIV 2; bot := lsp DIV 2;
   asr := Fonts.Default.maxY;
   dsr := -Fonts.Default.minY;
-  selH := lsp; markW := lsp DIV 2;
+  selH := lsp; markW := barW - 5;
   eolW := lsp DIV 2;
   ScrollMarker.Fade := FlipSM; ScrollMarker.Draw := FlipSM;
   Texts.OpenWriter(W); Texts.OpenWriter(KW)

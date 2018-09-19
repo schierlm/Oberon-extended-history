@@ -1,4 +1,4 @@
-MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 15.8.18 Experimental Oberon*)
+MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 18.9.18 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules,
     Input, Viewers, Fonts, Texts, Oberon, MenuViewers, TextFrames;
 
@@ -91,7 +91,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 15.8.18 Experimenta
     VAR logV, toolV, menu, main: Viewers.Frame; X, Y: INTEGER;
   BEGIN
     IF Viewers.CurDisplay # NIL THEN
-      Texts.WriteString(W, "Experimental Oberon  AP 15.8.18 / Display ");
+      Texts.WriteString(W, "Experimental Oberon  AP 18.9.18 / Display ");
       Texts.WriteInt(W, Viewers.CurDisplay.id, 2); Texts.Write(W, " ");
       Texts.WriteString(W, Viewers.CurDisplay.name); EndLine;
       Oberon.AllocateSystemViewer(0, X, Y);
@@ -764,7 +764,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 15.8.18 Experimenta
     END
   END RunRsc;
 
-  PROCEDURE Trap1(VAR a: INTEGER; b, c: INTEGER); (*trap routine installed by RunBin*)
+  PROCEDURE Trap1(VAR a: INTEGER; b, c, d: INTEGER); (*trap routine installed by RunBin*)
     VAR u, v, w: INTEGER;
   BEGIN u := SYSTEM.REG(15); SYSTEM.GET(u - 4, v); w := v DIV 10H MOD 10H; (*trap number*)
     LED(w + 192); REPEAT UNTIL FALSE
@@ -835,10 +835,10 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 15.8.18 Experimenta
     IF S.class = Texts.Name THEN InitMod(S.s) END
   END RunInit;
 
-  PROCEDURE Trap(VAR a: INTEGER; b, c: INTEGER);
-    VAR u, v, w: INTEGER; mod: Modules.Module; tag, size: LONGINT;
+  PROCEDURE Trap(VAR a: INTEGER; b, c, d: INTEGER);
+    VAR u, v, w: INTEGER; mod: Modules.Module;
   BEGIN u := SYSTEM.REG(15); SYSTEM.GET(u - 4, v); w := v DIV 10H MOD 10H; (*trap number*)
-    IF w = 0 THEN Kernel.New1(a, b, c)
+    IF w = 0 THEN Kernel.New(a, b, c, d)
     ELSE (*trap*) Texts.WriteLn(W); Texts.WriteString(W, "  pos "); Texts.WriteInt(W, v DIV 100H MOD 10000H, 4);
       Texts.WriteString(W, "  TRAP"); Texts.WriteInt(W, w, 4); mod := Modules.root;
       WHILE (mod # NIL) & ((u < mod.code) OR (u >= mod.imp)) DO mod := mod.next END ;

@@ -1,5 +1,5 @@
 # The Experimental Oberon operating system
-Experimental Oberon is a revision of the Original Oberon operating system and compiler (www.projectoberon.com), containing a number of enhancements, including
+Experimental Oberon is a revision of the Original Oberon operating system and the Oberon-07 compiler (www.projectoberon.com), containing a number of enhancements, including
 
 * Continuous fractional line scrolling with variable line spaces
 * Enhanced viewer operations
@@ -10,8 +10,8 @@ Experimental Oberon is a revision of the Original Oberon operating system and co
   * Numeric case statement
   * Exporting and importing of string constants
   * No access to intermediate objects within nested scopes
+  * Dynamic heap allocation procedure NEW for fixed-length and open arrays
   * Forward references and forward declarations of procedures
-  * Generic heap allocation procedure NEW(p, size)
   * Module contexts
 
 Documentation: [**The-Experimental-Oberon-System.pdf**](Documentation/The-Experimental-Oberon-System.pdf)
