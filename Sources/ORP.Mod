@@ -1,4 +1,4 @@
-MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07 / AP 18.9.18 Experimental Oberon*)
+MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07 / AP 21.9.18 Experimental Oberon*)
   IMPORT Texts, Oberon, ORS, ORB, ORG;
   (*Author: Niklaus Wirth, 2014.
     Parser of Oberon-RISC compiler. Uses Scanner ORS to obtain symbols (tokens),
@@ -936,7 +936,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
       NEW(type); type.form := ORB.Proc; type.size := ORG.WordSize; type.len := 0;
       proc := ORB.topScope.next;
       WHILE (proc # NIL) & (proc.name # procid) DO proc := proc.next END ;
-      IF proc = NIL THEN
+      IF proc = NIL THEN  (*identifier not found in the symbol table*)
         ORB.NewObj(proc, procid, ORB.Const); INC(fc);
         proc.type := type; proc.val := -1; proc.lev := level; proc.expo := expo;
         IF expo THEN proc.exno := exno; INC(exno) END
@@ -944,7 +944,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
       ORB.OpenScope; INC(level); type.base := ORB.noType;
       ProcedureType(type, parblksize);  (*formal parameter list*)
       type.dsc := ORB.topScope.next;
-      IF proc.type # type THEN  (*identifier was found in the symbol table*)
+      IF proc.type # type THEN  (*identifier found in the symbol table*)
         IF (proc.class # ORB.Const) OR (proc.type.form # ORB.Proc) OR (proc.val >= 0) OR ~body THEN ORS.Mark("mult def")
         ELSIF (proc.expo # expo) OR ~EqualSignatures(proc.type, type) THEN ORS.Mark("must match forward declaration")
         END ;
@@ -1090,7 +1090,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
     Oberon.Collect(0)
   END Compile;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Compiler  17.9.2018 / AP 18.9.18");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Compiler  17.9.2018 / AP 21.9.18");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
   NEW(dummy); dummy.class := ORB.Var; dummy.type := ORB.intType;
   expression := expression0; Type := Type0; FormalType := FormalType0

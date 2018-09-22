@@ -2,7 +2,6 @@
 Experimental Oberon is a revision of the Original Oberon operating system and the Oberon-07 compiler (www.projectoberon.com), containing a number of enhancements, including
 
 * Continuous fractional line scrolling with variable line spaces
-* Enhanced viewer operations
 * Multiple logical displays ("virtual displays")
 * Safe module unloading
 * System building and maintenance tools

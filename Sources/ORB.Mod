@@ -1,4 +1,4 @@
-MODULE ORB;   (*NW 25.6.2014  / 17.9.2018  in Oberon-07 / AP 18.9.18 Experimental Oberon*)
+MODULE ORB;   (*NW 25.6.2014  / 17.9.2018  in Oberon-07 / AP 21.9.18 Experimental Oberon*)
   IMPORT Files, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
@@ -227,8 +227,7 @@ MODULE ORB;   (*NW 25.6.2014  / 17.9.2018  in Oberon-07 / AP 18.9.18 Experimenta
           NEW(obj); obj.class := class; Files.ReadString(R, obj.name);
           InType(R, thismod, obj.type); obj.lev := -thismod.lev;
           IF class = Typ THEN obj.type.typobj := obj
-          ELSIF class = Const THEN
-            IF obj.type.form = Real THEN Files.ReadInt(R, obj.val) ELSE Files.ReadNum(R, obj.val) END
+          ELSIF class = Const THEN Files.ReadNum(R, obj.val)
           ELSIF class = Var THEN Files.ReadNum(R, obj.val); obj.rdo := TRUE
           END ;
           obj.next := thismod.dsc; thismod.dsc := obj; Read(R, class)
@@ -241,7 +240,7 @@ MODULE ORB;   (*NW 25.6.2014  / 17.9.2018  in Oberon-07 / AP 18.9.18 Experimenta
   (*-------------------------------- Export ---------------------------------*)
 
   PROCEDURE Write(VAR R: Files.Rider; x: INTEGER);
-  BEGIN Files.WriteByte(R, x)
+  BEGIN Files.WriteByte(R, x)  (* -128 <= x < 128 *)
   END Write;
 
   PROCEDURE OutType(VAR R: Files.Rider; t: Type);
@@ -305,7 +304,7 @@ MODULE ORB;   (*NW 25.6.2014  / 17.9.2018  in Oberon-07 / AP 18.9.18 Experimenta
 
   PROCEDURE Export*(VAR modid, context: ORS.Ident; VAR newSF: BOOLEAN; VAR key: LONGINT);
     VAR x, sum, oldkey: LONGINT;
-      obj, obj0: Object;
+      obj: Object;
       filename: ORS.Ident;
       F, F1: Files.File; R, R1: Files.Rider;
   BEGIN Ref := Record + 1; MakeFileName(filename, modid, context, ".smb");
@@ -321,7 +320,6 @@ MODULE ORB;   (*NW 25.6.2014  / 17.9.2018  in Oberon-07 / AP 18.9.18 Experimenta
         IF obj.class = Const THEN
           IF obj.type.form = Proc THEN Files.WriteNum(R, obj.exno)
           ELSIF obj.type.form = String THEN Files.WriteNum(R, obj.exno + obj.val DIV 100000H (*len*) * 100000H)
-          ELSIF obj.type.form = Real THEN Files.WriteInt(R, obj.val)
           ELSE Files.WriteNum(R, obj.val)
           END
         ELSIF obj.class = Var THEN Files.WriteNum(R, obj.exno)
