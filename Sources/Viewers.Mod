@@ -1,4 +1,4 @@
-MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 4.4.18*)
+MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 1.10.18*)
   CONST restore* = 0; modify* = 1; suspend* = 2; consume* = 3; track* = 4;
     defocus* = 5; neutralize* = 6; mark* = 7; inf = 65535; DnLength* = 24;
 
@@ -352,6 +352,14 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 4.4.18*)
     IF root = NIL THEN root := D ELSE D.prev := root.prev; D.prev.next := D END;
     root.prev := D; D.next := NIL; nextId := nextId + 1
   END InitDisplay;
+
+  PROCEDURE NextDisplay* (D: Display): Display;
+  BEGIN IF D.next = NIL THEN D := root ELSE D := D.next(Display) END; RETURN D
+  END NextDisplay;
+
+  PROCEDURE PrevDisplay* (D: Display): Display;
+  BEGIN RETURN D.prev(Display)
+  END PrevDisplay;
 
   PROCEDURE SetDisplay* (D: Display);
     VAR M: ViewerMsg;

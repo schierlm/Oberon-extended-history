@@ -1,4 +1,4 @@
-MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 17.9.2018  Oberon compiler; code generator for RISC / AP 18.9.18 Experimental Oberon*)
+MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 1.10.2018  Oberon compiler; code generator for RISC / AP 1.10.18 Experimental Oberon*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser OSAP; result in array "code".
@@ -7,7 +7,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 17.9.2018  Oberon compiler; code 
   CONST WordSize* = 4;
     StkOrg0 = -64; VarOrg0 = 0;  (*for RISC-0 only*)
     MT = 12; SP = 14; LNK = 15;   (*dedicated registers*)
-    maxCode = 12000; maxStrx = 3200; maxTD = 160; maxCase = 100; C16 = 10000H; C24 = 1000000H; C28 = 10000000H; C30 = 40000000H;
+    maxCode = 8192; maxStrx = 2800; maxTD = 160; maxCase = 100; C16 = 10000H; C24 = 1000000H; C28 = 10000000H; C30 = 40000000H;
     Reg = 10; RegI = 11; Cond = 12;  (*internal item modes*)
 
   (*frequently used opcodes*)  U = 2000H; V = 1000H;
@@ -128,10 +128,10 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 17.9.2018  Oberon compiler; code 
 
   PROCEDURE FixLinkWith(L, dst: LONGINT);
     VAR L1, k: LONGINT;
-  BEGIN (*fix format-1 and branch instructions*)
-    WHILE L # 0 DO k := code[L] DIV C30 MOD 4;
-      IF k = 1 THEN L1 := code[L] MOD C16; fix1(L, (dst-L)*4)
-      ELSIF k = 3 THEN L1 := code[L] MOD C24; fix(L, dst-L-1)
+  BEGIN (*fix format-1 and branch instructions in a single fixup chain*)
+    WHILE L # 0 DO
+      k := code[L] DIV C30 MOD 4; L1 := code[L] MOD C16;
+      IF k = 1 THEN fix1(L, (dst-L)*4) ELSIF k = 3 THEN fix(L, dst-L-1)
       ELSE ORS.Mark("fixup impossible"); L1 := 0
       END ;
       L := L1
@@ -144,9 +144,9 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 17.9.2018  Oberon compiler; code 
 
   PROCEDURE merged(L0, L1: LONGINT): LONGINT;
     VAR L2, L3: LONGINT;
-  BEGIN (*merge branch instructions*)
+  BEGIN (*merge chains of the two operands of AND and OR*)
     IF L0 # 0 THEN L3 := L0;
-      REPEAT L2 := L3; L3 := code[L2] MOD C24 UNTIL L3 = 0;
+      REPEAT L2 := L3; L3 := code[L2] MOD C16 UNTIL L3 = 0;
       code[L2] := code[L2] + L1; L1 := L0
     END ;
     RETURN L1
@@ -900,12 +900,12 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 17.9.2018  Oberon compiler; code 
     VAR z: Item; xt: ORB.Type; xf: INTEGER;
   BEGIN loadAdr(x); z.mode := ORB.Const; z.type := ORB.intType;
     IF y.type = ORB.noType THEN (*record*) xt:= x.type.base; z.a := xt.size;
-      loadTypTagAdr(xt); Put1(Mov, RH, 0, -1); incR
+      loadTypTagAdr(xt); Put1(Mov, RH, 0, -1); (*len*) incR
     ELSE (*array*) xt:= x.type.base.base; z.a := xt.size; xf := xt.form;
-      IF xf = ORB.Record THEN loadTypTagAdr(xt)  (*tag > 7*)
-      ELSIF xf = ORB.Pointer THEN Put1(Mov, RH, 0, 2); incR
-      ELSIF xf < ORB.Pointer THEN Put1(Mov, RH, 0, 3); incR  (*basic type*)
+      IF xf = ORB.Record THEN loadTypTagAdr(xt) (*tag > 7*)
       ELSIF xf = ORB.Proc THEN Put1(Mov, RH, 0, 7); incR
+      ELSIF xf = ORB.Pointer THEN Put1(Mov, RH, 0, 2); incR
+      ELSIF xf < ORB.Pointer THEN (*basic type*) Put1(Mov, RH, 0, 3); incR
       ELSE ORS.Mark("no valid ptr base type")
       END ;
       IF (y.mode = ORB.Const) & (y.a <= 0) THEN ORS.Mark("not a valid dyn array length") END ;

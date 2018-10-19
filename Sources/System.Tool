@@ -1,9 +1,11 @@
 System.Open ^ System.Recall System.Flush System.Watch System.Collect
-Edit.Open ^  Edit.Recall                           System.ShowDisplays
-Edit.ChangeFont Oberon8.Scn.Fnt           System.OpenDisplay name
-Edit.ChangeFont Oberon10i.Scn.Fnt        System.SetDisplayName 1 new
-Edit.ChangeFont Oberon16.Scn.Fnt         System.SetDisplay 1
-Edit.ChangeFont Times24.Scn.Fnt            System.CloseDisplay 1
+Edit.Open ^  Edit.Recall                            System.ShowDisplays
+Edit.ChangeFont Oberon8.Scn.Fnt            System.OpenDisplay name
+Edit.ChangeFont Oberon10i.Scn.Fnt         System.SetDisplayName 1 new
+Edit.ChangeFont Oberon10b.Scn.Fnt        System.SetDisplay 1
+Edit.ChangeFont Oberon12.Scn.Fnt          System.CloseDisplay 1
+Edit.ChangeFont Oberon16.Scn.Fnt          System.NextDisplay
+Edit.ChangeFont Times24.Scn.Fnt             System.PrevDisplay
 
 System.Directory ^
   *.Mod  *.Bak  *.Tool  *.Text  *.Scn.Fnt  *.smb  *.rsc  *.bin  *.mem
@@ -47,7 +49,7 @@ ORP.Compile PCLink1.Mod/s Clipboard.Mod ~
 ORP.Compile RS232.Mod/s SCC.Mod/s Net.Mod/s ~
 
 ORP.Compile Graphics.Mod/s GraphicFrames.Mod/s ~
-ORP.Compile GraphTool.Mod Draw.Mod ~
+ORP.Compile GraphTool.Mod MacroTool.Mod/s Draw.Mod ~
 
 ORP.Compile Curves.Mod/s Sierpinski.Mod ~
 ORP.Compile Hilbert.Mod Stars.Mod ~

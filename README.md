@@ -1,4 +1,4 @@
-# The Experimental Oberon operating system
+# The Experimental Oberon Operating System
 Experimental Oberon is a revision of the Original Oberon operating system and the Oberon-07 compiler (www.projectoberon.com), containing a number of enhancements, including
 
 * Continuous fractional line scrolling with variable line spaces
@@ -36,7 +36,7 @@ Additional background material can be found in the [**Documentation**](Documenta
 Edit the file *ORG.Mod* on your Original system and set the following constants to the indicated new values:
 
      CONST ...
-       maxCode = 12000; maxStrx = 3200; ...
+       maxCode = 8192; maxStrx = 2800; ...
 
 Then recompile your Original Oberon compiler (and unload the old one):
 

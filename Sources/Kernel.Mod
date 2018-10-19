@@ -1,4 +1,4 @@
-MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.18 Experimental Oberon*)
+MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.10.18 Experimental Oberon*)
   IMPORT SYSTEM;
   CONST SectorLength* = 1024;
     timer = -64; spiData = -48; spiCtrl = -44;
@@ -69,7 +69,7 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.18 Experimental 
     (*called by NEW via MT[0]; ptr is a pointer; tag is a pointer or blktyp; len and elemsize describe arrays*)
     VAR p, size, lim: LONGINT;
   BEGIN
-    IF len < 0 THEN (*record block*) SYSTEM.GET(tag, size); (*size already converted for heap allocation with 8 byte prefix*)
+    IF len < 0 THEN (*record*) SYSTEM.GET(tag, size); (*size already converted for heap allocation with 8 byte prefix*)
       IF size = 32 THEN GetBlock32(p)
       ELSIF size = 64 THEN GetBlock64(p)
       ELSIF size = 128 THEN GetBlock128(p)
@@ -79,7 +79,7 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.18 Experimental 
       ELSE ptr := p+8; SYSTEM.PUT(p, tag); lim := p + size; INC(p, 4); INC(allocated, size);
         WHILE p < lim DO SYSTEM.PUT(p, 0); INC(p, 4) END
       END
-    ELSIF len > 0 THEN (*array block*) size := len*elemsize; (*convert size for heap allocation with 24 byte prefix*)
+    ELSIF len > 0 THEN (*array*) size := len*elemsize; (*convert size for heap allocation with 24 byte prefix*)
       IF size <= 8 THEN size := 32; GetBlock32(p)
       ELSIF size <= 40 THEN size := 64; GetBlock64(p)
       ELSIF size <= 104 THEN size := 128; GetBlock128(p)
@@ -173,7 +173,7 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.18 Experimental 
 (* ---------- Generic heap scan ----------*)
 
   PROCEDURE Scan*(type, proc: Handler; s: ARRAY OF CHAR; VAR resType, resProc: INTEGER);
-    VAR p, r, mark, tag, size, offadr, offset, pos, len, elemsize, blktyp, i: LONGINT; continue: BOOLEAN;
+    VAR offadr, offset, p, r, mark, tag, size, pos, len, elemsize, blktyp: LONGINT; continue: BOOLEAN;
   BEGIN p := heapOrg; resType := 0; resProc := 0; continue := (type # NIL) OR (proc # NIL);
     REPEAT SYSTEM.GET(p+4, mark);
       IF mark < 0 THEN (*free*) SYSTEM.GET(p, size)

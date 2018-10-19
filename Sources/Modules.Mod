@@ -1,4 +1,4 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.9.19 Experimental Oberon*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.10.18 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, Files;
   CONST versionkey = 1X; MT = 12; DescSize = 84; context = "EO";
 
@@ -11,16 +11,16 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.9.19 E
       next*: Module;
       key*, num*, size*, refcnt*: INTEGER;
       data*, code*, imp*, cmd*, ent*, ptr*, pvr*: INTEGER;  (*addresses*)
-      selected, hidden, marked, unused: BOOLEAN
+      selected, marked, hidden, sel: BOOLEAN
     END ;
 
     RefHandler* = PROCEDURE(x: LONGINT; s: ARRAY OF CHAR; VAR continue: BOOLEAN): INTEGER;
-    ModHandler* = PROCEDURE(client, mod: Module; VAR continue: BOOLEAN): INTEGER;
+    ModHandler* = PROCEDURE(client, import, prev: Module; VAR continue: BOOLEAN): INTEGER;
 
   VAR root*, M: Module;
     MTOrg*, AllocPtr*, res*: INTEGER;
     importing*, imported*: ModuleName;
-    limit, NofHidden, NofSelected*: INTEGER;
+    limit, NofSelected*, NofHidden*: INTEGER;
 
   PROCEDURE ThisFile(name, context: ARRAY OF CHAR): Files.File;
     VAR i, j: INTEGER;
@@ -94,7 +94,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.9.19 E
         IF mod = NIL THEN (*no large enough hole was found*)
           IF AllocPtr + size < limit THEN (*allocate*)
             p := AllocPtr; mod := SYSTEM.VAL(Module, p);
-            AllocPtr := (p + size + 31) DIV 32 * 32; mod.size := AllocPtr - p;
+            AllocPtr := (p + size + 3) DIV 4 * 4; mod.size := AllocPtr - p;
             IF root = NIL THEN mod.num := 1 ELSE mod.num := root.num + 1 END ;
             mod.next := root; root := mod
           ELSE error(7, name1)
@@ -105,7 +105,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.9.19 E
       IF res = 0 THEN (*read file*)
         INC(p, DescSize); (*allocate descriptor*)
         mod.name := name; mod.key := key; mod.refcnt := 0;
-        mod.selected := FALSE; mod.hidden := FALSE; mod.marked := FALSE; mod.unused := FALSE;
+        mod.selected := FALSE; mod.marked := FALSE; mod.hidden := FALSE; mod.sel := FALSE;
         mod.data := p;  (*data*)
         SYSTEM.PUT(mod.num * 4 + MTOrg, p);  (*module table entry*)
         Files.ReadInt(R, n);
@@ -218,14 +218,14 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.9.19 E
 
   (*--------------------------- selections ---------------------------*)
 
-  PROCEDURE Mark(mod: Module; clients, imports: BOOLEAN);
+  PROCEDURE select(mod: Module; clients, imports: BOOLEAN);
     VAR imp, m: Module; p, q: INTEGER;
-  BEGIN (*~mod.marked & mod.name[0] # 0X*) mod.marked := TRUE;
+  BEGIN (*~mod.sel & mod.name[0] # 0X*) mod.sel := TRUE;
     IF clients THEN m := root;
       WHILE m # NIL DO
-        IF (m.name[0] # 0X) & (m # mod) & ~m.marked THEN p := m.imp; q := m.cmd;
+        IF (m.name[0] # 0X) & (m # mod) & ~m.sel THEN p := m.imp; q := m.cmd;
           WHILE p < q DO SYSTEM.GET(p, imp);
-            IF imp = mod THEN Mark(m, clients, imports); p := q ELSE INC(p, 4) END
+            IF imp = mod THEN select(m, clients, imports); p := q ELSE INC(p, 4) END
           END
         END ;
         m := m.next
@@ -233,21 +233,21 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.9.19 E
     END ;
     IF imports THEN p := mod.imp; q := mod.cmd;
       WHILE p < q DO SYSTEM.GET(p, imp); INC(p, 4);
-        IF (imp.name[0] # 0X) & ~imp.marked THEN Mark(imp, clients, imports) END
+        IF (imp.name[0] # 0X) & ~imp.sel THEN select(imp, clients, imports) END
       END
     END
-  END Mark;
+  END select;
 
-  PROCEDURE Select*(name: ARRAY OF CHAR; on, this, clients, imports: BOOLEAN); (*module, clients, imports*)
+  PROCEDURE Select*(name: ARRAY OF CHAR; on, this, clients, imports: BOOLEAN);
     VAR mod, m: Module;
   BEGIN mod := root; m := NIL;
-    WHILE mod # NIL DO mod.marked := FALSE;
+    WHILE mod # NIL DO mod.sel := FALSE;
       IF (mod.name[0] # 0X) & (mod.name = name) THEN m := mod END ;
       mod := mod.next
     END ;
-    IF m # NIL THEN Mark(m, clients, imports); mod := root;
+    IF m # NIL THEN select(m, clients, imports); mod := root;
       WHILE mod # NIL DO
-        IF mod.marked & ((mod # m) OR this) THEN
+        IF mod.sel & ((mod # m) OR this) THEN
           IF on THEN
             IF ~mod.selected THEN mod.selected := TRUE; INC(NofSelected) END
           ELSIF mod.selected THEN mod.selected := FALSE; DEC(NofSelected)
@@ -258,27 +258,27 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.9.19 E
     END
   END Select;
 
+  PROCEDURE Selected*(mod: Module): BOOLEAN;
+  BEGIN RETURN mod.selected
+  END Selected;
+
   PROCEDURE Deselect*; (*all modules*)
     VAR mod: Module;
   BEGIN mod := root; NofSelected := 0;
     WHILE mod # NIL DO mod.selected := FALSE; mod := mod.next END
   END Deselect;
 
-  PROCEDURE Selected*(mod: Module): BOOLEAN;
-  BEGIN RETURN mod.selected
-  END Selected;
-
   (*--------------------------- reference checking ---------------------------*)
 
   PROCEDURE FindClients*(proc: ModHandler; VAR res: INTEGER);
-    VAR mod, imp, m: Module; p, q: INTEGER; continue: BOOLEAN;
-  BEGIN res := 0; mod := root; continue := proc # NIL;
+    VAR mod, imp, prev, m: Module; p, q: INTEGER; continue: BOOLEAN;
+  BEGIN res := 0; mod := root; continue := proc # NIL; prev := NIL;
     WHILE continue & (mod # NIL) DO
       IF (mod.name[0] # 0X) & mod.selected & (mod.refcnt > 0) THEN m := root;
         WHILE continue & (m # NIL) DO
           IF (m.name[0] # 0X) & ~m.selected THEN p := m.imp; q := m.cmd;
             WHILE p < q DO SYSTEM.GET(p, imp);
-              IF imp = mod THEN INC(res, proc(m, mod, continue)); p := q ELSE INC(p, 4) END
+              IF imp = mod THEN INC(res, proc(m, mod, prev, continue)); prev := mod; p := q ELSE INC(p, 4) END
             END
           END ;
           m := m.next
@@ -315,17 +315,15 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.9.19 E
     END
   END FindStaticRefs;
 
-  PROCEDURE HandleClient(client, mod: Module; VAR continue: BOOLEAN): INTEGER;
+  PROCEDURE HandleClient(client, mod, prev: Module; VAR continue: BOOLEAN): INTEGER;
   BEGIN continue := FALSE; RETURN 1 (*stop when the first client is found*)
   END HandleClient;
 
   PROCEDURE HandleRef(x: LONGINT; s: ARRAY OF CHAR; VAR continue: BOOLEAN): INTEGER;
     VAR mod: Module; i: INTEGER;
   BEGIN mod := root; i := 0;
-    WHILE continue & (mod # NIL) DO (*check references to selected modules*)
-      IF (mod.name[0] # 0X) & mod.selected & (mod.data <= x) & (x < mod.imp) THEN
-        i := 1; continue := FALSE (*stop when the first reference is found*)
-      END ;
+    WHILE continue & (mod # NIL) DO (*stop when the first reference is found*)
+      IF (mod.name[0] # 0X) & mod.selected & (mod.data <= x) & (x < mod.imp) THEN INC(i); continue := FALSE END ;
       mod := mod.next
     END ;
     RETURN i
@@ -407,12 +405,12 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.9.19 E
   (*--------------------------- garbage collection ---------------------------*)
 
   PROCEDURE Collect*; (*no longer referenced hidden modules*)
-    VAR mod, m, M: Module; continue: BOOLEAN;
+    VAR mod, m, m1: Module; continue: BOOLEAN;
       p, q, k, res: INTEGER;
   BEGIN
     IF NofHidden > 0 THEN k := 0;
       IF NofSelected > 0 THEN (*save selection*) mod := root;
-        WHILE mod # NIL DO mod.marked := mod.selected; mod.selected := FALSE; mod := mod.next END
+        WHILE mod # NIL DO mod.sel := mod.selected; mod.selected := FALSE; mod := mod.next END
       END ;
       WHILE k < NofHidden DO INC(k);
         mod := root; p := 0; continue := TRUE;
@@ -428,31 +426,31 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.9.19 E
               mod := mod.next
             END
           ELSIF k < NofHidden THEN
-            mod := root; q := 0; M := NIL;
+            mod := root; q := 0; m1 := NIL;
             WHILE mod # NIL DO (*determine whether there is a next selection of k modules*)
               IF (mod.name[0] # 0X) & mod.hidden THEN
                 IF mod.selected THEN m := mod; INC(q) (*number of selected modules at end of list*)
-                ELSIF q > 0 THEN q := 0; M := m (*last selected module before last unselected group*)
+                ELSIF q > 0 THEN q := 0; m1 := m (*last selected module before last unselected group*)
                 END
               END ;
               mod := mod.next
             END ;
-            IF M # NIL THEN (*if there is a next selection of k modules*)
-              mod := M.next; p := 0; M.selected := FALSE;
+            IF m1 # NIL THEN (*if there is a next selection of k modules*)
+              mod := m1.next; p := 0; m1.selected := FALSE;
               WHILE mod # NIL DO (*set next selection of k modules*)
                 IF (mod.name[0] # 0X) & mod.hidden THEN mod.selected := p <= q; INC(p) END ;
                 mod := mod.next
               END
             ELSE (*otherwise continue with selections of k+1 modules*) continue := FALSE
             END
-          ELSE (*all possible selections checked*) continue := FALSE
+          ELSE (*all combinations of k modules chosen from n hidden modules checked*) continue := FALSE
           END
         END
       END ;
-      IF NofSelected > 0 THEN (*restore selection without reselecting unloaded hidden modules*)
+      IF NofSelected > 0 THEN (*restore selection without re-selecting the just unloaded hidden modules*)
         mod := root; NofSelected := 0;
         WHILE mod # NIL DO
-          IF mod.marked & (mod.name[0] # 0X) THEN mod.selected := TRUE; INC(NofSelected)
+          IF mod.sel & (mod.name[0] # 0X) THEN mod.selected := TRUE; INC(NofSelected)
           ELSE mod.selected := FALSE
           END ;
           mod := mod.next
