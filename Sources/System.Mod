@@ -1,4 +1,4 @@
-MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.10.18 Experimental Oberon*)
+MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 12.12.18 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules,
     Input, Viewers, Fonts, Texts, Oberon, MenuViewers, TextFrames;
 
@@ -88,7 +88,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.10.18 Experimenta
     VAR logV, toolV, menu, main: Viewers.Frame; X, Y: INTEGER;
   BEGIN
     IF Viewers.CurDisplay # NIL THEN
-      Texts.WriteString(W, "Experimental Oberon  AP 1.10.18 / Display ");
+      Texts.WriteString(W, "Experimental Oberon  AP 12.12.18 / Display ");
       Texts.WriteInt(W, Viewers.CurDisplay.id, 2); Texts.Write(W, " ");
       Texts.WriteString(W, Viewers.CurDisplay.name); EndLine;
       Oberon.AllocateSystemViewer(0, X, Y);
@@ -159,11 +159,13 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.10.18 Experimenta
   END SetDisplay;
 
   PROCEDURE NextDisplay*; (*switch to display on the "right"*)
-  BEGIN SwitchDisplay(Viewers.NextDisplay(Viewers.CurDisplay))
+    VAR D: Viewers.Viewer;
+  BEGIN D := Viewers.Next(Viewers.CurDisplay); SwitchDisplay(D(Viewers.Display))
   END NextDisplay;
 
   PROCEDURE PrevDisplay*; (*switch to display on the "left"*)
-  BEGIN SwitchDisplay(Viewers.PrevDisplay(Viewers.CurDisplay))
+    VAR D: Viewers.Viewer;
+  BEGIN D := Viewers.Prev(Viewers.CurDisplay); SwitchDisplay(D(Viewers.Display))
   END PrevDisplay;
 
   PROCEDURE SetDisplayName*; (*display id and name are provided as parameters*)
@@ -691,11 +693,11 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.10.18 Experimenta
     Files.ReadByte(R, b); (*version*) Files.ReadInt(R, data); (*size*)
     Files.ReadString(R, name); (*imports*) nofimps := 0;
     WHILE name[0] # 0X DO INC(nofimps); Files.ReadInt(R, data); (*key*) Files.ReadString(R, name) END ;
-    Files.ReadInt(R, n);
-    WHILE n > 0 DO Files.ReadInt(R, data); DEC(n, 4) END ; (*type descriptors*)
     Files.ReadInt(R, n); (*variable space*)
     Files.ReadInt(R, n);
     WHILE n > 0 DO Files.Read(R, ch); DEC(n) END ; (*strings*)
+    Files.ReadInt(R, n);
+    WHILE n > 0 DO Files.ReadInt(R, data); DEC(n, 4) END ; (*type descriptors*)
     Files.ReadInt(R, size);
     IF size > LEN(code) THEN (*program too long*) res := 2
     ELSE n := 0;
@@ -709,7 +711,8 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.10.18 Experimenta
       Files.ReadInt(R, data);
       WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*procedure variable references*)
       Files.ReadInt(R, data); (*fixorgP*) Files.ReadInt(R, data); (*fixorgD*)
-      Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, start); (*entry*)
+      Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, data); (*fixorgM*)
+      Files.ReadInt(R, start); (*entry*)
       Files.Read(R, ch);
       IF ch # "O" THEN (*corrupted file*) res := 1 ELSE res := 0 END
     END

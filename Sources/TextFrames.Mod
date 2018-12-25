@@ -1007,7 +1007,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 11.11.17*)
         ELSIF F.hasCar & (M.id = Viewers.consume) THEN
           CASE M OF
             Oberon.InputMsg: Write(F, M.ch, M.fnt, M.col, M.voff) |
-	    Viewers.InputMsg: Write(F, M.ch, Oberon.CurFnt, Oberon.CurCol, Oberon.CurOff)
+            Viewers.InputMsg: Write(F, M.ch, Oberon.CurFnt, Oberon.CurCol, Oberon.CurOff)
           END
         END |
       Viewers.ControlMsg:

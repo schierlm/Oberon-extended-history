@@ -1,4 +1,4 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.10.18 Experimental Oberon*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 12.12.18 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, Files;
   CONST versionkey = 1X; MT = 12; DescSize = 84; context = "EO";
 
@@ -53,11 +53,11 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.10.18 
       res = 0: already present or loaded; res = 1: file not available; res = 2: bad file version;
       res = 3: key conflict; res = 4: corrupted file; res = 7: insufficient space*)
     VAR mod, impmod: Module;
-      i, n, key, impkey, mno, nofimps, size: INTEGER;
+      i, n, key, impkey, mno, nofimps, size, tdx: INTEGER;
       p, u, v, w: INTEGER;  (*addresses*)
       ch: CHAR;
       body: Command;
-      fixorgP, fixorgD, fixorgT: INTEGER;
+      fixorgP, fixorgD, fixorgT, fixorgM: INTEGER;
       disp, adr, inst, pno, vno, dest, offset: INTEGER;
       name1, impname: ModuleName;
       F: Files.File; R: Files.Rider;
@@ -109,11 +109,12 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.10.18 
         mod.data := p;  (*data*)
         SYSTEM.PUT(mod.num * 4 + MTOrg, p);  (*module table entry*)
         Files.ReadInt(R, n);
-        WHILE n > 0 DO Files.ReadInt(R, w); SYSTEM.PUT(p, w); INC(p, 4); DEC(n, 4) END ;  (*type descriptors*)
-        Files.ReadInt(R, n);
         WHILE n > 0 DO SYSTEM.PUT(p, 0); INC(p, 4); DEC(n, 4) END ;  (*variable space*)
         Files.ReadInt(R, n);
         WHILE n > 0 DO Files.Read(R, ch); SYSTEM.PUT(p, ch); INC(p); DEC(n) END ;   (*strings*)
+        tdx := p;  (*type descriptors*)
+        Files.ReadInt(R, n);
+        WHILE n > 0 DO Files.ReadInt(R, w); SYSTEM.PUT(p, w); INC(p, 4); DEC(n, 4) END ;
         mod.code := p;  (*program*)
         Files.ReadInt(R, n);
         WHILE n > 0 DO Files.ReadInt(R, w); SYSTEM.PUT(p, w); INC(p, 4); DEC(n) END ;  (*program code*)
@@ -140,7 +141,8 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.10.18 
         Files.ReadInt(R, w);
         WHILE w >= 0 DO SYSTEM.PUT(p, mod.data + w); INC(p, 4); Files.ReadInt(R, w) END ;
         SYSTEM.PUT(p, 0); INC(p, 4);
-        Files.ReadInt(R, fixorgP); Files.ReadInt(R, fixorgD); Files.ReadInt(R, fixorgT);
+        Files.ReadInt(R, fixorgP); Files.ReadInt(R, fixorgD);
+        Files.ReadInt(R, fixorgT); Files.ReadInt(R, fixorgM);
         Files.ReadInt(R, w); body := SYSTEM.VAL(Command, mod.code + w);
         Files.Read(R, ch);
         IF ch # "O" THEN (*corrupted file*)  mod := NIL; error(4, name) END
@@ -177,17 +179,32 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 9.4.2016 / AP 1.10.18 
           adr := adr - disp*4
         END ;
         (*fixup of type descriptors*)
-        adr := mod.data + fixorgT*4;
-        WHILE adr # mod.data DO
+        adr := tdx + fixorgT*4;
+        WHILE adr # tdx DO
           SYSTEM.GET(adr, inst);
           mno := inst DIV 1000000H MOD 10H;
           vno := inst DIV 1000H MOD 1000H;
           disp := inst MOD 1000H;
-          IF mno = 0 THEN (*global*) inst := mod.data + vno
+          IF mno = 0 THEN (*global*) inst := tdx + vno
           ELSE (*import*)
             SYSTEM.GET(mod.imp + (mno-1)*4, impmod);
             SYSTEM.GET(impmod.ent + vno*4, offset);
             inst := impmod.data + offset
+          END ;
+          SYSTEM.PUT(adr, inst); adr := adr - disp*4
+        END ;
+        (*fixup of method tables*)
+        adr := tdx + fixorgM*4;
+        WHILE adr # tdx DO
+          SYSTEM.GET(adr, inst);
+          mno := inst DIV 10000000H;
+          vno := inst DIV 4000H MOD 4000H;
+          disp := inst MOD 4000H;
+          IF mno = 0 THEN (*global*) inst := mod.code + vno
+          ELSE (*import*)
+            SYSTEM.GET(mod.imp + (mno-1)*4, impmod);
+            SYSTEM.GET(impmod.ent + vno*4, offset);
+            inst := impmod.code + offset
           END ;
           SYSTEM.PUT(adr, inst); adr := adr - disp*4
         END ;

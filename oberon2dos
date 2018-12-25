@@ -45,6 +45,9 @@ foreach(@lines) {
     $_ =~ s/\r\n/\r/g;
     # convert all CR (\r) to CRLF (\r\n), so we ONLY have CRLF in the file afterwards
     $_ =~ s/\r/\r\n/g;
+    # replace a TAB (\t) with two spaces (\s\s)
+    $_ =~ s/\t/  /g;
+
     push(@newlines,$_);
 }
 

@@ -45,7 +45,7 @@ ORP.Compile TextFrames.Mod/s ~                Edit.Open TextFrames.Mod
 ORP.Compile System.Mod/s ~                       Edit.Open System.Mod
 ORP.Compile Edit.Mod/s Tools.Mod/s ~        Edit.Open Edit.Mod
 
-ORP.Compile PCLink1.Mod/s Clipboard.Mod ~
+ORP.Compile PCLink1.Mod/s Clipboard.Mod Out.Mod ~
 ORP.Compile RS232.Mod/s SCC.Mod/s Net.Mod/s ~
 
 ORP.Compile Graphics.Mod/s GraphicFrames.Mod/s ~

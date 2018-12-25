@@ -1,4 +1,4 @@
-MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 1.10.18*)
+MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 10.10.18*)
   CONST restore* = 0; modify* = 1; suspend* = 2; consume* = 3; track* = 4;
     defocus* = 5; neutralize* = 6; mark* = 7; inf = 65535; DnLength* = 24;
 
@@ -72,6 +72,14 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 1.10.18*)
     RETURN F(Display)
   END ThisDisplay;
 
+  PROCEDURE Next* (V: Viewer): Viewer;
+  BEGIN IF (V IS Display) & (V.next = NIL) THEN V := root ELSE V := V.next(Viewer) END; RETURN V
+  END Next;
+
+  PROCEDURE Prev* (V: Viewer): Viewer;
+  BEGIN RETURN V.prev(Viewer)
+  END Prev;
+
   PROCEDURE SetFocus* (D: Display; V: Viewer);
   BEGIN D.focus := V;
     IF D = CurDisplay THEN FocusViewer := V END
@@ -79,8 +87,7 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 1.10.18*)
 
   PROCEDURE PassFocus* (V: Viewer);
     VAR D: Display; M: ControlMsg;
-  BEGIN D := ThisDisplay(V);
-    M.id := defocus; D.focus.handle(D.focus, M); SetFocus(D, V)
+  BEGIN D := ThisDisplay(V); M.id := defocus; D.focus.handle(D.focus, M); SetFocus(D, V)
   END PassFocus;
 
   PROCEDURE Adjust* (F: Frame; id, Y, H: INTEGER);
@@ -228,13 +235,13 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 1.10.18*)
   BEGIN D.backup := NIL
   END Flush;
 
-  PROCEDURE Locate* (D: Display; X, H: INTEGER; VAR fil, bot, alt, max: Frame);
+  PROCEDURE Locate* (D: Display; X, H: INTEGER; VAR fil, top, bot, alt, max: Frame);
     VAR T, V: Frame;
   BEGIN
     IF X < inf THEN
       T := D.dsc;
       REPEAT T := T.next UNTIL X < T.X + T.W;
-      fil := T.dsc; bot := fil.next;
+      fil := T.dsc; top := fil.prev; bot := fil.next;
       IF bot.next # fil THEN
         alt := bot.next; V := alt.next;
         WHILE (V # fil) & (alt.H < H) DO
@@ -352,14 +359,6 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 1.10.18*)
     IF root = NIL THEN root := D ELSE D.prev := root.prev; D.prev.next := D END;
     root.prev := D; D.next := NIL; nextId := nextId + 1
   END InitDisplay;
-
-  PROCEDURE NextDisplay* (D: Display): Display;
-  BEGIN IF D.next = NIL THEN D := root ELSE D := D.next(Display) END; RETURN D
-  END NextDisplay;
-
-  PROCEDURE PrevDisplay* (D: Display): Display;
-  BEGIN RETURN D.prev(Display)
-  END PrevDisplay;
 
   PROCEDURE SetDisplay* (D: Display);
     VAR M: ViewerMsg;

@@ -1,4 +1,4 @@
-MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 4.7.18*)
+MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 10.10.18*)
   IMPORT SYSTEM, Kernel, Files, Modules, Input, Display, Viewers, Fonts, Texts;
 
   CONST off = 0; idle = 1; active = 2; (*task states*)
@@ -281,8 +281,8 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 4.7.
 
   PROCEDURE UY (X: INTEGER): INTEGER;
     VAR y: INTEGER;
-      fil, bot, alt, max: Viewers.Frame;
-  BEGIN Viewers.Locate(Viewers.CurDisplay, X, 0, fil, bot, alt, max);
+      fil, top, bot, alt, max: Viewers.Frame;
+  BEGIN Viewers.Locate(Viewers.CurDisplay, X, 0, fil, top, bot, alt, max);
     IF fil.H >= DH DIV 8 THEN y := DH ELSE y := max.Y + max.H DIV 2 END ;
     RETURN y
   END UY;
@@ -296,9 +296,9 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 4.7.
 
   PROCEDURE SY (X: INTEGER): INTEGER;
     VAR H0, H1, H2, H3, y: INTEGER;
-      fil, bot, alt, max: Viewers.Frame;
+      fil, top, bot, alt, max: Viewers.Frame;
   BEGIN H3 := DH - DH DIV 3; H2 := H3 - H3 DIV 2; H1 := DH DIV 5; H0 := DH DIV 10;
-    Viewers.Locate(Viewers.CurDisplay, X, DH, fil, bot, alt, max);
+    Viewers.Locate(Viewers.CurDisplay, X, DH, fil, top, bot, alt, max);
     IF fil.H >= DH DIV 8 THEN y := DH
     ELSIF max.H >= DH - H0 THEN y := max.Y + H3
     ELSIF max.H >= H3 - H0 THEN y := max.Y + H2

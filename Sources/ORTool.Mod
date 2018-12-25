@@ -1,4 +1,4 @@
-MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 1.10.18*)
+MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 12.12.18*)
   IMPORT Files, Texts, Oberon, ORB;
   VAR W: Texts.Writer;
     mnemo0, mnemo1: ARRAY 16, 4 OF CHAR;  (*mnemonics*)
@@ -33,10 +33,14 @@ MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 1.10.18*)
           IF name[0] # 0X THEN Texts.Write(W, " "); Texts.WriteString(W, name); ReadType(R)
           ELSE Texts.WriteString(W, " --")
           END ;
-          Files.ReadNum(R, off); Texts.WriteInt(W, off, 4); Read(R, class)
+          Files.ReadNum(R, off); Texts.WriteInt(W, off, 4); (*offset / mthno*)
+          IF (class = ORB.Const) & (name[0] # 0X) THEN (*exported type-bound procedure*)
+            Files.ReadNum(R, off); Texts.WriteInt(W, off, 4) (*exno*)
+          END ;
+          Read(R, class)
         END ;
         Texts.Write(W, "}")
-      ELSIF form = ORB.Proc THEN
+      ELSIF form IN {ORB.Proc, ORB.TProc} THEN
         ReadType(R); Texts.Write(W, "("); Read(R, class);
         WHILE class # 0 DO  (*parameters*)
           Texts.WriteString(W, " class = "); Texts.WriteInt(W, class, 1); Read(R, readonly);
@@ -156,14 +160,14 @@ MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 1.10.18*)
           Files.ReadInt(R, key); Texts.WriteHex(W, key); Texts.WriteLn(W);
           Files.ReadString(R, name)
         END ;
-        Texts.WriteString(W, "type descriptors"); Texts.WriteLn(W);
-        Files.ReadInt(R, n); n := n DIV 4; i := 0;
-        WHILE i < n DO Files.ReadInt(R, data); Texts.WriteHex(W, data); INC(i) END ;
-        Texts.WriteLn(W);
         Texts.WriteString(W, "data"); Files.ReadInt(R, data); Texts.WriteInt(W, data, 6); Texts.WriteLn(W);
         Texts.WriteString(W, "strings"); Texts.WriteLn(W);
         Files.ReadInt(R, n); i := 0;
         WHILE i < n DO Files.Read(R, ch); Texts.Write(W, ch); INC(i) END ;
+        Texts.WriteLn(W);
+        Texts.WriteString(W, "type descriptors"); Texts.WriteLn(W);
+        Files.ReadInt(R, n); n := n DIV 4; i := 0;
+        WHILE i < n DO Files.ReadInt(R, data); Texts.WriteHex(W, data); INC(i) END ;
         Texts.WriteLn(W);
         Texts.WriteString(W, "code"); Texts.WriteLn(W);
         Files.ReadInt(R, n); i := 0;
@@ -191,6 +195,7 @@ MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 1.10.18*)
         Files.ReadInt(R, data); Texts.WriteString(W, "fixP = "); Texts.WriteInt(W, data, 8); Texts.WriteLn(W);
         Files.ReadInt(R, data); Texts.WriteString(W, "fixD = "); Texts.WriteInt(W, data, 8); Texts.WriteLn(W);
         Files.ReadInt(R, data); Texts.WriteString(W, "fixT = "); Texts.WriteInt(W, data, 8); Texts.WriteLn(W);
+        Files.ReadInt(R, data); Texts.WriteString(W, "fixM = "); Texts.WriteInt(W, data, 8); Texts.WriteLn(W);
         Files.ReadInt(R, data); Texts.WriteString(W, "entry = "); Texts.WriteInt(W, data, 8); Texts.WriteLn(W);
         Files.Read(R, ch);
         IF ch # "O" THEN Texts.WriteString(W, "format error"); Texts.WriteLn(W) END
@@ -200,7 +205,7 @@ MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 1.10.18*)
     END
   END DecObj;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "ORTool 18.2.2013 / AP 1.10.18");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "ORTool 18.2.2013 / AP 12.12.18");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
   mnemo0[0] := "MOV";
   mnemo0[1] := "LSL";

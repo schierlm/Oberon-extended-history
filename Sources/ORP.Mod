@@ -1,4 +1,4 @@
-MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07 / AP 1.10.18 Experimental Oberon*)
+MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07 / AP 12.12.18 Experimental Oberon*)
   IMPORT Texts, Oberon, ORS, ORB, ORG;
   (*Author: Niklaus Wirth, 2014.
     Parser of Oberon-RISC compiler. Uses Scanner ORS to obtain symbols (tokens),
@@ -13,15 +13,15 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
       name: ORS.Ident; type: ORB.Type; next: PtrBase
     END ;
   
-  VAR sym: INTEGER;   (*last symbol read*)
-    dc, fc: LONGINT;    (*data counter, forward counter*)
+  VAR sym: INTEGER;  (*last symbol read*)
+    dc, fc: LONGINT;  (*data counter, forward counter*)
     level, exno, version: INTEGER;
     newSF: BOOLEAN;  (*option flag*)
     expression: PROCEDURE (VAR x: ORG.Item);  (*to avoid forward reference*)
     Type: PROCEDURE (VAR type: ORB.Type);
     FormalType: PROCEDURE (VAR typ: ORB.Type; dim: INTEGER);
     modid: ORS.Ident;
-    pbsList: PtrBase;   (*list of names of pointer base types*)
+    pbsList: PtrBase;  (*list of names of pointer base types*)
     dummy, lastobj: ORB.Object;
     W: Texts.Writer;
 
@@ -96,6 +96,11 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
     RETURN (t0 = t1) OR (t1 # NIL) & IsExtension(t0, t1.base)
   END IsExtension;
 
+  PROCEDURE DisallowMethods(rec: ORB.Type);  (*disallow binding methods to rec and its base types*)
+  BEGIN
+    WHILE rec # NIL DO rec.typobj.val := 1; rec := rec.base END
+  END DisallowMethods;
+
   (* expressions *)
 
   PROCEDURE TypeTest(VAR x: ORG.Item; T: ORB.Type; guard: BOOLEAN);
@@ -121,26 +126,44 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
     IF ~guard THEN x.type := ORB.boolType END
   END TypeTest;
 
-  PROCEDURE selector(VAR x: ORG.Item);
-    VAR y: ORG.Item; obj: ORB.Object;
-  BEGIN
+  PROCEDURE selector(VAR x, y: ORG.Item);
+    VAR w: ORG.Item; obj, fld: ORB.Object; rec: ORB.Type; deref, hasptr: BOOLEAN;
+  BEGIN hasptr := FALSE;
     WHILE (sym = ORS.lbrak) OR (sym = ORS.period) OR (sym = ORS.arrow)
         OR (sym = ORS.lparen) & (x.type.form IN {ORB.Record, ORB.Pointer}) DO
       IF sym = ORS.lbrak THEN
         IF x.type.form = ORB.Pointer THEN ORG.DeRef(x); x.type := x.type.base END ;
-        REPEAT ORS.Get(sym); expression(y);
+        REPEAT ORS.Get(sym); expression(w);
           IF x.type.form = ORB.Array THEN
-            CheckInt(y); ORG.Index(x, y); x.type := x.type.base
+            CheckInt(w); ORG.Index(x, w); x.type := x.type.base
           ELSE ORS.Mark("not an array")
           END
         UNTIL sym # ORS.comma;
         Check(ORS.rbrak, "no ]")
       ELSIF sym = ORS.period THEN ORS.Get(sym);
-        IF sym = ORS.ident THEN
-          IF x.type.form = ORB.Pointer THEN ORG.DeRef(x); x.type := x.type.base END ;
-          IF x.type.form = ORB.Record THEN
-            obj := ORB.thisfield(x.type); ORS.Get(sym);
-            IF obj # NIL THEN ORG.Field(x, obj); x.type := obj.type
+        IF sym = ORS.ident THEN y := x;  (*receiver*)
+          IF x.type.form = ORB.Pointer THEN rec := x.type.base; deref := TRUE; hasptr := TRUE ELSE rec := x.type; deref := FALSE END ;
+          IF rec.form = ORB.Record THEN
+            obj := ORB.thisfield(rec); ORS.Get(sym);
+            IF deref & ((obj = NIL) OR (obj.type.form # ORB.TProc) OR (sym # ORS.arrow)) THEN ORG.DeRef(x); x.type := rec END ;
+            IF obj # NIL THEN
+              IF obj.type.form = ORB.TProc THEN
+                IF hasptr & ~deref THEN ORS.Mark("not allowed") END ;
+                IF sym = ORS.arrow THEN  (*super call*)
+                  ORS.Get(sym); fld := ORB.FindFld(obj.name, rec, FALSE);
+                  IF fld # NIL THEN fld := NIL;
+                    WHILE (rec.base # NIL) & (fld = NIL) DO fld := ORB.FindFld(obj.name, rec.base, FALSE); rec := rec.base END ;
+                    IF fld # NIL THEN obj := fld; ORG.Method(x, obj, rec, TRUE); DisallowMethods(x.type.base)
+                    ELSE ORS.Mark("method unknown in base types")
+                    END
+                  ELSE ORS.Mark("method undefined at current extension level")
+                  END
+                ELSE ORG.Method(x, obj, rec, FALSE)
+                END ;
+                obj.dsc := rec.typobj  (*receiver type object*)
+              ELSE ORG.Field(x, obj)
+              END ;
+              x.type := obj.type
             ELSE ORS.Mark("undef")
             END
           ELSE ORS.Mark("not a record")
@@ -149,7 +172,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
         END
       ELSIF sym = ORS.arrow THEN
         ORS.Get(sym);
-        IF x.type.form = ORB.Pointer THEN ORG.DeRef(x); x.type := x.type.base
+        IF x.type.form = ORB.Pointer THEN ORG.DeRef(x); x.type := x.type.base; hasptr := TRUE
         ELSE ORS.Mark("not a pointer")
         END
       ELSIF (sym = ORS.lparen) & (x.type.form IN {ORB.Record, ORB.Pointer}) THEN (*type guard*)
@@ -167,11 +190,19 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
   END selector;
 
   PROCEDURE EqualSignatures(t0, t1: ORB.Type): BOOLEAN;
-    VAR p0, p1: ORB.Object; com: BOOLEAN;
-  BEGIN com := TRUE;
+    VAR p0, p1: ORB.Object; com, ext: BOOLEAN;
+  BEGIN com := TRUE; ext := FALSE;
     IF (t0.base = t1.base) & (t0.nofpar = t1.nofpar) THEN
       p0 := t0.dsc; p1 := t1.dsc;
-      WHILE p0 # NIL DO
+      IF t1.form = ORB.TProc THEN  (*type-bound procedure*)
+        IF t0.form = ORB.TProc THEN  (*check whether its receiver is an extension of p0*)
+          IF p1.type.form = ORB.Pointer THEN ext := IsExtension(p0.type.base, p1.type.base)
+          ELSE ext := IsExtension(p0.type, p1.type)
+          END
+        END ;
+        IF ext THEN p0 := p0.next; p1 := p1.next ELSE p0 := NIL; com := FALSE END
+      END ;
+      WHILE (p0 # NIL) & (p1 # NIL) DO
         IF (p0.class = p1.class) &  (p0.rdo = p1.rdo) &
           ((p0.type = p1.type) OR
           (p0.type.form = ORB.Array) & (p1.type.form = ORB.Array) & (p0.type.len = p1.type.len) & (p0.type.base = p1.type.base) OR
@@ -187,7 +218,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
 
   PROCEDURE CompTypes(t0, t1: ORB.Type; varpar: BOOLEAN): BOOLEAN;
   BEGIN (*check for assignment compatibility*)
-    RETURN (t0 = t1)    (*openarray assignment disallowed in ORG*)
+    RETURN (t0 = t1) & (t0.form # ORB.TProc) & (t1.form # ORB.TProc)    (*openarray assignment disallowed in ORG*)
       OR (t0.form = ORB.Array) & (t1.form = ORB.Array) & (t0.base =  t1.base) & (t0.len = t1.len) & (t0.len >= 0)
       OR (t0.form = ORB.Record) & (t1.form = ORB.Record)  & IsExtension(t0, t1)
       OR ~varpar &
@@ -196,10 +227,11 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
         OR (t0.form IN {ORB.Pointer, ORB.Proc}) & (t1.form = ORB.NilTyp))
   END CompTypes;
 
-  PROCEDURE Parameter(par: ORB.Object);
+  PROCEDURE Parameter(par: ORB.Object; VAR y: ORG.Item; receiver: BOOLEAN);
     VAR x: ORG.Item; varpar: BOOLEAN;
-  BEGIN expression(x);
+  BEGIN
     IF par # NIL THEN
+      IF receiver THEN x := y ELSE expression(x) END ;
       varpar := par.class = ORB.Par;
       IF CompTypes(par.type, x.type, varpar) THEN
         IF ~varpar THEN ORG.ValueParam(x)
@@ -224,15 +256,19 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
     END
   END Parameter;
 
-  PROCEDURE ParamList(VAR x: ORG.Item);
+  PROCEDURE ParamList(VAR x, y: ORG.Item);
     VAR n: INTEGER; par: ORB.Object;
   BEGIN par := x.type.dsc; n := 0;
+    IF x.type.form = ORB.TProc THEN  (*type-bound procedure, y receiver*)
+      IF (par.class = ORB.Par) & (y.type.form = ORB.Pointer) THEN ORG.DeRef(y); y.type := y.type.base END ;
+      INC(n); Parameter(par, y, TRUE); par := par.next
+    END ;
     IF sym # ORS.rparen THEN
-      Parameter(par); n := 1;
+      Parameter(par, y, FALSE); INC(n);
       WHILE sym <= ORS.comma DO
         Check(sym, "comma?");
         IF par # NIL THEN par := par.next END ;
-        INC(n); Parameter(par)
+        INC(n); Parameter(par, y, FALSE)
       END ;
       Check(ORS.rparen, ") missing")
     ELSE ORS.Get(sym);
@@ -312,7 +348,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
   END set; 
 
   PROCEDURE factor(VAR x: ORG.Item);
-    VAR obj: ORB.Object; rx: LONGINT;
+    VAR obj: ORB.Object; y: ORG.Item; rx: LONGINT;
   BEGIN (*sync*)
     IF (sym < ORS.char) OR (sym > ORS.ident) THEN ORS.Mark("expression expected");
       REPEAT ORS.Get(sym) UNTIL (sym >= ORS.char) & (sym <= ORS.for) OR (sym >= ORS.then)
@@ -320,12 +356,12 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
     IF sym = ORS.ident THEN
       qualident(obj); lastobj := obj;
       IF obj.class = ORB.SFunc THEN StandFunc(x, obj.val, obj.type)
-      ELSE ORG.MakeItem(x, obj, level); selector(x);
+      ELSE ORG.MakeItem(x, obj, level); selector(x, y);
         IF sym = ORS.lparen THEN
           ORS.Get(sym);
-          IF (x.type.form = ORB.Proc) & (x.type.base.form # ORB.NoTyp) THEN
-            ORG.PrepCall(x, rx); ParamList(x); ORG.Call(x, rx); x.type := x.type.base
-          ELSE ORS.Mark("not a function"); ParamList(x)
+          IF (x.type.form IN {ORB.Proc, ORB.TProc}) & (x.type.base.form # ORB.NoTyp) THEN
+            ORG.PrepCall(x, rx); ParamList(x, y); ORG.Call(x, rx); x.type := x.type.base
+          ELSE ORS.Mark("not a function"); ParamList(x, y)
           END
         END
       END
@@ -449,9 +485,11 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
       ELSIF pno = 4 THEN CheckBool(x); ORG.Assert(x)
       ELSIF pno = 5 THEN(*NEW*) CheckReadOnly(x);
         IF (x.type.form = ORB.Pointer) & (x.type.base.form IN {ORB.Record, ORB.Array}) THEN
-	  IF nap = 1 THEN
+          IF nap = 1 THEN
             IF x.type.base.form = ORB.Array THEN
-              IF x.type.base.len >= 0 THEN ORG.MakeConstItem(y, ORB.intType, x.type.base.len) ELSE ORS.Mark("wrong nof params") END
+              IF x.type.base.len >= 0 THEN ORG.MakeConstItem(y, ORB.intType, x.type.base.len)
+              ELSE ORS.Mark("wrong nof params")
+              END
             END
           ELSIF (nap = 2) & (x.type.base.form = ORB.Array) & (x.type.base.len < 0) THEN CheckInt(y) (*open array*)
           ELSE ORS.Mark("wrong nof params")
@@ -567,7 +605,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
       IF sym = ORS.ident THEN
         qualident(obj); ORG.MakeItem(x, obj, level);
         IF x.mode = ORB.SProc THEN StandProc(obj.val)
-        ELSE selector(x);
+        ELSE selector(x, y);
           IF sym = ORS.becomes THEN (*assignment*)
             ORS.Get(sym); CheckReadOnly(x); expression(y);
             IF CompTypes(x.type, y.type, FALSE) THEN
@@ -584,11 +622,11 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
             ELSE ORS.Mark("illegal assignment")
             END
           ELSIF sym = ORS.eql THEN ORS.Mark("should be :="); ORS.Get(sym); expression(y)
-          ELSIF sym = ORS.lparen THEN (*procedure call*)
+          ELSIF sym = ORS.lparen THEN (*procedure call, y receiver*)
             ORS.Get(sym);
-            IF (x.type.form = ORB.Proc) & (x.type.base.form = ORB.NoTyp) THEN
-              ORG.PrepCall(x, rx); ParamList(x); ORG.Call(x, rx)
-            ELSE ORS.Mark("not a procedure"); ParamList(x)
+            IF (x.type.form IN {ORB.Proc, ORB.TProc}) & (x.type.base.form = ORB.NoTyp) THEN
+              ORG.PrepCall(x, rx); ParamList(x, y); ORG.Call(x, rx)
+            ELSE ORS.Mark("not a procedure"); ParamList(x, y)
             END
           ELSIF x.type.form = ORB.Proc THEN (*procedure call without parameters*)
             IF x.type.nofpar > 0 THEN ORS.Mark("missing parameters") END ;
@@ -697,12 +735,12 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
   END ArrayType;
 
   PROCEDURE RecordType(VAR type: ORB.Type);
-    VAR obj, obj0, new, bot, base: ORB.Object;
+    VAR obj, obj0, new, bot, base, last: ORB.Object;
       typ, tp: ORB.Type;
       offset, off, n: LONGINT;
-  BEGIN NEW(typ); typ.form := ORB.NoTyp; typ.base := NIL; typ.mno := -level; typ.nofpar := 0; offset := 0; bot := NIL;
+  BEGIN NEW(typ); typ.form := ORB.NoTyp; typ.base := NIL; typ.mno := -level; typ.nofpar := 0; typ.len := 0; offset := 0; bot := NIL;
     IF sym = ORS.lparen THEN
-      ORS.Get(sym); (*record extension*)
+      ORS.Get(sym);  (*record extension*)
       IF level # 0 THEN ORS.Mark("extension of local types not implemented") END ;
       IF sym = ORS.ident THEN
         qualident(base);
@@ -718,13 +756,16 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
       END ;
       Check(ORS.rparen, "no )")
     END ;
+    typ.dsc := bot; last := NIL;
     WHILE sym = ORS.ident DO  (*fields*)
-      n := 0; obj := bot;
+      n := 0; obj := last;
       WHILE sym = ORS.ident DO
-        obj0 := obj;
+        obj0 := typ.dsc;
         WHILE (obj0 # NIL) & (obj0.name # ORS.id) DO obj0 := obj0.next END ;
         IF obj0 # NIL THEN ORS.Mark("mult def") END ;
-        NEW(new); ORS.CopyId(new.name); new.class := ORB.Fld; new.next := obj; obj := new; INC(n);
+        NEW(new); ORS.CopyId(new.name); new.class := ORB.Fld; INC(n);
+        IF last = NIL THEN typ.dsc := new ELSE last.next := new END ;
+        new.next := bot; last := new;
         ORS.Get(sym); CheckExport(new.expo);
         IF (sym # ORS.comma) & (sym # ORS.colon) THEN ORS.Mark("comma expected")
         ELSIF sym = ORS.comma THEN ORS.Get(sym)
@@ -733,12 +774,12 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
       Check(ORS.colon, "colon expected"); Type(tp);
       IF (tp.form = ORB.Array) & (tp.len < 0) THEN ORS.Mark("dyn array not allowed") END ;
       IF tp.size > 1 THEN offset := (offset+3) DIV 4 * 4 END ;
-      offset := offset + n * tp.size; off := offset; obj0 := obj;
-      WHILE obj0 # bot DO obj0.type := tp; obj0.lev := 0; off := off - tp.size; obj0.val := off; obj0 := obj0.next END ;
-      bot := obj;
+      off := offset; offset := offset + n * tp.size;
+      IF obj = NIL THEN obj0 := typ.dsc ELSE obj0 := obj.next END ;
+      WHILE obj0 # bot DO obj0.type := tp; obj0.lev := 0; obj0.val := off; off := off + tp.size; obj0 := obj0.next END ;
       IF sym = ORS.semicolon THEN ORS.Get(sym) ELSIF sym # ORS.end THEN ORS.Mark(" ; or END") END
     END ;
-    typ.form := ORB.Record; typ.dsc := bot; typ.size := (offset + 3) DIV 4 * 4; type := typ
+    typ.form := ORB.Record; typ.size := (offset + 3) DIV 4 * 4; type := typ
   END RecordType;
 
   PROCEDURE FPSection(VAR adr: LONGINT; VAR nofpar: INTEGER);
@@ -839,7 +880,9 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
         END ;
         ORS.Get(sym)
       ELSE Type(type.base);
-        IF ~(type.base.form IN {ORB.Record, ORB.Array}) OR (type.base.typobj = NIL) THEN ORS.Mark("must point to named record or array") END ;
+        IF ~(type.base.form IN {ORB.Record, ORB.Array}) OR (type.base.typobj = NIL) THEN
+          ORS.Mark("must point to named record or array")
+        END ;
         CheckLevel(level)
       END
     ELSIF sym = ORS.procedure THEN
@@ -888,8 +931,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
           WHILE ptbase # NIL DO
             IF obj.name = ptbase.name THEN ptbase.type.base := obj.type END ;
             ptbase := ptbase.next
-          END ;
-          IF (tp.form = ORB.Record) & (level = 0) THEN ORG.BuildTD(tp, dc) END    (*type descriptor; len used as its address*)
+          END
         END ;
         Check(ORS.semicolon, "; missing")
       END
@@ -919,61 +961,131 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
     IF (sym >= ORS.const) & (sym <= ORS.var) THEN ORS.Mark("declaration in bad order") END
   END Declarations;
 
+  PROCEDURE Receiver(VAR class: INTEGER; VAR name: ORS.Ident; VAR typ, rec: ORB.Type);
+    VAR obj: ORB.Object;
+  BEGIN typ := ORB.noType; rec := typ;
+    IF sym = ORS.var THEN ORS.Get(sym); class := ORB.Par ELSE class := ORB.Var END ;
+    IF sym = ORS.ident THEN ORS.CopyId(name); ORS.Get(sym) ELSE ORS.Mark("ident?") END ;
+    Check(ORS.colon, ": expected");
+    IF sym = ORS.ident THEN
+      obj := ORB.thisObj(); ORS.Get(sym);
+      IF obj # NIL THEN
+        IF obj.class = ORB.Typ THEN typ := obj.type;
+          IF ((class = ORB.Par) & (typ.form = ORB.Record)) OR
+             ((class = ORB.Var) & (typ.form = ORB.Pointer) & (typ.base.form = ORB.Record)) THEN
+            IF typ.form = ORB.Pointer THEN rec := typ.base ELSE rec := typ END ;
+            IF (rec # NIL) & (rec.mno # level) THEN ORS.Mark("must be bound to record of same scope") END
+          ELSE ORS.Mark("invalid receiver type")
+          END
+        ELSIF obj.class = ORB.Mod THEN ORS.Mark("external receiver type not implemented")
+        ELSE ORS.Mark("receiver type expected")
+        END
+      ELSE ORS.Mark("undef")
+      END
+    ELSE ORS.Mark("type identifier expected")
+    END ;
+    Check(ORS.rparen, "no )")
+  END Receiver;
+
   PROCEDURE ProcedureDecl;
-    VAR proc: ORB.Object;
-      type: ORB.Type;
-      procid: ORS.Ident;
-      x: ORG.Item;
-      locblksize, parblksize: LONGINT;
-      int, body, expo: BOOLEAN;
-  BEGIN int := FALSE; body := TRUE; ORS.Get(sym);
+    VAR proc, redef, obj: ORB.Object;
+      type, typ, rec: ORB.Type;
+      procid, recid: ORS.Ident;
+      parblksize: LONGINT; form, class: INTEGER;
+      int, body, expo, multdef: BOOLEAN;
+
+    PROCEDURE Body(proc: ORB.Object; parblksize: LONGINT; int: BOOLEAN);
+      VAR locblksize: LONGINT;
+        x: ORG.Item;
+    BEGIN Check(ORS.semicolon, "no ;"); locblksize := parblksize;
+      Declarations(locblksize);
+      WHILE sym = ORS.procedure DO ProcedureDecl; Check(ORS.semicolon, "no ;") END ;
+      ORG.FixLink(proc.type.len);  (*fix forward references generated in ORG*)
+      proc.val := ORG.Here() * 4; DEC(fc);
+      ORG.Enter(parblksize, locblksize, int);
+      IF sym = ORS.begin THEN ORS.Get(sym); StatSequence END ;
+      IF sym = ORS.return THEN
+        ORS.Get(sym); expression(x);
+        IF proc.type.base = ORB.noType THEN ORS.Mark("this is not a function")
+        ELSIF ~CompTypes(proc.type.base, x.type, FALSE) THEN ORS.Mark("wrong result type")
+        END
+      ELSIF proc.type.base.form # ORB.NoTyp THEN
+        ORS.Mark("function without result"); proc.type.base := ORB.noType
+      END ;
+      ORG.Return(proc.type.base.form, x, locblksize, int); Check(ORS.end, "no END");
+      IF sym = ORS.ident THEN
+        IF ORS.id # proc.name THEN ORS.Mark("no match") END ;
+        ORS.Get(sym)
+      ELSE ORS.Mark("no proc id")
+      END
+    END Body;
+
+  BEGIN (* ProcedureDecl *) int := FALSE; body := TRUE; ORS.Get(sym);
     IF sym = ORS.times THEN (*interrupt*) ORS.Get(sym); int := TRUE
     ELSIF sym = ORS.arrow THEN (*forward*) ORS.Get(sym); body := FALSE
     END ;
+    IF sym = ORS.lparen THEN  (*receiver*)
+      ORS.Get(sym);
+      IF level # 0 THEN ORS.Mark("local type-bound procedures not implemented") END ;
+      Receiver(class, recid, typ, rec); form := ORB.TProc
+    ELSE form := ORB.Proc
+    END ;
     IF sym = ORS.ident THEN
-      ORS.CopyId(procid); ORS.Get(sym); CheckExport(expo);
+      ORS.CopyId(procid); ORS.Get(sym); CheckExport(expo); multdef := FALSE;
       IF int THEN parblksize := 12 ELSE parblksize := 4 END ;
-      NEW(type); type.form := ORB.Proc; type.size := ORG.WordSize; type.len := 0;
-      proc := ORB.topScope.next;
-      WHILE (proc # NIL) & (proc.name # procid) DO proc := proc.next END ;
-      IF proc = NIL THEN  (*identifier not found in the symbol table*)
-        ORB.NewObj(proc, procid, ORB.Const); INC(fc);
-        proc.type := type; proc.val := -1; proc.lev := level; proc.expo := expo;
-        IF expo THEN proc.exno := exno; INC(exno) END
-      END ;
-      ORB.OpenScope; INC(level); type.base := ORB.noType;
-      ProcedureType(type, parblksize);  (*formal parameter list*)
-      type.dsc := ORB.topScope.next;
-      IF proc.type # type THEN  (*identifier found in the symbol table*)
-        IF (proc.class # ORB.Const) OR (proc.type.form # ORB.Proc) OR (proc.val >= 0) OR ~body THEN ORS.Mark("mult def")
-        ELSIF (proc.expo # expo) OR ~EqualSignatures(proc.type, type) THEN ORS.Mark("must match forward declaration")
+      NEW(type); type.form := form; type.size := ORG.WordSize; type.len := 0; (*heading of fixup list for forward references*)
+      IF form = ORB.Proc THEN  (*regular procedure*)
+        proc := ORB.FindObj(procid, ORB.topScope.next);
+        IF proc = NIL THEN
+          ORB.NewObj(proc, procid, ORB.Const); INC(fc);
+          proc.type := type; proc.val := -1; proc.lev := level; proc.expo := expo;
+          IF expo THEN proc.exno := exno; INC(exno) END
+        ELSE multdef := (proc.class # ORB.Const) OR (proc.type.form # form) OR (proc.val >= 0) OR ~body
         END ;
-        proc.type.dsc := type.dsc
+        ORB.OpenScope; INC(level); type.base := ORB.noType
+      ELSE  (*type-bound procedure*)
+        IF rec.base # NIL THEN redef := ORB.FindObj(procid, rec.base.dsc);  (*search in fields of all base types of receiver*)
+          multdef := (redef # NIL) & ((redef.class # ORB.Const) OR (redef.type.form # form))
+        ELSE redef := NIL
+        END ;
+        proc := ORB.FindFld(procid, rec, FALSE);  (*search in fields of receiver proper, but not its base types*)
+        IF proc = NIL THEN
+          ORB.OpenScope; ORB.NewObj(proc, procid, ORB.Const); ORB.CloseScope; INC(fc);
+          proc.type := type; proc.val := -1; proc.expo := expo; type.typobj := proc;
+          IF expo THEN proc.exno := exno; INC(exno);
+            IF (typ.typobj # NIL) & ~typ.typobj.expo THEN ORS.Mark("receiver must be exported") END ;
+            procid := "@"; ORB.NewObj(obj, procid, ORB.Const); obj.name[0] := 0X;  (*dummy entry to preserve linear order of exno*)
+            obj.type := proc.type; obj.dsc := proc; obj.exno := proc.exno; obj.expo := FALSE
+          END ;
+          IF redef # NIL THEN proc.lev := redef.lev ELSE proc.lev := ORB.NofMethods(rec) END ;  (*mthno*)
+          IF rec.typobj # NIL THEN ORB.InsertMethod(rec, proc);
+            IF rec.typobj.val > 0 THEN ORS.Mark("invalid method order") END
+          END ;
+          DisallowMethods(rec.base)
+        ELSE multdef := (proc.class # ORB.Const) OR (proc.type.form # form) OR (proc.val >= 0) OR ~body
+        END ;
+        ORB.OpenScope; INC(level); type.base := ORB.noType;
+        ORB.NewObj(obj, recid, class);  (*receiver*)
+        obj.type := typ; obj.rdo := FALSE; obj.lev := level; obj.val := parblksize;
+        IF typ.form = ORB.Record THEN INC(parblksize, 2*ORG.WordSize) ELSE INC(parblksize, ORG.WordSize) END
       END ;
-      IF body THEN
-        Check(ORS.semicolon, "no ;"); locblksize := parblksize;
-        Declarations(locblksize);
-        WHILE sym = ORS.procedure DO ProcedureDecl; Check(ORS.semicolon, "no ;") END ;
-        ORG.FixLink(proc.type.len);  (*fix forward references generated in ORG.load and ORG.Call*)
-        proc.val := ORG.Here() * 4; DEC(fc);
-        ORG.Enter(parblksize, locblksize, int);
-        IF sym = ORS.begin THEN ORS.Get(sym); StatSequence END ;
-        IF sym = ORS.return THEN
-          ORS.Get(sym); expression(x);
-          IF type.base = ORB.noType THEN ORS.Mark("this is not a function")
-          ELSIF ~CompTypes(type.base, x.type, FALSE) THEN ORS.Mark("wrong result type")
+      IF multdef THEN ORS.Mark("mult def") END ;
+      ProcedureType(type, parblksize); type.dsc := ORB.topScope.next;  (*formal parameter list*)
+      IF form = ORB.TProc THEN INC(type.nofpar) END ;
+      IF ~multdef THEN
+        IF proc.type # type THEN  (*forward declaration found*)
+          IF (proc.expo # expo) OR ~EqualSignatures(proc.type, type) THEN ORS.Mark("must match forward declaration") END ;
+          proc.type.dsc := type.dsc
+        END ;
+        IF (form = ORB.TProc) & (redef # NIL) THEN  (*redefined method found*)
+          IF redef.expo & typ.typobj.expo & ~proc.expo THEN ORS.Mark("overriding method must be exported")
+          ELSIF ~EqualSignatures(redef.type, proc.type) THEN ORS.Mark("must match redefined method")
           END
-        ELSIF type.base.form # ORB.NoTyp THEN
-          ORS.Mark("function without result"); type.base := ORB.noType
-        END ;
-        ORG.Return(type.base.form, x, locblksize, int); Check(ORS.end, "no END");
-        IF sym = ORS.ident THEN
-          IF ORS.id # procid THEN ORS.Mark("no match") END ;
-          ORS.Get(sym)
-        ELSE ORS.Mark("no proc id")
         END
       END ;
+      IF body THEN Body(proc, parblksize, int) END ;
       ORB.CloseScope; DEC(level)
+    ELSE ORS.Mark("proc id expected")
     END
   END ProcedureDecl;
 
@@ -997,7 +1109,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
         END
       ELSE context[0] := 0X
       END ;
-      Check(ORS.semicolon, "no ;"); level := 0; dc := 0; exno := 1; key := 0;
+      Check(ORS.semicolon, "no ;"); level := 0; dc := 0; fc := 0; exno := 1; key := 0;
       IF sym = ORS.import THEN
         ORS.Get(sym);
         WHILE sym = ORS.ident DO
@@ -1025,7 +1137,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
       END ;
       ORG.Open(version); Declarations(dc); ORG.SetDataSize((dc + 3) DIV 4 * 4);
       WHILE sym = ORS.procedure DO ProcedureDecl; Check(ORS.semicolon, "no ;") END ;
-      IF fc > 0 THEN ORS.Mark("undefined forward declarations") END ;
+      IF fc > 0 THEN ORS.Mark("unresolved forward declarations") END ;
       ORG.Header;
       IF sym = ORS.begin THEN ORS.Get(sym); StatSequence END ;
       Check(ORS.end, "no END");
@@ -1090,7 +1202,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
     Oberon.Collect(0)
   END Compile;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Compiler  17.9.2018 / AP 1.10.18");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Compiler  17.9.2018 / AP 12.12.18");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
   NEW(dummy); dummy.class := ORB.Var; dummy.type := ORB.intType;
   expression := expression0; Type := Type0; FormalType := FormalType0

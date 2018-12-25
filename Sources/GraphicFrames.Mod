@@ -380,10 +380,10 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 1.6.17*)
             IF newcap # NIL THEN InsertChar(G, M.ch); Mark(G, 1)
             ELSIF G.marked THEN Defocus(G); Deselect(G);
               CASE M OF
-	        Oberon.InputMsg: NewCaption(G, M.col, M.fnt) |
-	        Viewers.InputMsg: NewCaption(G, Oberon.CurCol, Oberon.CurFnt)
+                Oberon.InputMsg: NewCaption(G, M.col, M.fnt) |
+                Viewers.InputMsg: NewCaption(G, Oberon.CurCol, Oberon.CurFnt)
               END ;
-	      InsertChar(G, M.ch)
+              InsertChar(G, M.ch)
             END
           ELSIF (M.ch = 8X) & (newcap # NIL) THEN DeleteChar(G); Mark(G, 1)
           END

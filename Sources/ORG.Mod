@@ -1,13 +1,14 @@
-MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 1.10.2018  Oberon compiler; code generator for RISC / AP 1.10.18 Experimental Oberon*)
+MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 17.9.2018  Oberon compiler; code generator for RISC / AP 12.12.18 Experimental Oberon*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
-     Procedural interface to Parser OSAP; result in array "code".
+     Procedural interface to Parser ORP; result in array "code".
      Procedure Close writes code-files*)
 
   CONST WordSize* = 4;
     StkOrg0 = -64; VarOrg0 = 0;  (*for RISC-0 only*)
     MT = 12; SP = 14; LNK = 15;   (*dedicated registers*)
-    maxCode = 8192; maxStrx = 2800; maxTD = 160; maxCase = 100; C16 = 10000H; C24 = 1000000H; C28 = 10000000H; C30 = 40000000H;
+    maxCode = 8192; maxStrx = 3200; maxTD = 160; maxCase = 100;
+    C16 = 10000H; C24 = 1000000H; C28 = 10000000H; C30 = 40000000H;
     Reg = 10; RegI = 11; Cond = 12;  (*internal item modes*)
 
   (*frequently used opcodes*)  U = 2000H; V = 1000H;
@@ -36,20 +37,20 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 1.10.2018  Oberon compiler; code 
     RegI   regno   off     -
     Cond  cond   Fchain  Tchain  *)
 
-  VAR pc*, varsize: LONGINT;   (*program counter, data index*)
-    tdx, strx, casex: LONGINT;
-    entry: LONGINT;   (*main entry point*)
+  VAR pc*: LONGINT;  (*program counter*)
+    varx, strx, tdw, casew: LONGINT;  (*varx and strx in bytes, tdw and casew in words*)
+    entry: LONGINT;  (*main entry point*)
     RH: LONGINT;  (*available registers R[0] ... R[H-1]*)
     frame: LONGINT;  (*frame offset changed in SaveRegs and RestoreRegs*)
-    fixorgP, fixorgD, fixorgT: LONGINT;   (*origins of lists of locations to be fixed up by loader*)
+    fixorgP, fixorgD, fixorgT, fixorgM: LONGINT;   (*origins of lists of locations to be fixed up by loader*)
     check: BOOLEAN;  (*emit run-time checks*)
     version: INTEGER;  (* 0 = RISC-0, 1 = RISC-5 *)
     
     relmap: ARRAY 6 OF INTEGER;  (*condition codes for relations*)
     code: ARRAY maxCode OF LONGINT;
-    data: ARRAY maxTD OF LONGINT;  (*type descriptors*)
-    str: ARRAY maxStrx OF CHAR;
-    case: ARRAY maxCase OF LONGINT;  (*jump table addresses for CASE statements*)
+    str: ARRAY maxStrx OF CHAR;  (*strings*)
+    td: ARRAY maxTD OF LONGINT;  (*type descriptors*)
+    case: ARRAY maxCase OF LONGINT;  (*instructions with jump table addresses that require fixup*)
 
   (*instruction assemblers according to formats*)
 
@@ -103,7 +104,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 1.10.2018  Oberon compiler; code 
   BEGIN Put3(BLR, cond, ORS.Pos()*100H + num*10H + MT)
   END Trap;
 
-  (*handling of forward reference and fixups of branch addresses*)
+  (*handling of forward reference and fixups of operands*)
 
   PROCEDURE negated(cond: LONGINT): LONGINT;
   BEGIN
@@ -112,7 +113,8 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 1.10.2018  Oberon compiler; code 
   END negated;
 
   PROCEDURE fix(at, with: LONGINT);
-  BEGIN code[at] := code[at] DIV C24 * C24 + (with MOD C24)
+  BEGIN (*fix format-3 branch instruction*)
+    code[at] := code[at] DIV C24 * C24 + (with MOD C24)
   END fix;
 
   PROCEDURE FixOne*(at: LONGINT);
@@ -126,21 +128,42 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 1.10.2018  Oberon compiler; code 
     code[at] := code[at] DIV C16 * C16 + (with MOD C16) + v
   END fix1;
 
-  PROCEDURE FixLinkWith(L, dst: LONGINT);
-    VAR L1, k: LONGINT;
-  BEGIN (*fix format-1 and branch instructions in a single fixup chain*)
+  PROCEDURE fixlink(L, x: LONGINT);
+    VAR L1, format: LONGINT;
+  BEGIN (*fix format-1 and format-3 instructions in a single fixup chain*)
     WHILE L # 0 DO
-      k := code[L] DIV C30 MOD 4; L1 := code[L] MOD C16;
-      IF k = 1 THEN fix1(L, (dst-L)*4) ELSIF k = 3 THEN fix(L, dst-L-1)
+      format := code[L] DIV C30 MOD 4; L1 := code[L] MOD C16;
+      IF format = 1 THEN fix1(L, (x-L)*4)
+      ELSIF format = 3 THEN fix(L, x-L-1)
       ELSE ORS.Mark("fixup impossible"); L1 := 0
       END ;
       L := L1
     END
+  END fixlink;
+
+  PROCEDURE FixLinkWith(L, dst: LONGINT); (*fixup with offset to dst*)
+  BEGIN fixlink(L, dst)
   END FixLinkWith;
 
-  PROCEDURE FixLink*(L: LONGINT);
-  BEGIN FixLinkWith(L, pc)
+  PROCEDURE FixLink*(L: LONGINT); (*fixup with offset to pc*)
+  BEGIN fixlink(L, pc)
   END FixLink;
+
+  PROCEDURE FixTD(L, tdx, tdoff: LONGINT);  (*fix instructions generated in loadTypTagAdr and Call*)
+    VAR L1, format, x, tdw, tdadr: LONGINT;
+  BEGIN tdw := tdoff DIV 4; tdadr := tdx + tdoff;
+    WHILE L # 0 DO
+      format := code[L] DIV C30 MOD 4; L1 := code[L] MOD C16;
+      IF format = 1 THEN (*ADD*) fix1(L, tdadr)
+      ELSIF format = 3 THEN (*BL*)
+        x := code[L] DIV 10000H MOD 100H;  (*mthno*)
+        x := (td[tdw-x-1] DIV 4000H MOD 4000H) DIV 4;  (*mthadr*)
+        fix(L, x-L-1)
+      ELSE ORS.Mark("fixup impossible"); L1 := 0
+      END ;
+      L := L1
+    END
+  END FixTD;
 
   PROCEDURE merged(L0, L1: LONGINT): LONGINT;
     VAR L2, L3: LONGINT;
@@ -230,12 +253,13 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 1.10.2018  Oberon compiler; code 
 
   PROCEDURE loadTypTagAdr(T: ORB.Type);
     VAR x: Item;
-  BEGIN x.mode := ORB.Var; x.a := T.len; x.r := -T.mno; loadAdr(x)
+  BEGIN x.mode := ORB.Var; x.a := T.len; x.r := -T.mno; loadAdr(x);  (*generates an ADD instruction*)
+    IF T.mno = 0 THEN T.len := pc-1 END  (*enter it into chain of instructions to be fixed up in Close*)
   END loadTypTagAdr;
 
   PROCEDURE loadStringAdr(VAR x: Item);
   BEGIN GetSB(x.r);
-    IF x.r = 0 THEN Put1a(Add, RH, RH, varsize+x.a) ELSE (*imported*) Put1a(Add, RH, RH, x.a) (*exno*) END ;
+    IF x.r = 0 THEN (*global*) Put1a(Add, RH, RH, varx+x.a) ELSE (*imported*) Put1a(Add, RH, RH, x.a) (*exno*) END ;
     x.mode := Reg; x.r := RH; incR
   END loadStringAdr;
 
@@ -268,10 +292,10 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 1.10.2018  Oberon compiler; code 
     END
   END MakeItem;
 
-  (* Code generation for Selectors, Variables, Constants *)
+  (* Code generation for Selectors, Variables, Methods *)
 
   PROCEDURE Field*(VAR x: Item; y: ORB.Object);   (* x := x.y *)
-  BEGIN;
+  BEGIN
     IF x.mode = ORB.Var THEN
       IF x.r >= 0 THEN x.a := x.a + y.val
       ELSE loadAdr(x); x.mode := RegI; x.a := y.val
@@ -330,40 +354,58 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 1.10.2018  Oberon compiler; code 
     x.mode := RegI; x.a := 0; x.b := 0
   END DeRef;
 
-  PROCEDURE Q(T: ORB.Type; VAR dcw: LONGINT);
+  PROCEDURE Method*(VAR x: Item; obj: ORB.Object; rec: ORB.Type; supercall: BOOLEAN);
+  BEGIN x.b := obj.lev; (*mthno*)
+    IF supercall THEN x.a := obj.val; (*exno*) x.r := rec.mno ELSE x.r := -1 END
+  END Method;
+
+  PROCEDURE Q(T: ORB.Type; VAR tdw: LONGINT);
   BEGIN (*one entry of type descriptor extension table*)
     IF T.base # NIL THEN
-      Q(T.base, dcw); data[dcw] := (T.mno*1000H + T.len) * 1000H + dcw - fixorgT;
-      fixorgT := dcw; INC(dcw)
+      Q(T.base, tdw); td[tdw] := (T.mno*1000H + T.len (*TDoffset/exno*)) * 1000H + tdw - fixorgT;
+      fixorgT := tdw; INC(tdw)
     END
   END Q;
 
-  PROCEDURE FindRefFlds(ftyp: SET; typ: ORB.Type; off: LONGINT; VAR dcw: LONGINT);
+  PROCEDURE FindRefFlds(ftyp: SET; typ: ORB.Type; off: LONGINT; VAR tdw: LONGINT);
     VAR fld: ORB.Object; i, s: LONGINT;
   BEGIN
-    IF typ.form IN ftyp THEN data[dcw] := off; INC(dcw)
+    IF typ.form IN ftyp THEN td[tdw] := off; INC(tdw)
     ELSIF typ.form = ORB.Record THEN fld := typ.dsc;
-      WHILE fld # NIL DO FindRefFlds(ftyp, fld.type, fld.val + off, dcw); fld := fld.next END
+      WHILE fld # NIL DO FindRefFlds(ftyp, fld.type, fld.val + off, tdw); fld := fld.next END
     ELSIF typ.form = ORB.Array THEN s := typ.base.size;
-      FOR i := 0 TO typ.len-1 DO FindRefFlds(ftyp, typ.base, i*s + off, dcw) END
+      FOR i := 0 TO typ.len-1 DO FindRefFlds(ftyp, typ.base, i*s + off, tdw) END
     END
   END FindRefFlds;
 
-  PROCEDURE BuildTD*(T: ORB.Type; VAR dc: LONGINT);
-    VAR dcw, k, s: LONGINT;  (*dcw = word address*)
-  BEGIN dcw := dc DIV 4; s := T.size; (*convert size for heap allocation*)
+  PROCEDURE BuildTD(T: ORB.Type; VAR tdw: LONGINT);
+    VAR k, s, nofmth: LONGINT; fld: ORB.Object;
+  BEGIN (*type descriptors of T's base types already built*)
+    nofmth := ORB.NofMethods(T);
+    FOR k := 0 TO nofmth DO td[tdw] := -1; INC(tdw) END ;
+    fld := T.dsc;
+    WHILE fld # NIL DO  (*build method table*)
+      IF (fld.class = ORB.Const) & (fld.type.form = ORB.TProc) & (td[tdw-fld.lev-1] = -1) THEN
+        td[tdw-fld.lev-1] := (T.mno*4000H + fld.val (*mthadr/exno*)) * 4000H
+      END ;
+      fld := fld.next
+    END ;
+    FOR k := nofmth TO 1 BY -1 DO  (*insert displacements in ascending order, keep last -1 entry as sentinel*)
+      IF td[tdw-k] # -1 THEN td[tdw-k] := td[tdw-k] + tdw - k - fixorgM; fixorgM := tdw - k ELSE td[tdw-k] := 0 END
+    END ;
+    s := T.size; (*convert size for heap allocation*)
     IF s <= 24 THEN s := 32 ELSIF s <= 56 THEN s := 64 ELSIF s <= 120 THEN s := 128
     ELSE s := (s+263) DIV 256 * 256
     END ;
-    T.len := dc; data[dcw] := s; INC(dcw);  (*len used as address*)
-    k := T.nofpar;   (*extension level!*)
+    T.len := tdw*4; td[tdw] := s; INC(tdw);  (*len used as offset in bytes relative to varx + strx*)
+    k := T.nofpar;  (*extension level!*)
     IF k > 3 THEN ORS.Mark("ext level too large")
-    ELSE Q(T, dcw);
-      WHILE k < 3 DO data[dcw] := -1; INC(dcw); INC(k) END
+    ELSE Q(T, tdw);
+      WHILE k < 3 DO td[tdw] := -1; INC(tdw); INC(k) END
     END ;
-    FindRefFlds(ORB.Ptrs, T, 0, dcw); data[dcw] := -1; INC(dcw);
-    FindRefFlds(ORB.Procs, T, 0, dcw); data[dcw] := -1; INC(dcw); tdx := dcw; dc := dcw*4;
-    IF tdx >= maxTD THEN ORS.Mark("too many record types"); tdx := 0 END
+    FindRefFlds(ORB.Ptrs, T, 0, tdw); td[tdw] := -1; INC(tdw);
+    FindRefFlds(ORB.Procs, T, 0, tdw); td[tdw] := -1; INC(tdw);
+    IF tdw >= maxTD THEN ORS.Mark("too many record types"); tdw := 0 END
   END BuildTD;
 
   PROCEDURE TypeTest*(VAR x: Item; T: ORB.Type; varpar, isguard: BOOLEAN);
@@ -775,14 +817,15 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 1.10.2018  Oberon compiler; code 
   END RestoreRegs;
 
   PROCEDURE PrepCall*(VAR x: Item; VAR r: LONGINT);
-  BEGIN (*x.type.form = ORB.Proc*)
-    IF x.mode > ORB.Par THEN load(x) END ;
+  BEGIN (*x.type.form IN {ORB.Proc, ORB.TProc}*)
+    IF (x.mode > ORB.Par) & (x.type.form # ORB.TProc) THEN load(x) END ;
     r := RH;
     IF RH > 0 THEN SaveRegs(RH); RH := 0 END
   END PrepCall;
 
   PROCEDURE Call*(VAR x: Item; r: LONGINT);
-  BEGIN (*x.type.form = ORB.Proc*)
+    VAR rectype: ORB.Type;
+  BEGIN (*x.type.form IN {ORB.Proc, ORB.TProc}*)
     IF x.mode = ORB.Const THEN
       IF x.a < 0 THEN (*forward*) Put3(BL, 7, x.type.len); x.type.len := pc-1
       ELSIF x.r >= 0 THEN Put3(BL, 7, (x.a DIV 4)-pc-1)
@@ -790,6 +833,23 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 1.10.2018  Oberon compiler; code 
         IF pc - fixorgP < 1000H THEN
           Put3(BL, 7, ((-x.r) * 100H + x.a) * 1000H + pc-fixorgP); fixorgP := pc-1
         ELSE ORS.Mark("fixup impossible")
+        END
+      END
+    ELSIF x.type.form = ORB.TProc THEN
+      rectype := x.type.typobj.dsc.type;  (*receiver type*)
+      IF x.mode > ORB.Par THEN Put2(Ldr, RH, SP, 0); Put1(Add, SP, SP, 4); DEC(r); DEC(frame, 4) END ;
+      IF x.r < 0 THEN  (*method call*)
+        IF x.mode = ORB.Var THEN (*record*) loadTypTagAdr(rectype); DEC(RH)
+        ELSIF x.mode = ORB.Par THEN Put2(Ldr, RH, SP, x.a+4+frame)
+        ELSE (*pointer*) Put2(Ldr, RH, RH, -8)
+        END ;
+        Put2(Ldr, RH, RH, -4-x.b*4); Put3(BLR, 7, RH)
+      ELSE  (*super call*)
+        IF x.r = 0 THEN Put3(BL, 7, x.b*10000H (*mthno*) + rectype.len); rectype.len := pc-1  (*fixed up in Close*)
+        ELSE (*imported*)
+          IF pc - fixorgP < 1000H THEN Put3(BL, 7, (x.r*100H + x.a (*exno*)) * 1000H + pc-fixorgP); fixorgP := pc-1
+          ELSE ORS.Mark("fixup impossible")
+          END
         END
       END
     ELSE
@@ -832,21 +892,21 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 1.10.2018  Oberon compiler; code 
     RH := 0
   END Return;
 
-  (*Case Statements*)
+  (* Case Statements *)
 
   PROCEDURE CaseHead*(VAR x: Item; VAR L0, L1: LONGINT);
   BEGIN load(x);
-    L0 := pc; Put1(Sub, RH, x.r, 0); (*fixed up in CaseTail*)
+    L0 := pc; Put1(Sub, RH, x.r, 0); (*higher bound, fixed up in CaseTail*)
     Trap(10, 1); (*BCC*) GetSB(0);
-    L1 := pc; Put1(Add, RH, RH, 0); (*fixed up in CaseTail and again in Close*)
+    L1 := pc; Put1(Add, RH, RH, 0); (*jump table adr, fixed up in CaseTail and again in Close*)
     Put1(Lsl, x.r, x.r, 2); Put0(Add, RH, RH, x.r); Put3(BR, 7, RH); DEC(RH);
-    IF casex < maxCase THEN case[casex] := L1; INC(casex) ELSE ORS.Mark("too many cases") END
+    IF casew < maxCase THEN case[casew] := L1; INC(casew) ELSE ORS.Mark("too many cases") END
   END CaseHead;
 
   PROCEDURE CaseTail*(L0, L1, L2: LONGINT; n: INTEGER; VAR tab: ARRAY OF LabelRange);
     VAR i, j: INTEGER;
   BEGIN fix1(L0, tab[n-1].high + 1); (*higher bound*)
-    fix1(L1, pc); (*jump table adr*)
+    fix1(L1, pc); (*jump table adr, fixed up again in Close*)
     j := 0; L0 := 0;
     FOR i := 0 TO n-1 DO (*construct jump table*)
       WHILE j < tab[i].low DO
@@ -858,7 +918,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 1.10.2018  Oberon compiler; code 
     FixLink(L0)
   END CaseTail;
 
-  (* In-line code procedures*)
+  (* In-line code procedures *)
 
   PROCEDURE Increment*(upordown: LONGINT; VAR x, y: Item);
     VAR op, zr, v: LONGINT;
@@ -964,7 +1024,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 1.10.2018  Oberon compiler; code 
     END
   END LDREG;
 
-  (*In-line code functions*)
+  (* In-line code functions *)
 
   PROCEDURE Abs*(VAR x: Item);
   BEGIN
@@ -1057,14 +1117,15 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 1.10.2018  Oberon compiler; code 
   END Condition;
 
   PROCEDURE Open*(v: INTEGER);
-  BEGIN pc := 0; tdx := 0; strx := 0; casex := 0; RH := 0; fixorgP := 0; fixorgD := 0; fixorgT := 0; check := v # 0; version := v;
+  BEGIN pc := 0; strx := 0; tdw := 0; casew := 0; RH := 0; fixorgP := 0; fixorgD := 0; fixorgT := 0; fixorgM := 0;
+    check := v # 0; version := v;
     IF v = 0 THEN pc := 1;
       REPEAT code[pc] := 0; INC(pc) UNTIL pc = 8
     END
   END Open;
 
   PROCEDURE SetDataSize*(dc: LONGINT);
-  BEGIN varsize := dc
+  BEGIN varx := dc
   END SetDataSize;
 
   PROCEDURE Header*;
@@ -1074,7 +1135,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 1.10.2018  Oberon compiler; code 
     END
   END Header;
 
-  PROCEDURE NofRefs*(ftyp: SET; typ: ORB.Type): LONGINT;
+  PROCEDURE NofRefs(ftyp: SET; typ: ORB.Type): LONGINT;
     VAR fld: ORB.Object; n: LONGINT;
   BEGIN
     IF typ.form IN ftyp THEN n := 1
@@ -1099,30 +1160,35 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 1.10.2018  Oberon compiler; code 
 
   PROCEDURE Close*(VAR modid, context: ORS.Ident; key, nofent: LONGINT);
     VAR obj: ORB.Object;
-      i, comsize, nofimps, nofrefs, size: LONGINT;
+      i, comsize, nofimps, nofrefs, size, tdx, base, offset: LONGINT;
       name: ORS.Ident;
       F: Files.File; R: Files.Rider;
   BEGIN  (*exit code*)
     IF version = 0 THEN Put1(Mov, 0, 0, 0); Put3(BR, 7, 0)  (*RISC-0*)
     ELSE Put2(Ldr, LNK, SP, 0); Put1(Add, SP, SP, 4); Put3(BR, 7, LNK)
     END ;
-    FOR i := 0 TO casex-1 DO (*convert jump table addresses from progbase-relative to SB-relative*)
-      size := varsize + strx + (code[case[i]] MOD C16)*4;
-      IF size <= 0FFFFH THEN fix1(case[i], size) ELSE ORS.Mark("offset to static base too large") END
-    END ;
-    obj := ORB.topScope.next; nofimps := 0; comsize := 4; nofrefs := 0;
+    obj := ORB.topScope.next; nofimps := 0; comsize := 4; nofrefs := 0; tdx := varx + strx;
     WHILE obj # NIL DO
-      IF (obj.class = ORB.Mod) & (obj.dsc # ORB.system) THEN INC(nofimps) (*count imports*)
+      IF (obj.class = ORB.Mod) & (obj.dsc # ORB.system) THEN INC(nofimps)  (*count imports*)
       ELSIF (obj.exno # 0) & (obj.class = ORB.Const) & (obj.type.form = ORB.Proc)
-          & (obj.type.nofpar = 0) & (obj.type.base = ORB.noType) THEN i := 0; (*count commands*)
+          & (obj.type.nofpar = 0) & (obj.type.base = ORB.noType) THEN i := 0;  (*count commands*)
         WHILE obj.name[i] # 0X DO INC(i) END ;
         i := (i+4) DIV 4 * 4; INC(comsize, i+4)
-      ELSIF obj.class = ORB.Var THEN INC(nofrefs, NofRefs(ORB.Ptrs + ORB.Procs, obj.type)) (*count pointers and procedure variables*)
+      ELSIF obj.class = ORB.Var THEN INC(nofrefs, NofRefs(ORB.Ptrs + ORB.Procs, obj.type))  (*count ptr and proc vars*)
+      ELSIF (obj.class = ORB.Typ) & (obj.type.form = ORB.Record) & (obj.lev = 0) THEN  (*build type descriptors*)
+        base := obj.type.len;  (*len initially used as heading of fixup chain constructed in loadTypTagAdr and Call*)
+        BuildTD(obj.type, tdw);  (*len now used as TD offset in bytes relative to varx + strx*)
+        IF base > 0 THEN FixTD(base, tdx, obj.type.len) END  (*fixup instructions with the now known TD offset*)
       END ;
       obj := obj.next
     END ;
-    size := varsize + strx + comsize + (pc + nofimps + nofent + nofrefs + 2)*4; (*varsize includes type descriptors*)
-    ORB.MakeFileName(name, modid, context, ".rsc"); (*write code file*)
+    base := tdx + tdw*4;
+    FOR i := 0 TO casew-1 DO  (*convert jump table addresses from progbase-relative to SB-relative*)
+      offset := base + (code[case[i]] MOD C16)*4;
+      IF offset <= 0FFFFH THEN fix1(case[i], offset) ELSE ORS.Mark("offset to static base too large") END
+    END ;
+    size := base + comsize + (pc + nofimps + nofent + nofrefs + 2)*4;
+    ORB.MakeFileName(name, modid, context, ".rsc");  (*write code file*)
     F := Files.New(name); Files.Set(R, F, 0); Files.WriteString(R, modid); Files.WriteInt(R, key); Files.Write(R, CHR(version));
     Files.WriteInt(R, size);
     obj := ORB.topScope.next;
@@ -1131,11 +1197,11 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 1.10.2018  Oberon compiler; code 
       obj := obj.next
     END ;
     Files.Write(R, 0X);
-    Files.WriteInt(R, tdx*4);
-    FOR i := 0 TO tdx-1 DO Files.WriteInt(R, data[i]) END ; (*type descriptors*)
-    Files.WriteInt(R, varsize - tdx*4);  (*data*)
+    Files.WriteInt(R, varx);  (*variable space*)
     Files.WriteInt(R, strx);
     FOR i := 0 TO strx-1 DO Files.Write(R, str[i]) END ;  (*strings*)
+    Files.WriteInt(R, tdw*4);
+    FOR i := 0 TO tdw-1 DO Files.WriteInt(R, td[i]) END ;  (*type descriptors*)
     Files.WriteInt(R, pc);  (*code len*)
     FOR i := 0 TO pc-1 DO Files.WriteInt(R, code[i]) END ;  (*program*)
     obj := ORB.topScope.next;
@@ -1151,15 +1217,17 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 1.10.2018  Oberon compiler; code 
     obj := ORB.topScope.next;
     WHILE obj # NIL DO  (*entries*)
       IF obj.exno # 0 THEN
-        IF (obj.class = ORB.Const) & (obj.type.form = ORB.String) THEN
-          Files.WriteInt(R, varsize + obj.val MOD 100000H) (*strx converted to SB-relative*)
-        ELSIF (obj.class = ORB.Const) & (obj.type.form = ORB.Proc) OR (obj.class = ORB.Var) THEN
-          Files.WriteInt(R, obj.val)
-        ELSIF obj.class = ORB.Typ THEN
-          IF obj.type.form = ORB.Record THEN Files.WriteInt(R,  obj.type.len MOD 10000H)
-          ELSIF (obj.type.form = ORB.Pointer) & ((obj.type.base.typobj = NIL) OR (obj.type.base.typobj.exno = 0)) THEN
-            Files.WriteInt(R, obj.type.base.len MOD 10000H)
+        IF  obj.class = ORB.Const THEN
+          IF obj.type.form = ORB.String THEN Files.WriteInt(R, varx + obj.val MOD 100000H)  (*convert strx to SB-relative*)
+          ELSIF obj.type.form = ORB.Proc THEN Files.WriteInt(R, obj.val)
+          ELSIF obj.type.form = ORB.TProc THEN (*dummy entry*) Files.WriteInt(R, obj.dsc.val)
           END
+        ELSIF obj.class = ORB.Typ THEN
+          IF obj.type.form = ORB.Record THEN Files.WriteInt(R, tdx + obj.type.len MOD 10000H)
+          ELSIF (obj.type.form = ORB.Pointer) & ((obj.type.base.typobj = NIL) OR (obj.type.base.typobj.exno = 0)) THEN
+            Files.WriteInt(R, tdx + obj.type.base.len MOD 10000H)
+          END
+        ELSIF obj.class = ORB.Var THEN Files.WriteInt(R, obj.val)
         END
       END ;
       obj := obj.next
@@ -1176,7 +1244,8 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 1.10.2018  Oberon compiler; code 
       obj := obj.next
     END ;
     Files.WriteInt(R, -1);
-    Files.WriteInt(R, fixorgP); Files.WriteInt(R, fixorgD); Files.WriteInt(R, fixorgT); Files.WriteInt(R, entry);
+    Files.WriteInt(R, fixorgP); Files.WriteInt(R, fixorgD); Files.WriteInt(R, fixorgT); Files.WriteInt(R, fixorgM);
+    Files.WriteInt(R, entry);
     Files.Write(R, "O"); Files.Register(F)
   END Close;
 

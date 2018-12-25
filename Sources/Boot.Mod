@@ -1,4 +1,4 @@
-MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 1.10.18 Experimental Oberon*)
+MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 12.12.18 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, Files, Modules, Texts, Oberon;
   CONST versionkey = 1X; versionkey0 = 0X; MT = 12; DescSize = 84;
     MemLim = 0E7EF0H; stackOrg = 80000H; maxCode = 8000; CR = 0DX;
@@ -46,11 +46,11 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 1.10.18 Experimental Ober
 
   PROCEDURE Link1(name: ARRAY OF CHAR; VAR newmod: Module);
     VAR mod, impmod: Module;
-      i, n, key, impkey, mno, nofimps, size: INTEGER;
+      i, n, key, impkey, mno, nofimps, size, tdx: INTEGER;
       p, u, v, w: INTEGER;  (*addresses*)
       ch: CHAR;
       body: Command;
-      fixorgP, fixorgD, fixorgT: INTEGER;
+      fixorgP, fixorgD, fixorgT, fixorgM: INTEGER;
       disp, adr, inst, pno, vno, dest, offset: INTEGER;
       name1, impname: ModuleName;
       F: Files.File; R: Files.Rider;
@@ -96,11 +96,12 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 1.10.18 Experimental Ober
         mod.data := p;  (*data*)
         SYSTEM.PUT(mod.num * 4 + MTOrg, p);  (*module table entry*)
         Files.ReadInt(R, n);
-        WHILE n > 0 DO Files.ReadInt(R, w); SYSTEM.PUT(p, w); INC(p, 4); DEC(n, 4) END ;  (*type descriptors*)
-        Files.ReadInt(R, n);
         WHILE n > 0 DO SYSTEM.PUT(p, 0); INC(p, 4); DEC(n, 4) END ;  (*variable space*)
         Files.ReadInt(R, n);
         WHILE n > 0 DO Files.Read(R, ch); SYSTEM.PUT(p, ch); INC(p); DEC(n) END ;   (*strings*)
+        tdx := p;  (*type descriptors*)
+        Files.ReadInt(R, n);
+        WHILE n > 0 DO Files.ReadInt(R, w); SYSTEM.PUT(p, w); INC(p, 4); DEC(n, 4) END ;
         mod.code := p;  (*program*)
         Files.ReadInt(R, n);
         WHILE n > 0 DO Files.ReadInt(R, w); SYSTEM.PUT(p, w); INC(p, 4); DEC(n) END ;  (*program code*)
@@ -127,7 +128,8 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 1.10.18 Experimental Ober
         Files.ReadInt(R, w);
         WHILE w >= 0 DO SYSTEM.PUT(p, mod.data + w - Start); INC(p, 4); Files.ReadInt(R, w) END ;
         SYSTEM.PUT(p, 0); INC(p, 4);
-        Files.ReadInt(R, fixorgP); Files.ReadInt(R, fixorgD); Files.ReadInt(R, fixorgT);
+        Files.ReadInt(R, fixorgP); Files.ReadInt(R, fixorgD);
+        Files.ReadInt(R, fixorgT); Files.ReadInt(R, fixorgM);
         Files.ReadInt(R, w); body := SYSTEM.VAL(Command, mod.code + w - Start);
         Files.Read(R, ch);
         IF ch # "O" THEN (*corrupted file*)  mod := NIL; error(4, name) END
@@ -140,7 +142,7 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 1.10.18 Experimental Ober
           pno := inst DIV 1000H MOD 100H;
           disp := inst MOD 1000H;
           SYSTEM.GET(mod.imp + (mno-1)*4, impmod);
-          SYSTEM.GET(impmod.ent + pno*4, dest); dest := dest + impmod.code - Start;
+          SYSTEM.GET(impmod.ent + pno*4, dest); dest := dest - Start + impmod.code;
           offset := (dest - (adr - Start) - 4) DIV 4;
           SYSTEM.PUT(adr, (offset MOD 1000000H) + 0F7000000H);
           adr := adr - disp*4
@@ -164,17 +166,32 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 1.10.18 Experimental Ober
           adr := adr - disp*4
         END ;
         (*fixup of type descriptors*)
-        adr := mod.data + fixorgT*4;
-        WHILE adr # mod.data DO
+        adr := tdx + fixorgT*4;
+        WHILE adr # tdx DO
           SYSTEM.GET(adr, inst);
           mno := inst DIV 1000000H MOD 10H;
           vno := inst DIV 1000H MOD 1000H;
           disp := inst MOD 1000H;
-          IF mno = 0 THEN (*global*) inst := mod.data - Start + vno
+          IF mno = 0 THEN (*global*) inst := tdx - Start + vno
           ELSE (*import*)
             SYSTEM.GET(mod.imp + (mno-1)*4, impmod);
             SYSTEM.GET(impmod.ent + vno*4, offset);
-            inst := impmod.data + offset - Start
+            inst := impmod.data - Start + offset
+          END ;
+          SYSTEM.PUT(adr, inst); adr := adr - disp*4
+        END ;
+        (*fixup of method tables*)
+        adr := tdx + fixorgM*4;
+        WHILE adr # tdx DO
+          SYSTEM.GET(adr, inst);
+          mno := inst DIV 10000000H;
+          vno := inst DIV 4000H MOD 4000H;
+          disp := inst MOD 4000H;
+          IF mno = 0 THEN (*global*) inst := mod.code - Start + vno
+          ELSE (*import*)
+            SYSTEM.GET(mod.imp + (mno-1)*4, impmod);
+            SYSTEM.GET(impmod.ent + vno*4, offset);
+            inst := impmod.code - Start + offset
           END ;
           SYSTEM.PUT(adr, inst); adr := adr - disp*4
         END ;
@@ -268,11 +285,11 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 1.10.18 Experimental Ober
     Files.ReadByte(R, b); (*version*) Files.ReadInt(R, data); (*size*)
     Files.ReadString(R, name); (*imports*) nofimps := 0;
     WHILE name[0] # 0X DO INC(nofimps); Files.ReadInt(R, data); (*key*) Files.ReadString(R, name) END ;
-    Files.ReadInt(R, n);
-    WHILE n > 0 DO Files.ReadInt(R, data); DEC(n, 4) END ; (*type descriptors*)
     Files.ReadInt(R, n); (*variable space*)
     Files.ReadInt(R, n);
     WHILE n > 0 DO Files.Read(R, ch); DEC(n) END ; (*strings*)
+    Files.ReadInt(R, n);
+    WHILE n > 0 DO Files.ReadInt(R, data); DEC(n, 4) END ; (*type descriptors*)
     Files.ReadInt(R, size);
     IF size > LEN(code) THEN (*program too long*) res := 2
     ELSE n := 0;
@@ -286,7 +303,8 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 1.10.18 Experimental Ober
       Files.ReadInt(R, data);
       WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*procedure variable references*)
       Files.ReadInt(R, data); (*fixorgP*) Files.ReadInt(R, data); (*fixorgD*)
-      Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, start); (*entry*)
+      Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, data); (*fixorgM*)
+      Files.ReadInt(R, start); (*entry*)
       Files.Read(R, ch);
       IF ch # "O" THEN (*corrupted file*) res := 1 ELSE res := 0 END
     END
@@ -425,6 +443,6 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 1.10.18 Experimental Ober
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END WriteStream;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 1.10.18 Experimental Oberon");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 12.12.18 Experimental Oberon");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); limit := Kernel.heapOrg; DEC(limit, 8000H)
 END Boot.

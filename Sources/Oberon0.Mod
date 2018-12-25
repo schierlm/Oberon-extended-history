@@ -1,4 +1,4 @@
-MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 4.7.18*)
+MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 12.12.18*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules, RS232;
   CONST swi = -60; (*switches*)
     stat = -52; (*RS-232*)
@@ -316,11 +316,11 @@ MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 4.7.1
     Files.ReadByte(R, b); (*version*) Files.ReadInt(R, data); (*size*)
     Files.ReadString(R, name); (*imports*) nofimps := 0;
     WHILE name[0] # 0X DO INC(nofimps); Files.ReadInt(R, data); (*key*) Files.ReadString(R, name) END ;
-    Files.ReadInt(R, n);
-    WHILE n > 0 DO Files.ReadInt(R, data); DEC(n, 4) END ; (*type descriptors*)
     Files.ReadInt(R, n); (*variable space*)
     Files.ReadInt(R, n);
     WHILE n > 0 DO Files.Read(R, ch); DEC(n) END ; (*strings*)
+    Files.ReadInt(R, n);
+    WHILE n > 0 DO Files.ReadInt(R, data); DEC(n, 4) END ; (*type descriptors*)
     Files.ReadInt(R, size);
     IF size > LEN(code) THEN (*program too long*) res := 2
     ELSE n := 0;
@@ -334,7 +334,8 @@ MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 4.7.1
       Files.ReadInt(R, data);
       WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*procedure variable references*)
       Files.ReadInt(R, data); (*fixorgP*) Files.ReadInt(R, data); (*fixorgD*)
-      Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, start); (*entry*)
+      Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, data); (*fixorgT*)
+      Files.ReadInt(R, start); (*entry*)
       Files.Read(R, ch);
       IF ch # "O" THEN (*corrupted file*) res := 1 ELSE res := 0 END
     END
