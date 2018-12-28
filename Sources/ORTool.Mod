@@ -161,12 +161,12 @@ MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 12.12.18*)
           Files.ReadString(R, name)
         END ;
         Texts.WriteString(W, "data"); Files.ReadInt(R, data); Texts.WriteInt(W, data, 6); Texts.WriteLn(W);
-        Texts.WriteString(W, "strings"); Texts.WriteLn(W);
-        Files.ReadInt(R, n); i := 0;
+        Texts.WriteString(W, "strings"); Files.ReadInt(R, n); Texts.WriteInt(W, n, 6); Texts.WriteLn(W);
+        i := 0;
         WHILE i < n DO Files.Read(R, ch); Texts.Write(W, ch); INC(i) END ;
         Texts.WriteLn(W);
-        Texts.WriteString(W, "type descriptors"); Texts.WriteLn(W);
-        Files.ReadInt(R, n); n := n DIV 4; i := 0;
+        Texts.WriteString(W, "type descriptors"); Files.ReadInt(R, n); Texts.WriteInt(W, n, 6); Texts.WriteLn(W);
+        n := n DIV 4; i := 0;
         WHILE i < n DO Files.ReadInt(R, data); Texts.WriteHex(W, data); INC(i) END ;
         Texts.WriteLn(W);
         Texts.WriteString(W, "code"); Texts.WriteLn(W);

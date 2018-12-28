@@ -292,7 +292,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 17.9.2018  Oberon compiler; code 
     END
   END MakeItem;
 
-  (* Code generation for Selectors, Variables, Methods *)
+  (* Code generation for Selectors, Variables, Constants *)
 
   PROCEDURE Field*(VAR x: Item; y: ORB.Object);   (* x := x.y *)
   BEGIN
@@ -354,9 +354,9 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 17.9.2018  Oberon compiler; code 
     x.mode := RegI; x.a := 0; x.b := 0
   END DeRef;
 
-  PROCEDURE Method*(VAR x: Item; obj: ORB.Object; rec: ORB.Type; supercall: BOOLEAN);
-  BEGIN x.b := obj.lev; (*mthno*)
-    IF supercall THEN x.a := obj.val; (*exno*) x.r := rec.mno ELSE x.r := -1 END
+  PROCEDURE Method*(VAR x: Item; obj: ORB.Object; super: BOOLEAN);
+  BEGIN loadAdr(x); x.a := obj.lev; (*mthno*)
+    IF super THEN x.b := obj.val (*exno*) ELSE x.b := -obj.type.dsc.class END
   END Method;
 
   PROCEDURE Q(T: ORB.Type; VAR tdw: LONGINT);
@@ -741,6 +741,13 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 17.9.2018  Oberon compiler; code 
     END
   END VarParam;
 
+  PROCEDURE ReceiverParam*(par: ORB.Object; VAR x: Item);
+  BEGIN
+    IF x.r # RH THEN Put0(Mov, RH, 0, x.r) END ;
+    incR;
+    IF par.class = ORB.Par THEN loadTypTagAdr(x.type) END
+  END ReceiverParam;
+
   PROCEDURE ValueParam*(VAR x: Item);
   BEGIN load(x)
   END ValueParam;
@@ -818,13 +825,15 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 17.9.2018  Oberon compiler; code 
 
   PROCEDURE PrepCall*(VAR x: Item; VAR r: LONGINT);
   BEGIN (*x.type.form IN {ORB.Proc, ORB.TProc}*)
-    IF (x.mode > ORB.Par) & (x.type.form # ORB.TProc) THEN load(x) END ;
+    IF x.type.form = ORB.TProc THEN DEC(RH) (*receiver*)
+    ELSIF x.mode > ORB.Par THEN load(x)
+    END ;
     r := RH;
     IF RH > 0 THEN SaveRegs(RH); RH := 0 END
   END PrepCall;
 
   PROCEDURE Call*(VAR x: Item; r: LONGINT);
-    VAR rectype: ORB.Type;
+    VAR rec: ORB.Type;
   BEGIN (*x.type.form IN {ORB.Proc, ORB.TProc}*)
     IF x.mode = ORB.Const THEN
       IF x.a < 0 THEN (*forward*) Put3(BL, 7, x.type.len); x.type.len := pc-1
@@ -836,18 +845,14 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 17.9.2018  Oberon compiler; code 
         END
       END
     ELSIF x.type.form = ORB.TProc THEN
-      rectype := x.type.typobj.dsc.type;  (*receiver type*)
-      IF x.mode > ORB.Par THEN Put2(Ldr, RH, SP, 0); Put1(Add, SP, SP, 4); DEC(r); DEC(frame, 4) END ;
-      IF x.r < 0 THEN  (*method call*)
-        IF x.mode = ORB.Var THEN (*record*) loadTypTagAdr(rectype); DEC(RH)
-        ELSIF x.mode = ORB.Par THEN Put2(Ldr, RH, SP, x.a+4+frame)
-        ELSE (*pointer*) Put2(Ldr, RH, RH, -8)
-        END ;
-        Put2(Ldr, RH, RH, -4-x.b*4); Put3(BLR, 7, RH)
+      IF x.b < 0 THEN  (*method call*)
+        IF x.b = -ORB.Var THEN Put2(Ldr, RH, (*R*)0, -8) ELSE Put0(Mov, RH, 0, (*R*)1) END ;
+        Put2(Ldr, RH, RH, -4-x.a*4); Put3(BLR, 7, RH)
       ELSE  (*super call*)
-        IF x.r = 0 THEN Put3(BL, 7, x.b*10000H (*mthno*) + rectype.len); rectype.len := pc-1  (*fixed up in Close*)
+        rec := x.type.typobj.dsc.type;
+        IF rec.mno = 0 THEN Put3(BL, 7, x.a*10000H (*mthno*) + rec.len); rec.len := pc-1  (*fixed up in Close*)
         ELSE (*imported*)
-          IF pc - fixorgP < 1000H THEN Put3(BL, 7, (x.r*100H + x.a (*exno*)) * 1000H + pc-fixorgP); fixorgP := pc-1
+          IF pc - fixorgP < 1000H THEN Put3(BL, 7, (rec.mno*100H + x.b (*exno*)) * 1000H + pc-fixorgP); fixorgP := pc-1
           ELSE ORS.Mark("fixup impossible")
           END
         END
