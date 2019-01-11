@@ -1,4 +1,4 @@
-MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 31.12.18*)
+MODULE Oberon; (*module Oberon for a boot file containing the entire Oberon system / Experimental Oberon / AP 31.12.18*)
   IMPORT SYSTEM, Kernel, Files, Modules, Input, Display, Viewers, Fonts, Texts;
 
   CONST off = 0; idle = 1; active = 2; (*task states*)
@@ -436,5 +436,9 @@ BEGIN User[0] := 0X;
 
   ActCnt := 0; CurTask := NewTask(GC, 1000); Install(CurTask);
   Texts.OpenWriter(W); Log := NIL;
-  Modules.Load("System", Mod); Mod := NIL; Loop
+
+
+  IF Modules.importing = "Oberon" THEN (*loaded by the regular loader*)
+    Modules.Load("System", Mod); Mod := NIL; Loop
+  END
 END Oberon.

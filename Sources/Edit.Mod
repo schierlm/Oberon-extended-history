@@ -1,4 +1,4 @@
-MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 12.12.17*)
+MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 9.1.19*)
   IMPORT Files, Fonts, Texts, Viewers, Oberon, MenuViewers, TextFrames;
 
   CONST CR = 0DX; maxlen = 32;
@@ -46,7 +46,7 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 12.12.17*)
     PROCEDURE Backup (VAR name: ARRAY OF CHAR);
       VAR res, i: INTEGER; bak: ARRAY 32 OF CHAR;
     BEGIN i := 0;
-      WHILE name[i] # 0X DO bak[i] := name[i]; INC(i) END;
+      WHILE (i < 27) & (name[i] # 0X) DO bak[i] := name[i]; INC(i) END;
       bak[i] := "."; bak[i+1] := "B"; bak[i+2] := "a"; bak[i+3] := "k"; bak[i+4] := 0X;
       Files.Rename(name, bak, res)
     END Backup;

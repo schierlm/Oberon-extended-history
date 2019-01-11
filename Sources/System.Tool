@@ -21,7 +21,7 @@ System.ShowModules  System.ShowCommands ^  Modules.Collect
 System.ShowImports ORP~     System.ShowRefs Hilbert Sierpinski ~
 System.ShowClients Oberon~  System.ShowExternalRefs Hilbert Viewers ~
                                 
-PCLink1.Run
+PCLink1.Run  PCLink1.Stop    Oberon0Tool.Run  Oberon0Tool.Stop  # run only of of these 2
 Hilbert.Draw  Sierpinski.Draw  Blink.Run  Stars.Open
 Tools.Inspect 0  Tools.Sector 1  Tools.ShowFile
 Tools.Recall  Tools.Clear
@@ -56,18 +56,16 @@ ORP.Compile Hilbert.Mod Stars.Mod ~
 ORP.Compile Rectangles.Mod/s Checkers.Mod ~
 ORP.Compile Math.Mod/s PIO.Mod/s Blink.Mod/s ~
 
-ORP.Compile BootLoad.Mod ~     # regular Oberon boot loader
-
 # ------------ rebuilding the system on a remote target machine ----------------
 
-ORP.Compile Kernel.Mod FileDir.Mod Files.Mod Modules.Mod ~       # modules for the "regular" boot file
-ORP.Compile RS232.Mod Oberon0.Mod ~               # additional modules for the "build-up" boot file
+ORP.Compile Kernel.Mod FileDir.Mod Files.Mod Modules.Mod ~      # modules for the "regular" boot file
+ORP.Compile RS232.Mod PCLink0.Mod Oberon0.Mod ~    # additional modules for the "build-up" boot file
 ORP.Compile ORC.Mod/s Oberon0Tool.Mod/s ~     # partner program ORC and Oberon0 tool module
+ORP.Compile BootLoadDisk.Mod/s ~    # a boot loader for booting the target system from the local disk
+ORP.Compile BootLoadLine.Mod/s ~    # a boot loader for booting the target system over the data link
+ORP.Compile Boot.Mod/s ~            # the Oberon boot linker/loader (system building tool)
 
-ORP.Compile Boot.Mod/s ~    # boot linker/loader and system building tool
+Boot.Link Modules ~       # generate a pre-linked binary file of the "regular" boot file (Modules.bin)
+Boot.Link Oberon0 ~       # generate a pre-linked binary file of the "build-up" boot file (Oberon0.bin)
 
-Boot.Link Modules ~                # generate a pre-linked binary file of the "regular" boot file (Modules.bin)
-Boot.Link Oberon0 ~               # generate a pre-linked binary file of the "build-up" boot file (Oberon0.bin)
-
-ORP.Compile BootLoadDisk.Mod/s ~    # generate a boot loader for booting the target system from the local disk
-ORP.Compile BootLoadLine.Mod/s ~    # generate a boot loader for booting the target system over the data link
+Boot.Load Modules.bin ~   # load the "regular" boot file onto the boot area of the local disk

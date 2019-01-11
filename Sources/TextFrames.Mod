@@ -1,4 +1,4 @@
-MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 11.11.17*)
+MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 9.1.19*)
   IMPORT Input, Display, Viewers, Fonts, Texts, Oberon;
 
   CONST replace* = 0; insert* = 1; delete* = 2; unmark* = 3; (*message ids*)
@@ -822,6 +822,14 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 11.11.17*)
       IF F.hasSel THEN
         NEW(TBuf); Texts.OpenBuf(TBuf); Texts.Delete(F.text, F.selbeg.pos, F.selend.pos, TBuf)
       END
+    (*ELSIF ch = 11X THEN (*cursor left*)
+      IF F.carloc.pos > 0 THEN RemoveCaret(F); SetCaret(F, F.carloc.pos - 1) END
+    ELSIF ch = 12X THEN (*cursor right*)
+      IF F.carloc.pos < F.text.len THEN RemoveCaret(F); SetCaret(F, F.carloc.pos + 1) END
+    ELSIF ch = 13X THEN (*cursor up*)
+      RemoveCaret(F); SetCaret(F, Pos(F, F.X + F.carloc.x, F.Y + F.carloc.y + F.lsp))
+    ELSIF ch = 14X THEN (*cursor down*)
+      RemoveCaret(F); SetCaret(F, Pos(F, F.X + F.carloc.x, F.Y + F.carloc.y - F.lsp))*)
     ELSIF (20X <= ch) & (ch <= DEL) OR (ch = CR) OR (ch = TAB) THEN
       KW.fnt := fnt; KW.col := col; KW.voff := voff; Texts.Write(KW, ch);
       Texts.Insert(F.text, F.carloc.pos, KW.buf);

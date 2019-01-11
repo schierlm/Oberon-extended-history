@@ -1,51 +1,70 @@
-# -------------------------------------------------------------------------------------------------
-#  Generate the binaries for the "build-up" boot process
-# -------------------------------------------------------------------------------------------------
-
-ORP.Compile Kernel.Mod FileDir.Mod Files.Mod Modules.Mod ~       # modules for the "regular" boot file
-ORP.Compile RS232.Mod Oberon0.Mod ~               # additional modules for the "build-up" boot file
+# ---------------------------------------------------------------------------------------------------------------------
+#  1. Compile the modules needed for Oberon sytem building
+# ---------------------------------------------------------------------------------------------------------------------
+ORP.Compile Kernel.Mod FileDir.Mod Files.Mod Modules.Mod ~      # modules for the "regular" boot file
+ORP.Compile RS232.Mod PCLink0.Mod Oberon0.Mod ~    # additional modules for the "build-up" boot file
 ORP.Compile ORC.Mod/s Oberon0Tool.Mod/s ~     # partner program ORC and Oberon0 tool module
+ORP.Compile BootLoadDisk.Mod/s ~    # a boot loader for booting the target system from the local disk
+ORP.Compile BootLoadLine.Mod/s ~    # a boot loader for booting the target system over the data link
+ORP.Compile Boot.Mod/s ~            # the Oberon boot linker/loader (system building tool)
 
-ORP.Compile Boot.Mod/s ~    # boot linker/loader and system building tool
+# ---------------------------------------------------------------------------------------------------------------------
+#  2. Link the modules needed for Oberon sytem building
+# ---------------------------------------------------------------------------------------------------------------------
+Boot.Link Modules ~       # generate a pre-linked binary file of the "regular" boot file (Modules.bin)
+Boot.Link Oberon0 ~       # generate a pre-linked binary file of the "build-up" boot file (Oberon0.bin)
 
-Boot.Link Modules ~                # generate a pre-linked binary file of the "regular" boot file (Modules.bin)
-Boot.Link Oberon0 ~               # generate a pre-linked binary file of the "build-up" boot file (Oberon0.bin)
+# ---------------------------------------------------------------------------------------------------------------------
+#  3. Update the boot area of the local disk with the "regular" boot file
+# ---------------------------------------------------------------------------------------------------------------------
+Boot.Load Modules.bin ~   # load the "regular" boot file onto the boot area of the local disk
 
-ORP.Compile BootLoadDisk.Mod/s ~    # generate a boot loader for booting the target system from the local disk
-ORP.Compile BootLoadLine.Mod/s ~    # generate a boot loader for booting the target system over the data link
-
-# -------------------------------------------------------------------------------------------------
-#  Build Oberon on the target system by executing the following commands on the host system.
-#  Restart the target system over the data link first.
-# -------------------------------------------------------------------------------------------------
-
-ORC.Load Oberon0.bin      # load the Oberon-0 command interpreter over the serial link to the target system and start it
-ORC.SR 0 1234 ~           # test whether the Oberon-0 command interpreter is running (send and mirror integer s)
+# ---------------------------------------------------------------------------------------------------------------------
+#  4. Build Oberon on the target system connected to the host system via a data link (e.g., RS232 line)
+#     (restart the target system over the data link, then execute the following commands on the host system)
+# ---------------------------------------------------------------------------------------------------------------------
+ORC.Load Oberon0.bin      # load the Oberon-0 command interpreter over the data link to the target system and start it
+ORC.SR 8 1234 ~           # test whether the Oberon-0 command interpreter is running (send and mirror integer s)
 ORC.SR 101 ~              # clear the file directory on the target system
-
 ORC.Send Input.rsc Display.rsc Viewers.rsc
-      Fonts.rsc Texts.rsc Oberon.rsc
-      MenuViewers.rsc TextFrames.rsc
-      System.rsc System.Tool
-      Oberon10.Scn.Fnt
-      Modules.bin
-      BootLoadDisk.rsc
+      Fonts.rsc Texts.rsc Oberon.rsc MenuViewers.rsc TextFrames.rsc System.rsc
+      Oberon10.Scn.Fnt System.Tool
+      Modules.bin BootLoadDisk.rsc
+      RS232.rsc PCLink0.rsc
       Oberon0.rsc Oberon0Tool.rsc
       Edit.rsc PCLink1.rsc
       ORP.rsc ORG.rsc
       ORB.rsc ORS.rsc ORTool.rsc ~    # send the required (plus some additional) files to the target system
-
 ORC.SR 100 Modules.bin ~              # load the "regular" boot file onto the boot area of the local disk of the target system
 ORC.SR 102 BootLoadDisk.rsc ~         # reboot the target system from the local disk (i.e. initiate the "regular" boot process)
+ORC.SR 20 Oberon ~                    # alternatively, one can simply load module Oberon on the target system
 
-Alternatively, one can simply load module Oberon on the target system:
+# ---------------------------------------------------------------------------------------------------------------------
+#  5. Load an entire Oberon system in a single boot file to a target system (requires Font1, Oberon1, System1)
+#     (restart the target system over the data link, then execute the following commands on the host system)
+# ---------------------------------------------------------------------------------------------------------------------
+ORP.Compile Fonts1.Mod/s Oberon1.Mod/s System1.Mod/s ~           # compile the files needed to include an entire Oberon system in a boot file
+Boot.Link System ~                                               # generate a new boot file containing the entire Oberon system (System.bin)
+ORC.Load System.bin ~                                            # load the entire Oberon system over the data link to the target system
 
-ORC.SR 20 Oberon ~                    # load module Oberon on the target system (this will load module System and its imports)
+# ---------------------------------------------------------------------------------------------------------------------
+#  6. Load an entire Oberon system in a single boot file to a target system AND configure an ENLARGED boot area there
+#     (restart the target system over the data link, then execute the following commands on the host system)
+# ---------------------------------------------------------------------------------------------------------------------
+ORP.Compile Kernel1.Mod/s Fonts1.Mod/s ~                         # compile the files needed to include an entire Oberon system
+ORP.Compile Oberon1.Mod/s System1.Mod/s ~                        # ... and configured with an ENLARGED boot area in a boot file
+Boot.Link System ~                                               # generate a new boot file containing the entire Oberon system (System.bin)
+ORC.Load System.bin ~                                            # load the entire Oberon system over the data link to the target system
+ORC.SR 101 ~                                                     # clear the file directory on the target system
+ORC.Send System.bin
+      Oberon10.Scn.Fnt System.Tool BootLoadDisk.rsc
+      Edit.rsc ORP.rsc ORG.rsc ORB.rsc ORS.rsc ORTool.rsc ~      # send the required (plus some additional) files to the target system
+ORC.SR 100 System.bin ~         # load the enlarged boot file onto the enlarged boot area of the disk of the target system (sectors 2-159)
+ORC.SR 102 BootLoadDisk.rsc ~   # reboot the target system from its local disk (i.e. initiate the "regular" boot process)
 
 # -------------------------------------------------------------------------------------------------
-#  Other Oberon-0 commands
+#  7. Other Oberon-0 commands
 # -------------------------------------------------------------------------------------------------
-
 Rebooting
 
   ORC.Send Modules.bin ~              # send the "regular" boot file to the target system
@@ -60,8 +79,8 @@ Rebooting
 
 System
 
-  ORC.SR 0 1234 ~                     # send and mirror integer s (test whether the Oberon-0 command interpreter is running)
   ORC.SR 7 ~                          # show allocation, nof sectors, switches, and timer
+  ORC.SR 8 1234 ~                     # send and mirror integer s (test whether the Oberon-0 command interpreter is running)
 
 Files
 
@@ -99,47 +118,3 @@ Display
   ORC.SR 2 0 ~                        # fill display with words w (0 = black)
   ORC.SR 2 4294967295 ~               # fill display with words w (4294967295 = white)
 
-# -------------------------------------------------------------------------------------------------
-#  Update the boot area of the local disk with the "regular" boot file
-# -------------------------------------------------------------------------------------------------
-
-Boot.Load Modules.bin ~               # load the "regular" boot file onto the boot area of the local disk
-
-# -------------------------------------------------------------------------------------------------
-#  Load an entire Oberon system in a single boot file to a target system.
-#  This requires the source files Fonts1.Mod, Oberon1.Mod and System1.Mod from the Oberon building tools.
-#  Restart the target system over the data link first.
-# -------------------------------------------------------------------------------------------------
-
-ORP.Compile Fonts1.Mod Oberon1.Mod System1.Mod/s ~   # compile the files needed to include an entire Oberon system in a boot file
-Boot.Link System ~                                   # generate a new boot file containing the entire Oberon system (System.bin)
-ORC.Load System.bin ~                                # load the entire Oberon system over the data link to the target system and start it
-
-# -------------------------------------------------------------------------------------------------
-#  Load an entire Oberon system in a single boot file to a target system AND configure
-#  an ENLARGED boot area on the target system to hold the just transferred boot file.
-#  This requires the source files Kernel1.Mod, Fonts1.Mod, Oberon1.Mod and System1.Mod from the Oberon building tools.
-#  Restart the target system over the data link first.
-# -------------------------------------------------------------------------------------------------
-
-# STEP 1: On the host system execute the following commands:
-
-ORP.Compile Kernel1.Mod Fonts1.Mod Oberon1.Mod System1.Mod ~     # compile the files needed to include an entire Oberon system with an enlarged boot area in a boot file
-Boot.Link System ~                                               # generate a new boot file containing the entire Oberon system (System.bin)
-ORC.Load System.bin ~                                            # load the entire Oberon system over the data link to the target system and start it
-
-ORC.Send System.bin System.Tool
-      BootLoadDisk.rsc RS232.rsc
-      Oberon0.rsc Oberon0Tool.rsc                                # send the required files to the target system
-
-# STEP 2: On the target system execute the following commands:
-
-PCLink1.Stop                # stop the PCLink1 background task on the target system (as it uses the same RS232 queue as Oberon0)
-Oberon0Tool.Run             # start the Oberon0 background task on the target system
-
-# STEP 3: On the host system execute the following commands:
-
-ORC.SR 100 System.bin ~         # load the enlarged regular boot file onto the enlarged boot area of the disk of the target system (sectors 2-159)
-ORC.SR 102 BootLoadDisk.rsc ~   # reboot the target system from its local disk (i.e. initiate the "regular" boot process)
-
-Alternatively, one can manually restart the target system from the local disk.

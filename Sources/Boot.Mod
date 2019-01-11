@@ -1,7 +1,7 @@
-MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 12.12.18 Experimental Oberon*)
+MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 9.1.19 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, Files, Modules, Texts, Oberon;
-  CONST versionkey = 1X; versionkey0 = 0X; MT = 12; DescSize = 84;
-    MemLim = 0E7EF0H; stackOrg = 80000H; maxCode = 8000; CR = 0DX;
+  CONST versionkey = 1X; versionkey0 = 0X; MT = 12; DescSize = 84; CR = 0DX; maxCode = 8000;
+    noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5;
 
   TYPE (*copied from Modules for use as cross linker/loader*)
     Module* = POINTER TO ModDesc;
@@ -44,7 +44,14 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 12.12.18 Experimental Obe
     END
   END Check;
 
-  PROCEDURE Link1(name: ARRAY OF CHAR; VAR newmod: Module);
+  PROCEDURE LinkOne(name: ARRAY OF CHAR; VAR newmod: Module);
+    (*search module in list; if not found, link module.
+      res = noerr: already present or linked;
+      res = nofile: file not available;
+      res = badversion: bad file version;
+      res = badkey: key conflict;
+      res = badfile: corrupted file;
+      res = nospace: insufficient space*)
     VAR mod, impmod: Module;
       i, n, key, impkey, mno, nofimps, size, tdx: INTEGER;
       p, u, v, w: INTEGER;  (*addresses*)
@@ -55,41 +62,41 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 12.12.18 Experimental Obe
       name1, impname: ModuleName;
       F: Files.File; R: Files.Rider;
       import: ARRAY 16 OF Module;
-  BEGIN mod := root; res := 0; nofimps := 0;
+  BEGIN mod := root; error(noerr, name); nofimps := 0;
     WHILE (mod # NIL) & (name # mod.name) DO mod := mod.next END ;
-    IF mod = NIL THEN (*load*)
+    IF mod = NIL THEN (*link*)
       Check(name);
-      IF res = 0 THEN MakeFileName(name1, name, ".rsc"); F := Files.Old(name1) ELSE F := NIL END ;
+      IF res = noerr THEN MakeFileName(name1, name, ".rsc"); F := Files.Old(name1) ELSE F := NIL END ;
       IF F # NIL THEN
         Files.Set(R, F, 0); Files.ReadString(R, name1); Files.ReadInt(R, key); Files.Read(R, ch);
         Files.ReadInt(R, size); importing := name1;
         IF (ch = versionkey) (*regular module*) OR (ch = versionkey0) (*standalone program*) THEN
           Files.ReadString(R, impname);   (*imports*)
-          WHILE (impname[0] # 0X) & (res = 0) DO
+          WHILE (impname[0] # 0X) & (res = noerr) DO
             Files.ReadInt(R, impkey);
-            Link1(impname, impmod); import[nofimps] := impmod;
-            IF res = 0 THEN importing := name1;
+            LinkOne(impname, impmod); import[nofimps] := impmod; importing := name1;
+            IF res = noerr THEN
               IF impmod.key = impkey THEN INC(impmod.refcnt); INC(nofimps)
-              ELSE error(3, name1); imported := impname
+              ELSE error(badkey, name1); imported := impname
               END
             END ;
             Files.ReadString(R, impname)
           END
-        ELSE error(2, name1)
+        ELSE error(badversion, name1)
         END
-      ELSE error(1, name)
+      ELSE error(nofile, name)
       END ;
-      IF res = 0 THEN
+      IF res = noerr THEN
         INC(size, DescSize);
         IF AllocPtr + size < limit THEN (*allocate*)
           p := AllocPtr; mod := SYSTEM.VAL(Module, p);
           AllocPtr := (p + size + 3) DIV 4 * 4; mod.size := AllocPtr - p;
           IF root = NIL THEN mod.num := 1 ELSE mod.num := root.num + 1 END ;
           mod.next := root; root := mod
-        ELSE error(7, name1)
+        ELSE error(nospace, name1)
         END
       END ;
-      IF res = 0 THEN (*read file*)
+      IF res = noerr THEN (*read file*)
         INC(p, DescSize); (*allocate descriptor*)
         mod.name := name; mod.key := key; mod.refcnt := 0;
         mod.selected := FALSE; mod.marked := FALSE; mod.hidden := FALSE; mod.sel := FALSE;
@@ -132,9 +139,9 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 12.12.18 Experimental Obe
         Files.ReadInt(R, fixorgT); Files.ReadInt(R, fixorgM);
         Files.ReadInt(R, w); body := SYSTEM.VAL(Command, mod.code + w - Start);
         Files.Read(R, ch);
-        IF ch # "O" THEN (*corrupted file*)  mod := NIL; error(4, name) END
+        IF ch # "O" THEN mod := NIL; error(badfile, name) END
       END ;
-      IF res = 0 THEN (*fixup of BL*)
+      IF res = noerr THEN (*fixup of BL*)
         adr := mod.code + fixorgP*4;
         WHILE adr # mod.code DO
           SYSTEM.GET(adr, inst);
@@ -196,12 +203,12 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 12.12.18 Experimental Obe
           SYSTEM.PUT(adr, inst); adr := adr - disp*4
         END ;
         SYSTEM.PUT(Start, body) (*module initialization body*)
-      ELSIF res = 3 THEN importing := name;
+      ELSIF res >= badkey THEN importing := name;
         WHILE nofimps > 0 DO DEC(nofimps); DEC(import[nofimps].refcnt) END
       END
     END ;
     newmod :=  mod
-  END Link1;
+  END LinkOne;
 
   PROCEDURE Link*; (*link object files together and create a single boot file F.bin from them*)
     VAR i, x: INTEGER;
@@ -210,16 +217,16 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 12.12.18 Experimental Obe
       M, p: Module;
       name: ModuleName;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
-    IF (S.class = Texts.Name) OR (S.class = Texts.String) THEN (*name of top module*)
+    IF S.class = Texts.Name THEN
       root := NIL; Start := Modules.AllocPtr; MTOrg := Start + 32; AllocPtr :=  Start + 256; i := Start;
       WHILE i < AllocPtr DO SYSTEM.PUT(i, 0); INC(i, 4) END ;
-      Link1(S.s, M);
-      IF res = 0 THEN p := root; Texts.WriteString(W, "  linking");
+      REPEAT LinkOne(S.s, M); Texts.Scan(S) UNTIL (S.class # Texts.Name) OR (res # noerr);
+      IF res = noerr THEN p := root; Texts.WriteString(W, "  linking");
         WHILE p # NIL DO (*fixup*) Texts.Write(W, " "); Texts.WriteString(W, p.name);
           M := p; p := p.next;
           IF M.next # NIL THEN M.next := SYSTEM.VAL(Module, SYSTEM.VAL(INTEGER, M.next) - Start) END ;
           M.data := M.data - Start;
-          SYSTEM.PUT(M.num * 4 + MTOrg, M.data); (*module table entry*)
+          SYSTEM.PUT(M.num * 4 + MTOrg, M.data);  (*module table entry*)
           M.code := M.code - Start;
           i := M.imp;
           WHILE i < M.cmd DO SYSTEM.GET(i, x); SYSTEM.PUT(i, x - Start); INC(i, 4) END ;
@@ -230,25 +237,25 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 12.12.18 Experimental Obe
           M.pvr := M.pvr - Start
         END ;
         SYSTEM.GET(Start, x);
-        SYSTEM.PUT(Start, 0E7H * 1000000H + (x DIV 4) - 1); (*branch instruction to the initialization body of the top module*)
-        SYSTEM.PUT(Start + 12, MemLim); (*limit of available memory / MemLim*)
-        SYSTEM.PUT(Start + 16, AllocPtr - Start); (*address of the end of the module space loaded / AllocPtr*)
-        SYSTEM.PUT(Start + 20, SYSTEM.VAL(INTEGER, root) - Start); (*current root of the links of loaded  modules / root*)
-        SYSTEM.PUT(Start + 24, stackOrg); (*current limit of the module area / stackOrg = heapOrg*)
-        SYSTEM.PUT(Start + 252, 12345678H); (*fingerprint*)
+        SYSTEM.PUT(Start, 0E7H * 1000000H + (x DIV 4) - 1);  (*branch instruction to the initialization body of the top module*)
+        SYSTEM.PUT(Start + 12, Kernel.MemLim);  (*limit of available memory; typically overwritten by the boot loader*)
+        SYSTEM.PUT(Start + 16, AllocPtr - Start);  (*address of the end of the module space loaded*)
+        SYSTEM.PUT(Start + 20, SYSTEM.VAL(INTEGER, root) - Start);  (*current root of the links of loaded modules*)
+        SYSTEM.PUT(Start + 24, Kernel.stackOrg);  (*current limit of the module area; typically overwritten by the boot loader*)
+        SYSTEM.PUT(Start + 252, 12345678H);  (*fingerprint*)
         MakeFileName(name, S.s, ".bin"); F := Files.New(name); Files.Set(R, F, 0); i := Start;
         WHILE i < AllocPtr DO SYSTEM.GET(i, x); Files.WriteInt(R, x); INC(i, 4) END ;
         Texts.WriteInt(W, AllocPtr - Start, 7); Files.Register(F)
       ELSE Texts.WriteString(W, "Link error:  "); Texts.WriteString(W, importing);
-        IF res = 1 THEN Texts.WriteString(W, " module not found")
-        ELSIF res = 2 THEN Texts.WriteString(W, " bad version")
-        ELSIF res = 3 THEN Texts.WriteString(W, " imports ");
+        IF res = nofile THEN Texts.WriteString(W, " module not found")
+        ELSIF res = badversion THEN Texts.WriteString(W, " bad version")
+        ELSIF res = badkey THEN Texts.WriteString(W, " imports ");
           Texts.WriteString(W, imported); Texts.WriteString(W, " with bad key")
-        ELSIF res = 4 THEN Texts.WriteString(W, " corrupted obj file")
-        ELSIF res = 7 THEN Texts.WriteString(W, " insufficient space")
+        ELSIF res = badfile THEN Texts.WriteString(W, " corrupted obj file")
+        ELSIF res = nospace THEN Texts.WriteString(W, " insufficient space")
         END
       END
-    ELSE Texts.WriteString(W, "Usage: Boot.Link module")
+    ELSE Texts.WriteString(W, "Usage: Boot.Link [module...] topmodule")
     END ;
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END Link;
@@ -259,7 +266,7 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 12.12.18 Experimental Obe
       S: Texts.Scanner;
       buf: ARRAY Kernel.SectorLength OF BYTE;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
-    IF (S.class = Texts.Name) OR (S.class = Texts.String) THEN (*input file name*)
+    IF S.class = Texts.Name THEN (*input file name*)
       Texts.WriteString(W, "  loading "); Texts.WriteString(W, S.s); F := Files.Old(S.s);
       IF F # NIL THEN Texts.WriteString(W, " onto boot area"); Texts.WriteInt(W, Files.Length(F), 7);
         secno := 2; i := 0; Files.Set(R, F, 0); Files.ReadByte(R, b);
@@ -328,9 +335,9 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 12.12.18 Experimental Obe
       name: ARRAY 32 OF CHAR;
       S: Texts.Scanner;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S); res := -1;
-    IF (S.class = Texts.Name) OR (S.class = Texts.String) THEN name := S.s; Texts.Scan(S);
+    IF S.class = Texts.Name THEN name := S.s; Texts.Scan(S);
       IF S.class = Texts.Int THEN len := S.i; Texts.Scan(S);
-        IF (S.class = Texts.Name) OR (S.class = Texts.String) THEN res := 0; Texts.WriteString(W, "  WriteFile ");
+        IF S.class = Texts.Name THEN res := 0; Texts.WriteString(W, "  WriteFile ");
           Texts.WriteString(W, name); Texts.WriteInt(W, len, 5); Texts.Write(W, " "); Texts.WriteString(W, S.s);
           IF len > 0 THEN if := Files.Old(name);
             IF if # NIL THEN of := Files.New(S.s);
@@ -367,8 +374,8 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 12.12.18 Experimental Obe
       name: ARRAY 32 OF CHAR;
       S: Texts.Scanner;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S); res := -1;
-    IF (S.class = Texts.Name) OR (S.class = Texts.String) THEN name := S.s; Texts.Scan(S);
-      IF (S.class = Texts.Name) OR (S.class = Texts.String) THEN res := 0; Texts.WriteString(W, "  WriteCode ");
+    IF S.class = Texts.Name THEN name := S.s; Texts.Scan(S);
+      IF S.class = Texts.Name THEN res := 0; Texts.WriteString(W, "  WriteCode ");
         Texts.WriteString(W, name); Texts.Write(W, " "); Texts.WriteString(W, S.s);
         if := Files.Old(name);
         IF if # NIL THEN of := Files.New(S.s);
@@ -412,8 +419,8 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 12.12.18 Experimental Obe
       name, name1: ARRAY 32 OF CHAR;
       S: Texts.Scanner;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S); res := -1;
-    IF (S.class = Texts.Name) OR (S.class = Texts.String) THEN name := S.s; Texts.Scan(S);
-      IF (S.class = Texts.Name) OR (S.class = Texts.String) THEN name1 := S.s; Texts.Scan(S);
+    IF S.class = Texts.Name THEN name := S.s; Texts.Scan(S);
+      IF S.class = Texts.Name THEN name1 := S.s; Texts.Scan(S);
         IF S.class = Texts.Int THEN blksize := S.i; Texts.Scan(S);
           IF S.class = Texts.Int THEN res := 0; Texts.WriteString(W, "  WriteStream ");
             Texts.WriteString(W, name); Texts.Write(W, " "); Texts.WriteString(W, name1);
@@ -443,6 +450,6 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 12.12.18 Experimental Obe
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END WriteStream;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 12.12.18 Experimental Oberon");
-  Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); limit := Kernel.heapOrg; DEC(limit, 8000H)
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 9.1.19 Experimental Oberon");
+  Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); limit := Kernel.stackOrg - Kernel.stackSize
 END Boot.

@@ -1,57 +1,12 @@
-MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 12.12.18*)
-  IMPORT SYSTEM, Kernel, FileDir, Files, Modules, RS232;
+MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 9.1.19*)
+  IMPORT SYSTEM, Kernel, FileDir, Files, Modules, RS232, PCLink0;
   CONST swi = -60; (*switches*)
     stat = -52; (*RS-232*)
-    BlkLen = 255; (*packet size for Send and Receive*)
-    REQ = 20H; REC = 21H; SND = 22H; ACK = 10H; NAK = 11H;
+    REQ = 20H; REC = 21H; SND = 22H; ACK = 10H;
     screenbase = 0E7F00H; screensize = 1024 * 768 DIV 8; (*1024 x 768 pixel monocolor display*)
     maxCode = 8000;
 
   VAR pat: ARRAY 32 OF CHAR;
-
-  (*------------ send and receive files ------------*)
-
-  PROCEDURE Receive; (*filename - receive file*)
-    VAR x, n, i: INTEGER;
-      name: ARRAY 32 OF CHAR;
-      F: Files.File; R: Files.Rider;
-      buf: ARRAY 256 OF BYTE;
-  BEGIN RS232.RecStr(name); F := Files.New(name);
-    IF F # NIL THEN
-      Files.Set(R, F, 0); RS232.Send(ACK);
-      REPEAT (*receive packet*)
-        RS232.Rec(n); i := 0;
-        WHILE i < n DO RS232.Rec(x); buf[i] := x; INC(i) END ;
-        i := 0;
-        WHILE i < n DO Files.WriteByte(R, buf[i]); INC(i) END ;
-        RS232.Send(ACK)
-      UNTIL n < BlkLen;
-      Files.Register(F); RS232.Send(ACK)
-    ELSE RS232.Send(NAK)
-    END
-  END Receive;
-
-  PROCEDURE Send; (*filename - send file*)
-    VAR ch: CHAR;
-      x, n, i, L: INTEGER;
-      name: ARRAY 32 OF CHAR;
-      F: Files.File; R: Files.Rider;
-  BEGIN RS232.RecStr(name); F := Files.Old(name);
-    IF F # NIL THEN
-      RS232.Send(ACK); L := Files.Length(F); Files.Set(R, F, 0);
-      REPEAT (*send packet*)
-        IF L > BlkLen THEN n := BlkLen ELSE n := L END ;
-        RS232.Send(n); DEC(L, n); i := 0;
-        WHILE i < n DO Files.Read(R, ch); RS232.Send(ORD(ch)); INC(i) END ;
-        RS232.Rec(x);
-        IF x # ACK THEN n := 0 END
-      UNTIL n < BlkLen;
-      RS232.Rec(x)
-    ELSE RS232.Send(NAK)
-    END
-  END Send;
-
-  (*------------ Oberon-0 commands ------------*)
 
   PROCEDURE Mirror; (*n - mirror integer n*)
     VAR n: INTEGER;
@@ -213,33 +168,19 @@ MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 12.12
   END Unload;
 
   PROCEDURE Call; (*name - call command*)
-    VAR mod: Modules.Module; P: Modules.Command;
-      i, j, res: INTEGER; ch: CHAR;
-      name, Cname: ARRAY 32 OF CHAR;
+    VAR name: ARRAY 64 OF CHAR; res: INTEGER;
   BEGIN RS232.RecStr(name); RS232.SendStr("Call");
-    i := 0; ch := name[0];
-    WHILE (ch # ".") & (ch # 0X) DO INC(i); ch := name[i] END ;
-    IF ch = "." THEN
-      name[i] := 0X; INC(i);
-      Modules.Load(name, mod); res := Modules.res;
-      IF Modules.res = 0 THEN
-        j := 0; ch := name[i]; INC(i);
-        WHILE ch # 0X DO Cname[j] := ch; INC(j); ch := name[i]; INC(i) END ;
-        Cname[j] := 0X;
-        P := Modules.ThisCommand(mod, Cname); res := Modules.res;
-        IF Modules.res = 0 THEN P END
-      END
-    ELSE res := 5
-    END ;
-    IF res > 0 THEN
-      RS232.SendStr(" error: "); RS232.SendStr(name);
-      IF res = 1 THEN RS232.SendStr(" module not found")
-      ELSIF res = 2 THEN RS232.SendStr(" bad version")
-      ELSIF res = 3 THEN RS232.SendStr(" imports ");
+    Modules.Call(name); res := Modules.res;
+    IF (res > Modules.noerr) & (res < Modules.clients) THEN
+      RS232.SendStr(" error: "); RS232.SendStr(Modules.importing);
+      IF res = Modules.nofile THEN RS232.SendStr(" module not found")
+      ELSIF res = Modules.badversion THEN RS232.SendStr(" bad version")
+      ELSIF res = Modules.badkey THEN RS232.SendStr(" imports ");
         RS232.SendStr(Modules.imported); RS232.SendStr(" with bad key")
-      ELSIF res = 4 THEN RS232.SendStr(" corrupted obj file")
-      ELSIF res = 5 THEN RS232.SendStr(" command not found")
-      ELSIF res = 7 THEN RS232.SendStr(" insufficient space")
+      ELSIF res = Modules.badfile THEN RS232.SendStr(" corrupted obj file")
+      ELSIF res = Modules.nospace THEN RS232.SendStr(" insufficient space")
+      ELSIF res = Modules.nocmd THEN RS232.SendStr(" command not found")
+      ELSIF res = Modules.badcmd THEN RS232.SendStr(" invalid command")
       END
     ELSE RS232.SendStr(" done")
     END
@@ -334,7 +275,7 @@ MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 12.12
       Files.ReadInt(R, data);
       WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*procedure variable references*)
       Files.ReadInt(R, data); (*fixorgP*) Files.ReadInt(R, data); (*fixorgD*)
-      Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, data); (*fixorgT*)
+      Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, data); (*fixorgM*)
       Files.ReadInt(R, start); (*entry*)
       Files.Read(R, ch);
       IF ch # "O" THEN (*corrupted file*) res := 1 ELSE res := 0 END
@@ -372,17 +313,17 @@ MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 12.12
     IF SYSTEM.BIT(stat, 0) THEN (*byte available*)
       RS232.Rec(code);
       IF code = REQ THEN RS232.Send(ACK)
-      ELSIF code = REC THEN Receive (*filename*)
-      ELSIF code = SND THEN Send (*filename*)
-      ELSE (*Oberon-0 commands*) end := TRUE;
+      ELSIF code = REC THEN PCLink0.Receive (*filename*)
+      ELSIF code = SND THEN PCLink0.Send (*filename*)
+      ELSIF code > 0 THEN (*Oberon-0 commands*) end := TRUE;
         code := ROR(code, 8); i := 3;
         REPEAT DEC(i); RS232.Rec(y); code := ROR(code+y, 8) UNTIL i = 0;
-        IF code = 0 THEN Mirror (*n*)
-        ELSIF code = 1 THEN Inspect (*a, n*)
+        IF code = 1 THEN Inspect (*a, n*)
         ELSIF code = 2 THEN FillDisplay (*w*)
         ELSIF code = 3 THEN Sector (*secno*)
         ELSIF code = 4 THEN ShowFile (*filename*)
         ELSIF code = 7 THEN Watch
+        ELSIF code = 8 THEN Mirror (*n*)
         ELSIF code = 10 THEN ShowModules
         ELSIF code = 11 THEN ShowCommands (*modname*)
         ELSIF code = 12 THEN Directory (*prefix*)

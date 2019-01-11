@@ -1,6 +1,6 @@
-MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental Oberon*)
+MODULE System; (*module System for a boot file containing the entire Oberon system / Experimental Oberon / AP 9.1.19*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules,
-    Input, Viewers, Fonts, Texts, Oberon, MenuViewers, TextFrames;
+    Input, Viewers, Fonts, Texts, Oberon, MenuViewers, TextFrames, Oberon0Tool;
 
   CONST
     StandardMenu = "System.Close System.Copy System.Grow Edit.Search Edit.Store | System.Expand System.Spread System.Clone";
@@ -844,7 +844,55 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); Oberon.Reset
   END Abort;
 
-BEGIN Texts.OpenWriter(W);
+  PROCEDURE Init; (*establish a working file system (root page) if needed*)
+    VAR a: FileDir.DirPage;
+  BEGIN Kernel.GetSector(FileDir.DirRootAdr, a);
+    IF a.mark # FileDir.DirMark THEN
+      a.mark := FileDir.DirMark; a.m := 0; a.p0 := 0;
+      Kernel.PutSector(FileDir.DirRootAdr, a)
+    END
+  END Init;
+
+BEGIN
+  IF Modules.importing # "System" THEN (*loaded by the boot loader*)
+    Init; Modules.Init;
+    InitMod("Input");
+    InitMod("Display");
+    InitMod("Viewers");
+    InitMod("Fonts");  (*creates the default font file Oberon10.Scn.Fnt if needed*)
+    InitMod("Texts");
+    InitMod("Oberon");  (*does not load module System and does not start the Oberon loop*)
+    InitMod("MenuViewers");
+    InitMod("TextFrames");
+    (*Do not initialize module Oberon0!*)
+    InitMod("Oberon0Tool")
+  END ;
+  Texts.OpenWriter(W);
   Oberon.OpenLog(TextFrames.Text("")); CreateDisplay("Oberon");
-  Kernel.Install(SYSTEM.ADR(Trap), 20H); Kernel.Install(SYSTEM.ADR(Abort), 0)
+  Kernel.Install(SYSTEM.ADR(Trap), 20H); Kernel.Install(SYSTEM.ADR(Abort), 0);
+
+  Oberon0Tool.Run;
+
+  (*
+    If you do not want to import Oberon0Tool and its imports in module System - so as to be able to UNLOAD
+    it AFTER the system has been started using the pre-linked Oberon boot file System.bin, proceed as follows:
+
+    a) explicitly include Oberon0Tool and all its imports into the boot file System.bin to be generated,
+       by calling the Oberon boot linker as follows: Boot.Link Oberon0Tool System ~
+    b) no longer import module Oberon0Tool (and therefore any of its imports) in System1.Mod (this file)
+    c) use the code below instead of the above call to Oberon0Tool.Run to initialize module Oberon0Tool
+    d) restart the target system over the serial line
+    e) send the modified boot file System.bin to the target system: ORC.Load System.bin ~
+  *)
+
+  (*
+    M := Modules.root;
+    WHILE (M # NIL) & (M.name # "Oberon0Tool") DO M := M.next END ;
+    IF M = NIL THEN Modules.Load("Oberon0Tool", M) (*will also initialize Oberon0Tool*)
+    ELSE InitMod("Oberon0Tool") (*assume it was included in the boot file -> in memory, but not initialized*)
+    END ;
+    Modules.Call("Oberon0Tool.Run");
+  *)
+
+  IF Modules.importing # "System" THEN (*loaded by the boot loader*) Oberon.Loop END
 END System.

@@ -7,18 +7,23 @@ Experimental Oberon is a revision of the FPGA Oberon operating system and its Ob
 * System building and maintenance tools
 * An enhanced FPGA Oberon-07 compiler with various new features, including
   * Type-bound procedures (Oberon-2 style)
-  * Dynamic heap allocation procedure NEW for fixed-length and open arrays (Oberon-2 style)
+  * Dynamic heap allocation procedure for fixed-length and open arrays (Oberon-2 style)
   * Numeric case statement
   * Exporting and importing of string constants
   * Forward references and forward declarations of procedures
   * No access to intermediate objects within nested scopes
   * Module contexts
 
-**Documentation**:
+**DOCUMENTATION**:
 
-System: [**The-Experimental-Oberon-System.pdf**](Documentation/The-Experimental-Oberon-System.pdf)
-
-Compiler: [**Enhanced-FPGA-Oberon07-compiler.pdf**](Documentation/Enhanced-FPGA-Oberon07-compiler.pdf)
+| Topic  | Documentation |
+| :------------- | :------------- |
+| System  | [**The-Experimental-Oberon-System.pdf**](Documentation/The-Experimental-Oberon-System.pdf)  |
+| Compiler  | [**Enhanced-FPGA-Oberon07-compiler.pdf**](Documentation/Enhanced-FPGA-Oberon07-compiler.pdf)  |
+| System building tools  | [**The-Oberon-system-building-tools.pdf**](Documentation/The-Oberon-system-building-tools.pdf)  |
+| Safe module unloading (implementation)  | [**Safe-module-unloading-in-FPGA-Oberon.pdf**](Documentation/Safe-module-unloading-in-FPGA-Oberon.pdf) |
+| Module unloading (historical notes)  | [**Historical-notes-on-module-unloading-in-Oberon.pdf**](Documentation/Historical-notes-on-module-unloading-in-Oberon.pdf)  |
+| Symbol files  | [**Streamlining-symbol-files-in-FPGA-Oberon.pdf**](Documentation/Streamlining-symbol-files-in-FPGA-Oberon.pdf)  |
 
 Additional background material can be found in the [**Documentation**](Documentation) directory.
 

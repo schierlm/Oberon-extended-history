@@ -15,8 +15,8 @@ MODULE ORB;   (*NW 25.6.2014  / 1.12.2018  in Oberon-07 / AP 12.12.18 Experiment
     (* form values*)
       Byte* = 1; Bool* = 2; Char* = 3; Int* = 4; Real* = 5; Set* = 6;
       Pointer* = 7; NilTyp* = 8; NoTyp* = 9; Proc* = 10;
-      String* = 11; Array* = 12; Record* = 13; TProc* = 14; MaxDef = TProc;
-      Ptrs* = {Pointer, NilTyp}; Procs* = {Proc, NoTyp}; TProcs = {TProc, Byte}; (*+hidden variants*)
+      String* = 11; Array* = 12; Record* = 13; TProc* = 14;
+      Ptrs* = {Pointer, NilTyp}; Procs* = {Proc, NoTyp}; TProcs = {TProc, Byte}; (*with hidden variants*)
 
   TYPE Object* = POINTER TO ObjDesc;
     Module* = POINTER TO ModDesc;
@@ -25,7 +25,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.12.2018  in Oberon-07 / AP 12.12.18 Experiment
     ObjDesc*= RECORD
       class*, exno*: BYTE;
       expo*, rdo*: BOOLEAN;   (*exported / read-only*)
-      lev*: INTEGER;   (*for modules, types and objects; for type-bound procedures: mthno*)
+      lev*: INTEGER;   (*for modules, types and objects; mthno for type-bound procedures*)
       next*, dsc*: Object;
       type*: Type;
       name*: ORS.Ident;
@@ -220,7 +220,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.12.2018  in Oberon-07 / AP 12.12.18 Experiment
           last := fld;
           IF class = Const THEN  (*type-bound procedure*)
             IF fld.name[0] # 0X THEN
-              fld.expo := TRUE; InType(R, thismod, fld.type); fld.type.typobj := fld; fld.dsc := NIL;
+              fld.expo := TRUE; InType(R, thismod, fld.type); fld.type.typobj := fld;
               Files.ReadNum(R, fld.lev); (*mthno*) Files.ReadNum(R, fld.val) (*exno*)
             ELSE (*hidden method*) fld.expo := FALSE; Files.ReadNum(R, fld.lev); (*mthno*) fld.type := byteType (*mth*)
             END
@@ -331,7 +331,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.12.2018  in Oberon-07 / AP 12.12.18 Experiment
         Files.WriteNum(R, t.nofpar); Files.WriteNum(R, t.size);
         fld := t.dsc;
         WHILE fld # bot DO  (*fields*)
-          IF fld.class = Const THEN (*type-bound procedure*) Write(R, Const);
+          IF (fld.class = Const) & (fld.type.form IN TProcs) THEN (*type-bound procedure*) Write(R, Const);
             IF fld.expo THEN
               Files.WriteString(R, fld.name); OutType(R, fld.type); Files.WriteNum(R, fld.lev); (*mthno*)
               IF t.mno > 0 THEN Files.WriteNum(R, fld.val) (*exno*) ELSE Files.WriteNum(R, fld.exno) END
@@ -362,7 +362,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.12.2018  in Oberon-07 / AP 12.12.18 Experiment
       obj: Object;
       filename: ORS.Ident;
       F, F1: Files.File; R, R1: Files.Rider;
-  BEGIN Ref := MaxDef + 1; MakeFileName(filename, modid, context, ".smb");
+  BEGIN Ref := TProc + 1; MakeFileName(filename, modid, context, ".smb");
     F := Files.New(filename); Files.Set(R, F, 0);
     Files.WriteInt(R, 0); (*placeholder*)
     Files.WriteInt(R, 0); (*placeholder for key to be inserted at the end*)
@@ -383,7 +383,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.12.2018  in Oberon-07 / AP 12.12.18 Experiment
       obj := obj.next
     END ;
     REPEAT Write(R, 0) UNTIL Files.Length(F) MOD 4 = 0;
-    FOR Ref := MaxDef+1 TO maxTypTab-1 DO typtab[Ref] := NIL END ;
+    FOR Ref := TProc+1 TO maxTypTab-1 DO typtab[Ref] := NIL END ;
     Files.Set(R, F, 0); sum := 0; Files.ReadInt(R, x);  (* compute key (checksum) *)
     WHILE ~R.eof DO sum := sum + x; Files.ReadInt(R, x) END ;
     F1 := Files.Old(filename); (*sum is new key*)
