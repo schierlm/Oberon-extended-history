@@ -1,4 +1,4 @@
-MODULE Display; (*NW 5.11.2013 / 3.7.2016 / AP 1.6.17*)
+MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 3.3.19 Experimental Oberon*)
   IMPORT SYSTEM;
 
   CONST black* = 0; white* = 1;  (*black = background*)
@@ -55,12 +55,12 @@ MODULE Display; (*NW 5.11.2013 / 3.7.2016 / AP 1.6.17*)
     END
   END ReplConst;
 
-  PROCEDURE CopyPattern*(col, patadr, x, y, top, bot, mode: INTEGER);  (*only for modes = paint, invert*)
+  PROCEDURE CopyPattern*(col, patadr, x, y, left, right, top, bot, mode: INTEGER);  (*only for modes = paint, invert*)
     VAR a, a0, pwd: INTEGER;
-      w, h, pbt: BYTE; pix: SET;
-  BEGIN (*0 <= top < h & 0 <= bot < h & top + bot < h*)
-    SYSTEM.GET(patadr, w); SYSTEM.GET(patadr+1, h); INC(patadr, 2 + bot*((w + 7) DIV 8));
-    a := base + (x DIV 32)*4 + (y + bot)*128; h := h - top - bot;
+      w, h, pbt: BYTE; pix, mask: SET;
+  BEGIN (*0 <= top < h, 0 <= bot < h, top + bot < h, 0 <= right < w, 0 <= left < w, left + right < w*)
+    SYSTEM.GET(patadr, w); SYSTEM.GET(patadr+1, h); INC(patadr, 2 + bot*((w + 7) DIV 8)); h := h - top - bot;
+    a := base + (x DIV 32)*4 + (y+bot)*128; x := x MOD 32; mask := -LSL({0 .. 31}, x);
     FOR a0 := a TO a + (h-1)*128 BY 128 DO
       (*build pattern line; w < 32*)
       SYSTEM.GET(patadr, pbt); INC(patadr); pwd := pbt;
@@ -69,14 +69,15 @@ MODULE Display; (*NW 5.11.2013 / 3.7.2016 / AP 1.6.17*)
           IF w > 24 THEN SYSTEM.GET(patadr, pbt); INC(patadr); pwd := pbt*1000000H + pwd END
         END
       END ;
+      IF left + right > 0 THEN pwd := SYSTEM.VAL(INTEGER, SYSTEM.VAL(SET, pwd) * {left .. w-1} * {0 .. w-right-1}) END ;
       SYSTEM.GET(a0, pix);
-      IF mode = invert THEN SYSTEM.PUT(a0, SYSTEM.VAL(SET, LSL(pwd, x MOD 32)) / pix)
-      ELSE SYSTEM.PUT(a0, SYSTEM.VAL(SET, LSL(pwd, x MOD 32)) + pix)
+      IF mode = invert THEN SYSTEM.PUT(a0, SYSTEM.VAL(SET, LSL(pwd, x)) / pix)
+      ELSE SYSTEM.PUT(a0, SYSTEM.VAL(SET, LSL(pwd, x)) + pix)
       END ;
-      IF (x MOD 32) + w > 32 THEN (*spill over*)
+      IF x + w > 32 THEN (*spill over*)
         SYSTEM.GET(a0+4, pix);
-        IF mode = invert THEN SYSTEM.PUT(a0+4, SYSTEM.VAL(SET, ASR(pwd, -(x MOD 32))) / pix)
-        ELSE SYSTEM.PUT(a0+4, SYSTEM.VAL(SET, ASR(pwd, -(x MOD 32))) + pix)
+        IF mode = invert THEN SYSTEM.PUT(a0+4, SYSTEM.VAL(SET, ASR(pwd, -x)) * mask / pix)
+        ELSE SYSTEM.PUT(a0+4, SYSTEM.VAL(SET, ASR(pwd, -x)) * mask + pix)
         END
       END
     END

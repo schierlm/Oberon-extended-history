@@ -1,4 +1,4 @@
-MODULE Graphics;   (*NW 21.12.89 / 18.11.201 / 8.4.2016*)
+MODULE Graphics;   (*NW 21.12.89 / 18.11.201 / 8.4.2016 / AP 18.1.19 Experimental Oberon*)
   IMPORT SYSTEM, Files, Modules, Fonts, (*Printer,*) Texts, Oberon;
 
   CONST NameLen* = 32; GraphFileId = 0FAX; LibFileId = 0FBX;
@@ -333,7 +333,7 @@ MODULE Graphics;   (*NW 21.12.89 / 18.11.201 / 8.4.2016*)
     WHILE ~R.eof & (cno < 255) DO
       IF cno = 0 THEN
         Files.ReadByte(R, m); Files.ReadByte(R, n); Files.ReadString(R, name);
-        IF m = 0 THEN fnt := Fonts.This(name); C.font[n] := fnt
+        IF m = 0 THEN fnt := Fonts.Load(name); C.font[n] := fnt
         ELSIF m = 1 THEN GetLib0(name, FALSE, C.lib[n])
         ELSIF m = 2 THEN Files.ReadString(R, name1); GetClass(name, name1, C.class[n])
         END

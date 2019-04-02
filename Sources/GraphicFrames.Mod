@@ -1,4 +1,4 @@
-MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 1.6.17*)
+MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 22.2.19*)
   IMPORT SYSTEM, Display, Viewers, Input, Fonts, Texts, Graphics, Oberon;
 
   CONST (*update message ids*)
@@ -75,7 +75,7 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 1.6.17*)
   BEGIN
     IF F.H > 16 THEN
       IF col = 0 THEN Display.ReplConst(Display.black, F.X+F.W-12, F.Y+F.H-12, 8, 8, Display.replace)
-      ELSE Display.CopyPattern(Display.white, Display.block, F.X+F.W-12, F.Y+F.H-12, 0, 0, Display.paint)
+      ELSE Display.CopyPattern(Display.white, Display.block, F.X+F.W-12, F.Y+F.H-12, 0, 0, 0, 0, Display.paint)
       END
     END
   END SetChangeMark;
@@ -105,7 +105,7 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 1.6.17*)
       IF X < CL + 7 THEN X := CL + 7 ELSIF X > CL + DW - 7 THEN X := CL + DW - 7 END
     END ;
     IF Y < 7 THEN Y := 7 ELSIF Y > DH THEN Y := DH - 7 END ;
-    Display.CopyPattern(Display.white, Display.cross, X-7, Y-7, 0, 0, Display.invert)
+    Display.CopyPattern(Display.white, Display.cross, X-7, Y-7, 0, 0, 0, 0, Display.invert)
   END FlipCross;
 
   PROCEDURE Focus*(): Frame;
@@ -409,7 +409,7 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 1.6.17*)
         DM := M;
         x := G.x + newcap.x + newcap.w; y := G.y + newcap.y;
         IF (DM.graph = G.graph) & (x >= G.X) & (x + DM.w < G.X1) & (y >= G.Y) & (y < G.Y1) THEN
-          Display.CopyPattern(Oberon.CurCol, DM.pat, x + DM.x1, y + DM.y1, 0, 0, 2);
+          Display.CopyPattern(Oberon.CurCol, DM.pat, x + DM.x1, y + DM.y1, 0, 0, 0, 0, 2);
           Display.ReplConst(Display.white, x, y, DM.w, newcap.h, 2)
         END
       | Viewers.ControlMsg:
@@ -483,8 +483,8 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 1.6.17*)
           IF ch >= " " THEN
             fnt := R.fnt; x0 := x; y0 := y - fnt.minY;
             REPEAT Fonts.GetPat(fnt, ch, dx, x1, y1, w1, h1, pat);
-              IF x0+x1+w1 <= f.X1 THEN
-                Display.CopyPattern(col, pat, x0+x1, y0+y1, 0, 0, Display.paint); INC(x0, dx); Texts.Read(R, ch)
+              IF x0+x1+w1 <= f.X1 THEN Display.CopyPattern(col, pat, x0+x1, y0+y1, 0, 0, 0, 0, Display.paint);
+                INC(x0, dx); Texts.Read(R, ch)
               ELSE ch := 0X
               END
             UNTIL ch < " ";

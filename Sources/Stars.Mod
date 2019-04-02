@@ -1,4 +1,4 @@
-MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 12.12.17*)
+MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 22.2.19*)
   IMPORT SYSTEM, Display, Viewers, Texts, Oberon, MenuViewers, TextFrames;
 
   CONST Menu = "Stars.Close System.Copy System.Grow Stars.Step Stars.Run Stars.Stop | System.Expand System.Spread System.Clone";
@@ -16,7 +16,7 @@ MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 12.12.17*)
     W: Texts.Writer;
 
   PROCEDURE Draw(x, y: INTEGER);
-  BEGIN Display.CopyPattern(Display.white, Display.star, x, y, 0, 0, Display.invert)
+  BEGIN Display.CopyPattern(Display.white, Display.star, x, y, 0, 0, 0, 0, Display.invert)
   END Draw;
 
   PROCEDURE Restore(F: Frame);

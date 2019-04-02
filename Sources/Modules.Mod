@@ -1,12 +1,12 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 9.1.19 Experimental Oberon*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 15.3.19 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, Files;
-  CONST versionkey = 1X; MT = 12; DescSize = 84; context = "EO";
+  CONST versionkey = 1X; MT = 12; DescSize = 84; MnLength = 32; context = "EO";
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5; nocmd* = 6; badcmd* = 7; nomod* = 8;
     noref* = 0; clients* = 9; dyntypes* = 10; dynprocs* = 11; statprocs* = 12;
 
   TYPE Module* = POINTER TO ModDesc;
     Command* = PROCEDURE;
-    ModuleName* = ARRAY 32 OF CHAR;
+    ModuleName* = ARRAY MnLength OF CHAR;
 
     ModDesc* = RECORD
       name*: ModuleName;
@@ -16,23 +16,36 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 9.1.19 E
       selected, marked, hidden, sel: BOOLEAN
     END ;
 
-    RefHandler* = PROCEDURE(x: LONGINT; s: ARRAY OF CHAR; VAR continue: BOOLEAN): INTEGER;
-    ModHandler* = PROCEDURE(client, import, prev: Module; VAR continue: BOOLEAN): INTEGER;
+    RefHandler* = PROCEDURE(x: LONGINT; s: ARRAY OF CHAR; VAR continue: BOOLEAN): INTEGER;  (*for type and proc var refs*)
+    ImpHandler* = PROCEDURE(mod, imp: Module; VAR continue: BOOLEAN): INTEGER;  (*for client refs*)
 
   VAR root*, M: Module;
     MTOrg*, AllocPtr*, res*: INTEGER;
     importing*, imported*: ModuleName;
     limit, NofSelected*, NofHidden*: INTEGER;
 
-  PROCEDURE ThisFile(name, context: ARRAY OF CHAR): Files.File;
-    VAR i, j: INTEGER;
+  PROCEDURE MakeFileName(VAR FName: ARRAY OF CHAR; context, name, ext: ARRAY OF CHAR);
+    VAR i, j, k: INTEGER;
+  BEGIN i := 0; j := 0; k := 0;
+    WHILE (i < MnLength-1) & (context[i] # 0X) DO FName[i] := context[i]; INC(i) END ;
+    IF context[i] = 0X THEN
+      IF (i > 0) & (i < MnLength-1) THEN FName[i] := "."; INC(i) END ;
+      WHILE (i < MnLength-1) & (name[j] # 0X) DO FName[i] := name[j]; INC(i); INC(j) END ;
+      IF name[j] = 0X THEN j := 0;
+        WHILE (i < MnLength-1) & (ext[j] # 0X) DO FName[i] := ext[j]; INC(i); INC(j) END ;
+        IF ext[j] = 0X THEN k := i END
+      END
+    END ;
+    FName[k] := 0X
+  END MakeFileName;
+
+  PROCEDURE ThisFile(name: ARRAY OF CHAR): Files.File;
+    VAR F: Files.File;
       filename: ModuleName;
-  BEGIN i := 0; j := 0;
-    WHILE context[i] # 0X DO filename[i] := context[i]; INC(i) END ;
-    IF i > 0 THEN  filename[i] := "."; INC(i) END ;
-    WHILE name[j] # 0X DO filename[i] := name[j]; INC(i); INC(j) END ;
-    filename[i] := "."; filename[i+1] := "r"; filename[i+2] := "s"; filename[i+3] := "c"; filename[i+4] := 0X;
-    RETURN Files.Old(filename)
+  BEGIN MakeFileName(filename, context, name, ".rsc");
+    IF filename[0] # 0X THEN F := Files.Old(filename) ELSE F := NIL END ;
+    IF F = NIL THEN MakeFileName(filename, "", name, ".rsc"); F := Files.Old(filename) END ;
+    RETURN F
   END ThisFile;
 
   PROCEDURE error(n: INTEGER; name: ARRAY OF CHAR);
@@ -45,8 +58,8 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 9.1.19 E
     IF (ch >= "A") & (ch <= "Z") OR (ch >= "a") & (ch <= "z") THEN
       REPEAT ch := s[i]; INC(i)
       UNTIL ~((ch >= "0") & (ch <= "9") OR (ch >= "A") & (ch <= "Z")
-        OR (ch >= "a") & (ch <= "z") OR (ch = ".")) OR (i = 32);
-      IF (i < 32) & (ch = 0X) THEN res := 0 END
+        OR (ch >= "a") & (ch <= "z") OR (ch = ".")) OR (i = MnLength);
+      IF (i < MnLength) & (ch = 0X) THEN res := 0 END
     END
   END check;
 
@@ -72,9 +85,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 9.1.19 E
     WHILE (mod # NIL) & (name # mod.name) DO mod := mod.next END ;
     IF mod = NIL THEN (*load*)
       check(name);
-      IF res # noerr THEN F := NIL ELSE F := ThisFile(name, context);
-        IF F = NIL THEN F := ThisFile(name, "") END
-      END ;
+      IF res = noerr THEN F := ThisFile(name) ELSE F := NIL END ;
       IF F # NIL THEN
         Files.Set(R, F, 0); Files.ReadString(R, name1); Files.ReadInt(R, key); Files.Read(R, ch);
         Files.ReadInt(R, size); importing := name1;
@@ -219,7 +230,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 9.1.19 E
         WHILE nofimps > 0 DO DEC(nofimps); DEC(import[nofimps].refcnt) END
       END
     END ;
-    newmod :=  mod
+    newmod := mod
   END Load;
 
   PROCEDURE ThisCommand*(mod: Module; name: ARRAY OF CHAR): Command;
@@ -244,7 +255,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 9.1.19 E
 
   PROCEDURE Call* (name: ARRAY OF CHAR);
     (*call the command named 'name' of the form M.P, where M is either a module name or
-      a module number; if M is not loaded, load module hierarchy M* before calling M.P.
+      a module number; if M is not loaded, load module hierarchy M* before calling P.
       res = noerr: module loaded, command found and executed;
       res = nofile: file not available;
       res = badversion: bad file version;
@@ -256,14 +267,14 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 9.1.19 E
       res = nomod: module not found in module list*)
     VAR mod: Module; P: Command;
       i, j: INTEGER; ch: CHAR;
-      Mname, Cname: ARRAY 32 OF CHAR;
+      Mname, Cname: ModuleName;
   BEGIN i := 0; ch := name[0];
     IF ("0" <= ch) & (ch <= "9") THEN (*module number*) j := 0;
       REPEAT j := 10*j + (ORD(ch) - 30H); INC(i); ch := name[i] UNTIL (ch < "0") OR (ch > "9");
       IF ch = "." THEN INC(i); mod := root;
         WHILE (mod # NIL) & (mod.num # j) DO mod := mod.next END ;
         IF (mod # NIL) & (mod.name[0] # 0X) THEN res := noerr; j := 0;
-          REPEAT ch := mod.name[j]; Mname[j] := ch; INC(j)  UNTIL ch = 0X
+          REPEAT ch := mod.name[j]; Mname[j] := ch; INC(j) UNTIL ch = 0X
         ELSE res := nomod
         END
       ELSE res := badcmd
@@ -336,21 +347,21 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 9.1.19 E
 
   (*--------------------------- reference checking ---------------------------*)
 
-  PROCEDURE FindClients*(proc: ModHandler; VAR res: INTEGER);
-    VAR mod, imp, prev, m: Module; p, q: INTEGER; continue: BOOLEAN;
-  BEGIN res := noref; mod := root; continue := proc # NIL; prev := NIL;
-    WHILE continue & (mod # NIL) DO
-      IF (mod.name[0] # 0X) & mod.selected & (mod.refcnt > 0) THEN m := root;
-        WHILE continue & (m # NIL) DO
-          IF (m.name[0] # 0X) & ~m.selected THEN p := m.imp; q := m.cmd;
+  PROCEDURE FindClients*(proc: ImpHandler; VAR res: INTEGER);
+    VAR mod, imp, m: Module; p, q: INTEGER; continue: BOOLEAN;
+  BEGIN res := noref; m := root; continue := proc # NIL;
+    WHILE continue & (m # NIL) DO
+      IF (m.name[0] # 0X) & m.selected & (m.refcnt > 0) THEN mod := root;
+        WHILE continue & (mod # NIL) DO
+          IF (mod.name[0] # 0X) & ~mod.selected THEN p := mod.imp; q := mod.cmd;
             WHILE p < q DO SYSTEM.GET(p, imp);
-              IF imp = mod THEN INC(res, proc(m, mod, prev, continue)); prev := mod; p := q ELSE INC(p, 4) END
+              IF imp = m THEN INC(res, proc(mod, imp, continue)); p := q ELSE INC(p, 4) END
             END
           END ;
-          m := m.next
+          mod := mod.next
         END
       END ;
-      mod := mod.next
+      m := m.next
     END
   END FindClients;
 
@@ -381,14 +392,14 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 9.1.19 E
     END
   END FindStaticRefs;
 
-  PROCEDURE HandleClient(client, mod, prev: Module; VAR continue: BOOLEAN): INTEGER;
-  BEGIN continue := FALSE; RETURN 1 (*stop when the first client is found*)
+  PROCEDURE HandleClient(mod, imp: Module; VAR continue: BOOLEAN): INTEGER;
+  BEGIN (*mod imports imp*) continue := FALSE; RETURN 1 (*stop when the first client reference is found*)
   END HandleClient;
 
   PROCEDURE HandleRef(x: LONGINT; s: ARRAY OF CHAR; VAR continue: BOOLEAN): INTEGER;
     VAR mod: Module; i: INTEGER;
   BEGIN mod := root; i := 0;
-    WHILE continue & (mod # NIL) DO (*stop when the first reference is found*)
+    WHILE continue & (mod # NIL) DO (*stop when the first type or procedure variable reference is found*)
       IF (mod.name[0] # 0X) & mod.selected & (mod.data <= x) & (x < mod.imp) THEN INC(i); continue := FALSE END ;
       mod := mod.next
     END ;
@@ -436,7 +447,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 9.1.19 E
     VAR i: INTEGER;
   BEGIN (*~mod.hidden & mod.name[0] # 0X*) i := 0;
     WHILE mod.name[i] # 0X DO INC(i) END ;
-    IF i = LEN(ModuleName) - 1 THEN DEC(i) ELSE mod.name[i+1] := 0X END ;
+    IF i = MnLength-1 THEN DEC(i) ELSE mod.name[i+1] := 0X END ;
     WHILE i > 0 DO DEC(i); mod.name[i+1] := mod.name[i] END ;
     mod.name[0] := "*"; mod.hidden := TRUE; INC(NofHidden)
   END Hide;

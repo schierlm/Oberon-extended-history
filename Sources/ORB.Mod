@@ -1,4 +1,4 @@
-MODULE ORB;   (*NW 25.6.2014  / 1.12.2018  in Oberon-07 / AP 12.12.18 Experimental Oberon*)
+MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 15.3.19 Experimental Oberon*)
   IMPORT Files, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
@@ -162,21 +162,28 @@ MODULE ORB;   (*NW 25.6.2014  / 1.12.2018  in Oberon-07 / AP 12.12.18 Experiment
 
   (*------------------------------- Import ---------------------------------*)
 
-  PROCEDURE MakeFileName*(VAR FName: ORS.Ident; name, context, ext: ARRAY OF CHAR);
-    VAR i, j: INTEGER;
-  BEGIN i := 0; j := 0;  (*assume name suffix less than 4 characters*)
-    WHILE (i < ORS.IdLen-6) & (context[i] > 0X) DO FName[i] := context[i]; INC(i) END ;
-    IF i > 0 THEN  FName[i] := "."; INC(i) END ;
-    WHILE (i < ORS.IdLen-5) & (name[j] > 0X) DO FName[i] := name[j]; INC(i); INC(j) END ;
-    j := 0;
-    REPEAT FName[i]:= ext[j]; INC(i); INC(j) UNTIL ext[j] = 0X;
-    FName[i] := 0X
+  PROCEDURE MakeFileName*(VAR FName: ARRAY OF CHAR; context, name, ext: ARRAY OF CHAR);
+    VAR i, j, k: INTEGER;
+  BEGIN i := 0; j := 0; k := 0;
+    WHILE (i < ORS.IdLen-1) & (context[i] # 0X) DO FName[i] := context[i]; INC(i) END ;
+    IF context[i] = 0X THEN
+      IF (i > 0) & (i < ORS.IdLen-1) THEN FName[i] := "."; INC(i) END ;
+      WHILE (i < ORS.IdLen-1) & (name[j] # 0X) DO FName[i] := name[j]; INC(i); INC(j) END ;
+      IF name[j] = 0X THEN j := 0;
+        WHILE (i < ORS.IdLen-1) & (ext[j] # 0X) DO FName[i] := ext[j]; INC(i); INC(j) END ;
+        IF ext[j] = 0X THEN k := i END
+      END
+    END ;
+    FName[k] := 0X
   END MakeFileName;
 
   PROCEDURE ThisModule(name, orgname: ORS.Ident; non: BOOLEAN; key: LONGINT): Object;
     VAR mod: Module; obj, obj1: Object;
-  BEGIN obj1 := topScope; obj := obj1.next;  (*search for module*)
+  BEGIN obj1 := topScope; obj := obj1.next;  (*search for module name*)
     WHILE (obj # NIL) & (obj.name # name) DO obj1 := obj; obj := obj1.next END ;
+    IF obj = NIL THEN obj1 := topScope; obj := obj1.next;  (*search for module orgname*)
+      WHILE (obj # NIL) & (obj IS Module) & (obj(Module).orgname # orgname) DO obj1 := obj; obj := obj1.next END
+    END ;
     IF obj = NIL THEN  (*insert new module*)
       NEW(mod); mod.class := Mod; mod.rdo := FALSE;
       mod.name := name; mod.orgname := orgname; mod.val := key;
@@ -265,7 +272,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.12.2018  in Oberon-07 / AP 12.12.18 Experiment
     IF modid1 = "SYSTEM" THEN
       thismod := ThisModule(modid, modid1, TRUE, key); DEC(nofmod);
       thismod.lev := 0; thismod.dsc := system; thismod.rdo := TRUE
-    ELSE MakeFileName(fname, modid1, context, ".smb"); F := Files.Old(fname);
+    ELSE MakeFileName(fname, context, modid1, ".smb"); F := Files.Old(fname);
       IF F # NIL THEN
         Files.Set(R, F, 0); Files.ReadInt(R, key); Files.ReadInt(R, key); Files.ReadString(R, modname);
         thismod := ThisModule(modid, modid1, TRUE, key); thismod.rdo := TRUE;
@@ -362,7 +369,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.12.2018  in Oberon-07 / AP 12.12.18 Experiment
       obj: Object;
       filename: ORS.Ident;
       F, F1: Files.File; R, R1: Files.Rider;
-  BEGIN Ref := TProc + 1; MakeFileName(filename, modid, context, ".smb");
+  BEGIN Ref := TProc + 1; MakeFileName(filename, context, modid, ".smb");
     F := Files.New(filename); Files.Set(R, F, 0);
     Files.WriteInt(R, 0); (*placeholder*)
     Files.WriteInt(R, 0); (*placeholder for key to be inserted at the end*)

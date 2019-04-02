@@ -1,4 +1,4 @@
-MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 9.1.19*)
+MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 1.4.19 Experimental Oberon*)
   IMPORT Files, Fonts, Texts, Viewers, Oberon, MenuViewers, TextFrames;
 
   CONST CR = 0DX; maxlen = 32;
@@ -93,7 +93,7 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 9.1.19*)
     IF time >= 0 THEN
       Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
       IF S.class = Texts.Name THEN
-        Texts.ChangeLooks(T, beg, end, {0}, Fonts.This(S.s), 0, 0)
+        Texts.ChangeLooks(T, beg, end, {0}, Fonts.Load(S.s), 0, 0)
       END
     END
   END ChangeFont;

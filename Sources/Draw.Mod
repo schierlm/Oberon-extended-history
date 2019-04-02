@@ -1,4 +1,4 @@
-MODULE Draw; (*NW 29.6.88 / 12.11.94 / 18.11.2013*)
+MODULE Draw; (*NW 29.6.88 / 12.11.94 / 18.11.2013 / AP 18.1.19 Experimental Oberon*)
 
   IMPORT Files, Fonts, Viewers, Texts, Oberon,
     TextFrames, MenuViewers, Graphics, GraphicFrames;
@@ -77,7 +77,7 @@ MODULE Draw; (*NW 29.6.88 / 12.11.94 / 18.11.2013*)
     VAR S: Texts.Scanner; FM: Graphics.FontMsg;
   BEGIN GetArg(S);
     IF S.class = Texts.Name THEN
-      FM.fnt := Fonts.This(S.s);
+      FM.fnt := Fonts.Load(S.s);
       IF FM.fnt # NIL THEN GraphicFrames.Change(GraphicFrames.Selected(), FM) END
     END
   END ChangeFont;

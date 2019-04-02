@@ -1,12 +1,12 @@
-MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 9.1.19 Experimental Oberon*)
+MODULE Boot;  (*Oberon boot linker/loader for RISC / AP 1.4.19 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, Files, Modules, Texts, Oberon;
-  CONST versionkey = 1X; versionkey0 = 0X; MT = 12; DescSize = 84; CR = 0DX; maxCode = 8000;
+  CONST versionkey = 1X; versionkey0 = 0X; MT = 12; DescSize = 84; MnLength = 32; CR = 0DX; maxCode = 8000;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5;
 
   TYPE (*copied from Modules for use as cross linker/loader*)
     Module* = POINTER TO ModDesc;
     Command* = PROCEDURE;
-    ModuleName* = ARRAY 32 OF CHAR;
+    ModuleName* = ARRAY MnLength OF CHAR;
     ModDesc* = RECORD
       name*: ModuleName;
       next*: Module;
@@ -20,14 +20,26 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 9.1.19 Experimental Obero
     importing*, imported*: ModuleName;
     W: Texts.Writer;
 
-  PROCEDURE MakeFileName(VAR FName: ARRAY OF CHAR; name, ext: ARRAY OF CHAR);
+  PROCEDURE MakeFileName(VAR FName: ARRAY OF CHAR; context, name, ext: ARRAY OF CHAR);
     VAR i, j, k: INTEGER;
   BEGIN i := 0; j := 0; k := 0;
-    WHILE ext[k] > 0X DO INC(k) END ;
-    WHILE (i < LEN(FName)-k-1) & (name[i] > 0X) DO FName[i] := name[i]; INC(i) END ;
-    WHILE (i < LEN(FName)-1) & (j < k) DO FName[i] := ext[j]; INC(i); INC(j) END ;
-    FName[i] := 0X
+    WHILE (i < MnLength-1) & (context[i] # 0X) DO FName[i] := context[i]; INC(i) END ;
+    IF context[i] = 0X THEN
+      IF (i > 0) & (i < MnLength-1) THEN FName[i] := "."; INC(i) END ;
+      WHILE (i < MnLength-1) & (name[j] # 0X) DO FName[i] := name[j]; INC(i); INC(j) END ;
+      IF name[j] = 0X THEN j := 0;
+        WHILE (i < MnLength-1) & (ext[j] # 0X) DO FName[i] := ext[j]; INC(i); INC(j) END ;
+        IF ext[j] = 0X THEN k := i END
+      END
+    END ;
+    FName[k] := 0X
   END MakeFileName;
+
+  PROCEDURE ThisFile(name: ARRAY OF CHAR): Files.File;
+    VAR F: Files.File;
+      filename: ModuleName;
+  BEGIN MakeFileName(filename, "", name, ".rsc"); F := Files.Old(filename); RETURN F
+  END ThisFile;
 
   PROCEDURE error(n: INTEGER; name: ARRAY OF CHAR);
   BEGIN res := n; importing := name
@@ -39,8 +51,8 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 9.1.19 Experimental Obero
     IF (ch >= "A") & (ch <= "Z") OR (ch >= "a") & (ch <= "z") THEN
       REPEAT ch := s[i]; INC(i)
       UNTIL ~((ch >= "0") & (ch <= "9") OR (ch >= "A") & (ch <= "Z")
-        OR (ch >= "a") & (ch <= "z") OR (ch = ".")) OR (i = 32);
-      IF (i < 32) & (ch = 0X) THEN res := 0 END
+        OR (ch >= "a") & (ch <= "z") OR (ch = ".")) OR (i = MnLength);
+      IF (i < MnLength) & (ch = 0X) THEN res := 0 END
     END
   END Check;
 
@@ -66,7 +78,7 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 9.1.19 Experimental Obero
     WHILE (mod # NIL) & (name # mod.name) DO mod := mod.next END ;
     IF mod = NIL THEN (*link*)
       Check(name);
-      IF res = noerr THEN MakeFileName(name1, name, ".rsc"); F := Files.Old(name1) ELSE F := NIL END ;
+      IF res = noerr THEN F := ThisFile(name) ELSE F := NIL END ;
       IF F # NIL THEN
         Files.Set(R, F, 0); Files.ReadString(R, name1); Files.ReadInt(R, key); Files.Read(R, ch);
         Files.ReadInt(R, size); importing := name1;
@@ -207,7 +219,7 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 9.1.19 Experimental Obero
         WHILE nofimps > 0 DO DEC(nofimps); DEC(import[nofimps].refcnt) END
       END
     END ;
-    newmod :=  mod
+    newmod := mod
   END LinkOne;
 
   PROCEDURE Link*; (*link object files together and create a single boot file F.bin from them*)
@@ -243,7 +255,7 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 9.1.19 Experimental Obero
         SYSTEM.PUT(Start + 20, SYSTEM.VAL(INTEGER, root) - Start);  (*current root of the links of loaded modules*)
         SYSTEM.PUT(Start + 24, Kernel.stackOrg);  (*current limit of the module area; typically overwritten by the boot loader*)
         SYSTEM.PUT(Start + 252, 12345678H);  (*fingerprint*)
-        MakeFileName(name, S.s, ".bin"); F := Files.New(name); Files.Set(R, F, 0); i := Start;
+        MakeFileName(name, "", S.s, ".bin"); F := Files.New(name); Files.Set(R, F, 0); i := Start;
         WHILE i < AllocPtr DO SYSTEM.GET(i, x); Files.WriteInt(R, x); INC(i, 4) END ;
         Texts.WriteInt(W, AllocPtr - Start, 7); Files.Register(F)
       ELSE Texts.WriteString(W, "Link error:  "); Texts.WriteString(W, importing);
@@ -450,6 +462,6 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC; AP 9.1.19 Experimental Obero
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END WriteStream;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 9.1.19 Experimental Oberon");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 1.4.19");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); limit := Kernel.stackOrg - Kernel.stackSize
 END Boot.

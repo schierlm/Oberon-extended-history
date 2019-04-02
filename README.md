@@ -1,13 +1,13 @@
 # The Experimental Oberon Operating System
-Experimental Oberon is a revision of the FPGA Oberon operating system and its Oberon-07 compiler (www.projectoberon.com), containing a number of enhancements, including
+Experimental Oberon is a revision of the FPGA Oberon operating system and its compiler (www.projectoberon.com), containing a number of enhancements, including
 
-* Continuous fractional line scrolling with variable line spaces
+* Smooth line scrolling with variable line spaces
 * Multiple logical displays ("virtual displays")
 * Safe module unloading
 * System building and maintenance tools
-* An enhanced FPGA Oberon-07 compiler with various new features, including
-  * Type-bound procedures (Oberon-2 style)
-  * Dynamic heap allocation procedure for fixed-length and open arrays (Oberon-2 style)
+* A compiler for the Revised Oberon-2 programming language (implementing a strict superset of the Oberon-07 language) with various features, including
+  * Type-bound procedures
+  * Dynamic heap allocation procedure for fixed-length and open arrays
   * Numeric case statement
   * Exporting and importing of string constants
   * Forward references and forward declarations of procedures
@@ -18,11 +18,11 @@ Experimental Oberon is a revision of the FPGA Oberon operating system and its Ob
 
 | Topic  | Documentation |
 | :------------- | :------------- |
-| System  | [**The-Experimental-Oberon-System.pdf**](Documentation/The-Experimental-Oberon-System.pdf)  |
-| Compiler  | [**Enhanced-FPGA-Oberon07-compiler.pdf**](Documentation/Enhanced-FPGA-Oberon07-compiler.pdf)  |
+| Operating system  | [**The-Experimental-Oberon-System.pdf**](Documentation/The-Experimental-Oberon-System.pdf)  |
+| Programming language  | [**The-Revised-Oberon2-Programming-Language.pdf**](Documentation/The-Revised-Oberon2-Programming-Language.pdf)  |
 | System building tools  | [**The-Oberon-system-building-tools.pdf**](Documentation/The-Oberon-system-building-tools.pdf)  |
-| Safe module unloading (implementation)  | [**Safe-module-unloading-in-FPGA-Oberon.pdf**](Documentation/Safe-module-unloading-in-FPGA-Oberon.pdf) |
-| Module unloading (historical notes)  | [**Historical-notes-on-module-unloading-in-Oberon.pdf**](Documentation/Historical-notes-on-module-unloading-in-Oberon.pdf)  |
+| Safe module unloading  | [**Safe-module-unloading-in-Oberon.pdf**](Documentation/Safe-module-unloading-in-Oberon.pdf) |
+| Historical notes on module unloading  | [**Historical-notes-on-module-unloading-in-Oberon.pdf**](Documentation/Historical-notes-on-module-unloading-in-Oberon.pdf)  |
 | Symbol files  | [**Streamlining-symbol-files-in-FPGA-Oberon.pdf**](Documentation/Streamlining-symbol-files-in-FPGA-Oberon.pdf)  |
 
 Additional background material can be found in the [**Documentation**](Documentation) directory.
@@ -44,7 +44,7 @@ Additional background material can be found in the [**Documentation**](Documenta
 Edit the file *ORG.Mod* on your Original system and set the following constants to the indicated new values:
 
      CONST ...
-       maxCode = 8192; maxStrx = 3200; ...
+       maxCode = 8800; maxStrx = 3200; ...
 
 Then recompile your FPGA Oberon compiler (and unload the old one):
 

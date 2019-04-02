@@ -1,4 +1,4 @@
-MODULE Texts; (*JG 21.11.90 / NW 11.7.90 / 24.12.95 / 22.11.10 / 18.11.2014 / 7.1.2019 / AP 9.1.19 Experimental Oberon*)
+MODULE Texts; (*JG 21.11.90 / NW 11.7.90 / 24.12.95 / 22.11.10 / 18.11.2014 / 7.1.2019 / AP 18.1.19 Experimental Oberon*)
   IMPORT Files, Fonts;
 
   CONST (*scanner symbol classes*)
@@ -92,7 +92,7 @@ MODULE Texts; (*JG 21.11.90 / NW 11.7.90 / 24.12.95 / 22.11.10 / 18.11.2014 / 7.
     WHILE fno # 0 DO
       IF fno = N THEN
         Files.ReadString(R, FName);
-        Dict[N] := Fonts.This(FName); INC(N)
+        Dict[N] := Fonts.Load(FName); INC(N)
       END;
       NEW(q); q.fnt := Dict[fno];
       Files.ReadByte(R, bt); q.col := bt;
@@ -340,7 +340,7 @@ MODULE Texts; (*JG 21.11.90 / NW 11.7.90 / 24.12.95 / 22.11.10 / 18.11.2014 / 7.
       k: LONGINT;
       x: REAL;
   BEGIN ch := S.nextCh; i := 0;
-    WHILE ~S.eot & (ch <= " ") DO
+    WHILE ~S.eot & (ch <= " ") DO  (*WHILE (ch = " ") OR (ch = TAB) OR (ch = CR) DO*)
       IF ch = CR THEN INC(S.line) END ;
       Read(S, ch)
     END ;

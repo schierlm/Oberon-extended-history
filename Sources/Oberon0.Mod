@@ -1,4 +1,4 @@
-MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 9.1.19*)
+MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 22.1.19*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules, RS232, PCLink0;
   CONST swi = -60; (*switches*)
     stat = -52; (*RS-232*)
@@ -283,11 +283,10 @@ MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 9.1.1
   END ReadCode;
 
   PROCEDURE Execute; (*filename - execute standalone program  M.rsc*)
-    TYPE Command = PROCEDURE;
     VAR code: ARRAY maxCode OF LONGINT;
       size, start, nofimps, res: INTEGER;
       name: ARRAY 32 OF CHAR;
-      body: Command;
+      body: Modules.Command;
       F: Files.File; R: Files.Rider;
   BEGIN RS232.RecStr(name); RS232.SendStr("Execute "); RS232.SendStr(name);
     F := Files.Old(name);
@@ -295,7 +294,7 @@ MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 9.1.1
       ReadCode(R, code, size, start, nofimps, res);
       IF res = 0 THEN
         IF nofimps = 0 THEN RS232.SendStr(" done");
-          body := SYSTEM.VAL(Command, SYSTEM.ADR(code) + start); body
+          body := SYSTEM.VAL(Modules.Command, SYSTEM.ADR(code) + start); body
         ELSE RS232.SendStr(" imports not allowed")
         END
       ELSIF res = 1 THEN RS232.SendStr(" input file format error")
@@ -351,7 +350,7 @@ MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 9.1.1
 
   (*------------ initialization ------------*)
 
-  PROCEDURE Init*;  (*initialize the file system if needed*)
+  PROCEDURE Init*; (*establish a working file system (root page) if necessary*)
     VAR a: FileDir.DirPage;
   BEGIN Kernel.GetSector(FileDir.DirRootAdr, a);
     IF a.mark # FileDir.DirMark THEN

@@ -1,4 +1,4 @@
-MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental Oberon*)
+MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.4.19 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules,
     Input, Viewers, Fonts, Texts, Oberon, MenuViewers, TextFrames;
 
@@ -8,7 +8,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
 
   TYPE Handler = PROCEDURE(name: ARRAY OF CHAR);
 
-  VAR W: Texts.Writer; M: Modules.Module; global: BOOLEAN;
+  VAR W: Texts.Writer; M: Modules.Module;
     pat: ARRAY 32 OF CHAR;
 
   PROCEDURE GetArg(VAR S: Texts.Scanner);
@@ -31,16 +31,16 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
       user: ARRAY 8 OF CHAR;
       password: ARRAY 16 OF CHAR;
   BEGIN i := 0; Input.Read(ch);
-    WHILE (ch # "/") & (i < 7) DO user[i] := ch; INC(i); Input.Read(ch) END;
+    WHILE (ch # "/") & (i < 7) DO user[i] := ch; INC(i); Input.Read(ch) END ;
     user[i] := 0X; i := 0; Input.Read(ch);
-    WHILE (ch > " ") & (i < 15) DO password[i] := ch; INC(i); Input.Read(ch) END;
+    WHILE (ch > " ") & (i < 15) DO password[i] := ch; INC(i); Input.Read(ch) END ;
     password[i] := 0X; Oberon.SetUser(user, password)
   END SetUser;
 
   PROCEDURE SetFont*;
     VAR S: Texts.Scanner;
   BEGIN GetArg(S);
-    IF S.class = Texts.Name THEN Oberon.SetFont(Fonts.This(S.s)) END
+    IF S.class = Texts.Name THEN Oberon.SetFont(Fonts.Load(S.s)) END
   END SetFont;
 
   PROCEDURE SetColor*;
@@ -75,20 +75,20 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
 
   (* ------------- Toolbox for logical display areas ---------------*)
 
-  PROCEDURE MakeDisplayName(prefix: ARRAY OF CHAR; id: INTEGER; VAR name: ARRAY OF CHAR); (*0 <= id < 10^5*)
+  PROCEDURE MakeDisplayName(prefix: ARRAY OF CHAR; id: INTEGER; VAR name: ARRAY OF CHAR);  (*0 <= id < 10^5*)
     VAR i, j: INTEGER; buf: ARRAY 5 OF INTEGER;
   BEGIN i := 0; j := 0;
-    WHILE prefix[j] > 0X DO name[j] := prefix[j]; INC(j) END;
+    WHILE prefix[j] > 0X DO name[j] := prefix[j]; INC(j) END ;
     REPEAT buf[i] := id MOD 10; id := id DIV 10; INC(i) UNTIL id = 0;
     REPEAT DEC(i); name[j] := CHR(buf[i] + ORD("0")); INC(j) UNTIL (i = 0) OR (j = Viewers.DnLength);
     IF j < Viewers.DnLength THEN name[j] := 0X END
   END MakeDisplayName;
 
-  PROCEDURE OpenViewers; (*open log and system tool viewer in system track of current display*)
+  PROCEDURE OpenViewers;  (*open log and system tool viewer in system track of current display*)
     VAR logV, toolV, menu, main: Viewers.Frame; X, Y: INTEGER;
   BEGIN
     IF Viewers.CurDisplay # NIL THEN
-      Texts.WriteString(W, "Experimental Oberon  AP 9.1.19 / Display ");
+      Texts.WriteString(W, "Experimental Oberon  AP 1.4.19 / Display ");
       Texts.WriteInt(W, Viewers.CurDisplay.id, 2); Texts.Write(W, " ");
       Texts.WriteString(W, Viewers.CurDisplay.name); EndLine;
       Oberon.AllocateSystemViewer(0, X, Y);
@@ -104,12 +104,12 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
 
   PROCEDURE CreateDisplay(name: ARRAY OF CHAR);
     VAR D: Viewers.Display;
-  BEGIN NEW(D); Oberon.InitDisplay(D, name); (*create and initialize a new display*)
-    Oberon.SetDisplay(D); (*make it the current display*)
-    OpenViewers (*open log and system tool viewer*)
+  BEGIN NEW(D); Oberon.InitDisplay(D, name);  (*create and initialize a new display*)
+    Oberon.SetDisplay(D);  (*make it the current display*)
+    OpenViewers  (*open log and system tool viewer*)
   END CreateDisplay;
 
-  PROCEDURE OpenDisplay*; (*display name is provided as parameter*)
+  PROCEDURE OpenDisplay*;  (*display name is provided as parameter*)
     VAR S: Texts.Scanner; prev: INTEGER;
       name: ARRAY Viewers.DnLength OF CHAR;
   BEGIN prev := Viewers.CurDisplay.id;
@@ -122,7 +122,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
     EndLine
   END OpenDisplay;
 
-  PROCEDURE CloseDisplay*; (*display id and (optionally) a hint are provided as parameters*)
+  PROCEDURE CloseDisplay*;  (*display id and (optionally) a hint are provided as parameters*)
     VAR D: Viewers.Display; S: Texts.Scanner; prev, id, hint: INTEGER;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
     IF S.class = Texts.Int THEN id := S.i; D := Viewers.GetDisplay(S.i);
@@ -143,7 +143,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
     EndLine
   END CloseDisplay;
 
-  PROCEDURE SwitchDisplay(D: Viewers.Display);
+  PROCEDURE SwitchDisplay(D: Viewers.Display);  (*switch to the specified display*)
     VAR prev: INTEGER;
   BEGIN prev := Viewers.CurDisplay.id;
     IF (D # NIL) & (D.id # prev) THEN Oberon.SetDisplay(D);
@@ -152,23 +152,23 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
     END
   END SwitchDisplay;
 
-  PROCEDURE SetDisplay*; (*display id is provided as parameter*)
+  PROCEDURE SetDisplay*;  (*display id is provided as parameter*)
     VAR S: Texts.Scanner;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
     IF S.class = Texts.Int THEN SwitchDisplay(Viewers.GetDisplay(S.i)) END
   END SetDisplay;
 
-  PROCEDURE NextDisplay*; (*switch to display on the "right"*)
+  PROCEDURE NextDisplay*;  (*switch to display on the "right"*)
     VAR D: Viewers.Viewer;
   BEGIN D := Viewers.Next(Viewers.CurDisplay); SwitchDisplay(D(Viewers.Display))
   END NextDisplay;
 
-  PROCEDURE PrevDisplay*; (*switch to display on the "left"*)
+  PROCEDURE PrevDisplay*;  (*switch to display on the "left"*)
     VAR D: Viewers.Viewer;
   BEGIN D := Viewers.Prev(Viewers.CurDisplay); SwitchDisplay(D(Viewers.Display))
   END PrevDisplay;
 
-  PROCEDURE SetDisplayName*; (*display id and name are provided as parameters*)
+  PROCEDURE SetDisplayName*;  (*display id and name are provided as parameters*)
     VAR D: Viewers.Display; S: Texts.Scanner;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
     IF S.class = Texts.Int THEN  Texts.Scan(S);
@@ -205,7 +205,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
 
   (* ------------- Toolbox for standard display ---------------*)
 
-  PROCEDURE Open*; (*open viewer in system track*)
+  PROCEDURE Open*;  (*open viewer in system track*)
     VAR X, Y: INTEGER;
       V: Viewers.Viewer;
       S: Texts.Scanner;
@@ -218,10 +218,10 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
     END
   END Open;
 
-  PROCEDURE Clear*; (*used to clear Log*)
+  PROCEDURE Clear*;  (*used to clear Log*)
     VAR T: Texts.Text; F: Viewers.Frame; buf: Texts.Buffer;
   BEGIN F := Oberon.Par.frame;
-    IF (F # NIL) & (F.next IS TextFrames.Frame) & (F = Oberon.Par.vwr.dsc) THEN      
+    IF (F # NIL) & (F.next IS TextFrames.Frame) & (F = Oberon.Par.vwr.dsc) THEN
       NEW(buf); Texts.OpenBuf(buf); T := F.next(TextFrames.Frame).text; Texts.Delete(T, 0, T.len, buf)
     END
   END Clear;
@@ -229,7 +229,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
   PROCEDURE Close*;
     VAR V: Viewers.Viewer;
   BEGIN
-    IF Oberon.Par.frame = Oberon.Par.vwr.dsc THEN V := Oberon.Par.vwr ELSE V := Oberon.MarkedViewer() END;
+    IF Oberon.Par.frame = Oberon.Par.vwr.dsc THEN V := Oberon.Par.vwr ELSE V := Oberon.MarkedViewer() END ;
     Viewers.Close(V)
   END Close;
 
@@ -238,7 +238,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
   BEGIN V := Oberon.MarkedViewer(); D := Viewers.ThisDisplay(V); Viewers.CloseTrack(D, V.X)
   END CloseTrack;
 
-  PROCEDURE Recall*; (*recover the last closed viewer of the current display*)
+  PROCEDURE Recall*;  (*recover the last closed viewer of the current display*)
     VAR V: Viewers.Viewer; curDisplay: Viewers.Display; M: Viewers.ViewerMsg;
   BEGIN curDisplay := Viewers.CurDisplay; Viewers.Recall(curDisplay, V);
     IF (V # NIL) & (V.state = 0) THEN
@@ -246,11 +246,11 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
     END
   END Recall;
 
-  PROCEDURE Flush*; (*clear the last closed viewer of the current display*)
+  PROCEDURE Flush*;  (*clear the last closed viewer of the current display*)
   BEGIN Viewers.Flush(Viewers.CurDisplay)
   END Flush;
 
-  PROCEDURE RecallFocus*; (*recover the focus viewer of the current display*)
+  PROCEDURE RecallFocus*;  (*recover the focus viewer of the current display*)
     VAR V: Viewers.Viewer; M: Viewers.ViewerMsg;
   BEGIN V := Viewers.FocusViewer;
     IF (V # NIL) & (V.state = 0) THEN
@@ -258,7 +258,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
     END
   END RecallFocus;
 
-  PROCEDURE OpenLog*; (*open a(nother) log viewer for the system-wide central log*)
+  PROCEDURE OpenLog*;  (*open a(nother) log viewer for the system-wide central log*)
     VAR V: Viewers.Viewer; X, Y: INTEGER;
   BEGIN Oberon.AllocateSystemViewer(0, X, Y);
     IF Oberon.Log = NIL THEN Oberon.OpenLog(TextFrames.Text("")) END ;
@@ -267,19 +267,19 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
       TextFrames.NewText(Oberon.Log, 0), TextFrames.menuH, X, Y)
   END OpenLog;
 
-  PROCEDURE Copy*; (*create a copy of the viewer in the current display*)
+  PROCEDURE Copy*;  (*create a copy of the viewer in the current display*)
     VAR V, V1: Viewers.Viewer; M: Viewers.CopyMsg; N: Viewers.ViewerMsg;
   BEGIN V := Oberon.Par.vwr; V.handle(V, M); V1 := M.F(Viewers.Viewer);
     Viewers.Open(Viewers.CurDisplay, V1, V.X, V.Y + V.H DIV 2);
     N.id := Viewers.restore; V1.handle(V1, N)
   END Copy;
 
-  PROCEDURE Grow*; (*create a copy of the viewer in a newly created overlaying track*)
+  PROCEDURE Grow*;  (*create a copy of the viewer in a newly created overlaying track*)
     VAR D: Viewers.Display; V, V1: Viewers.Viewer; M: Viewers.CopyMsg; N: Viewers.ViewerMsg;
   BEGIN V := Oberon.Par.vwr; D := Viewers.ThisDisplay(V);
     IF V.H < D.H - D.minH THEN Oberon.OpenTrack(D, V.X, V.W)
     ELSIF V.W < D.W THEN Oberon.OpenTrack(D, Oberon.UserTrack(V.X), D.W)
-    END;
+    END ;
     IF (V.H < D.H - D.minH) OR (V.W < D.W) THEN
       V.handle(V, M); V1 := M.F(Viewers.Viewer);
       Viewers.Open(D, V1, V.X, D.H);
@@ -287,7 +287,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
     END
   END Grow;
 
-  PROCEDURE Clone*; (*create a copy of the viewer in a newly created display*)
+  PROCEDURE Clone*;  (*create a copy of the viewer in a newly created display*)
     VAR D: Viewers.Display; V, V1: Viewers.Viewer;
       M: Viewers.CopyMsg; N: Viewers.ViewerMsg; prev: INTEGER;
       name: ARRAY Viewers.DnLength OF CHAR;
@@ -303,18 +303,18 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
     EndLine
   END Clone;
 
-  PROCEDURE Expand*; (*expand the viewer vertically as much as possible*)
+  PROCEDURE Expand*;  (*expand the viewer vertically as much as possible*)
     VAR V: Viewers.Viewer; y, h: INTEGER;
   BEGIN V := Oberon.Par.vwr; y := 0; h := Oberon.DisplayHeight(0);
     Viewers.Validate(V, y, h); Viewers.Change(V, y, h)
   END Expand;
 
-  PROCEDURE Spread*; (*redistribute viewers vertically*)
+  PROCEDURE Spread*;  (*redistribute viewers vertically*)
     VAR D: Viewers.Display; V: Viewers.Viewer;
   BEGIN V := Oberon.Par.vwr; D := Viewers.ThisDisplay(V); Viewers.Spread(D, V.X, V.W)
   END Spread;
 
-  PROCEDURE ExtendDisplay*; (*extend the current display to the right*)
+  PROCEDURE ExtendDisplay*;  (*extend the current display to the right*)
     VAR V: Viewers.Viewer; curDisplay: Viewers.Display;
       X, Y, DX, DW, DH: INTEGER;
       S: Texts.Scanner;
@@ -353,7 +353,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
     END
   END Select;
 
-  PROCEDURE WriteName(name: ARRAY OF CHAR); (*handler for Select*)
+  PROCEDURE WriteName(name: ARRAY OF CHAR);  (*handler*)
   BEGIN Texts.Write(W, " "); Texts.WriteString(W, name)
   END WriteName;
 
@@ -368,7 +368,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
 
   (* show references *)
 
-  PROCEDURE WriteRef(x: LONGINT; s: ARRAY OF CHAR; VAR continue: BOOLEAN): INTEGER;
+  PROCEDURE WriteRef(x: LONGINT; s: ARRAY OF CHAR; VAR continue: BOOLEAN; dynamic: BOOLEAN): INTEGER;
     VAR mod: Modules.Module;
   BEGIN mod := Modules.root;
     WHILE mod # NIL DO
@@ -376,8 +376,8 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
         IF (M # mod) OR (pat # s) THEN M := mod; pat := s;
           IF x < mod.code THEN Texts.WriteString(W, "  types of ") ELSE Texts.WriteString(W, "  procedures of ") END ;
           Texts.WriteString(W, mod.name); Texts.WriteString(W, " in use in ");
-          IF global THEN Texts.WriteString(W, "global procedures variables of ")
-          ELSE Texts.WriteString(W, "dynamic objects reachable by ")
+          IF dynamic THEN Texts.WriteString(W, "dynamic objects reachable by ")
+          ELSE Texts.WriteString(W, "global procedures variables of ")
           END ;
           Texts.WriteString(W, s); Texts.WriteLn(W)
         END
@@ -387,25 +387,33 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
     RETURN 1
   END WriteRef;
 
-  PROCEDURE WriteRefs; (*write references from each unselected module to the selected modules*)
+  PROCEDURE WriteDynamicRef(x: LONGINT; s: ARRAY OF CHAR; VAR continue: BOOLEAN): INTEGER;  (*handler*)
+  BEGIN RETURN WriteRef(x, s, continue, TRUE)
+  END WriteDynamicRef;
+
+  PROCEDURE WriteStaticRef(x: LONGINT; s: ARRAY OF CHAR; VAR continue: BOOLEAN): INTEGER;  (*handler*)
+  BEGIN RETURN WriteRef(x, s, continue, FALSE)
+  END WriteStaticRef;
+
+  PROCEDURE WriteRefs;  (*write references from each unselected module to the selected modules*)
     VAR res: INTEGER;
-  BEGIN global := FALSE; Oberon.SetPar(NIL, NIL, 0); (*exclude viewers reachable only via Oberon.Par.vwr*)
-    M := NIL; Modules.FindDynamicRefs(WriteRef, NIL, res, res, FALSE); (*dynamic type references*)
-    M := NIL; Modules.FindDynamicRefs(NIL, WriteRef, res, res, FALSE); (*dynamic procedure variable references*)
-    M := NIL; global := TRUE; Modules.FindStaticRefs(WriteRef, res); (*static procedure variable references*)
+  BEGIN Oberon.SetPar(NIL, NIL, 0);  (*exclude viewers that are reachable only via Oberon.Par.vwr*)
+    M := NIL; Modules.FindDynamicRefs(WriteDynamicRef, NIL, res, res, FALSE);  (*dynamic type refs*)
+    M := NIL; Modules.FindDynamicRefs(NIL, WriteDynamicRef, res, res, FALSE);  (*dynamic procedure variable refs*)
+    M := NIL; Modules.FindStaticRefs(WriteStaticRef, res);  (*static procedure variable refs*)
     Texts.Append(Oberon.Log, W.buf)
   END WriteRefs;
 
-  PROCEDURE ShowRef(name: ARRAY OF CHAR); (*handler for Select*)
+  PROCEDURE ShowRef(name: ARRAY OF CHAR);  (*handler*)
   BEGIN IF Modules.NofSelected > 0 THEN WriteRefs; Modules.Deselect END
   END ShowRef;
 
-  PROCEDURE ShowRefs*; (*show references from all modules (individually) to the specified modules*)
+  PROCEDURE ShowRefs*;  (*show references from all modules (individually) to the specified modules*)
     VAR S: Texts.Scanner;
   BEGIN Texts.WriteString(W, "System.ShowRefs"); EndLine; Modules.Deselect; Select(S, TRUE, TRUE, FALSE, FALSE, ShowRef)
   END ShowRefs;
 
-  PROCEDURE ShowExternalRefs*; (*show references from external modules (individually) to the specified modules*)
+  PROCEDURE ShowExternalRefs*;  (*show references from external modules (individually) to the specified modules*)
     VAR S: Texts.Scanner;
   BEGIN Texts.WriteString(W, "System.ShowExternalRefs");
     Modules.Deselect; Select(S, TRUE, TRUE, FALSE, FALSE, WriteName); EndLine;
@@ -420,40 +428,39 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
     IF Modules.NofSelected > 0 THEN Texts.Write(W, " "); WriteSelection; EndLine; Modules.Deselect END
   END ShowMods;
 
-  PROCEDURE Show*; (*show the specified modules if they are loaded*)
+  PROCEDURE Show*;  (*show the specified modules if they are loaded*)
   BEGIN Texts.WriteString(W, "System.Show"); ShowMods(TRUE, FALSE, FALSE)
   END Show;
 
-  PROCEDURE ShowImports*; (*show the specified modules and their imports*)
+  PROCEDURE ShowImports*;  (*show the specified modules and their imports*)
   BEGIN Texts.WriteString(W, "System.ShowImports"); ShowMods(TRUE, FALSE, TRUE)
   END ShowImports;
 
-  PROCEDURE ShowClients*; (*show the specified modules and their clients*)
+  PROCEDURE ShowClients*;  (*show the specified modules and their clients*)
   BEGIN Texts.WriteString(W, "System.ShowClients"); ShowMods(TRUE, TRUE, FALSE)
   END ShowClients;
 
   (* free modules *)
 
-  PROCEDURE WriteClient(client, import, prev: Modules.Module; VAR continue: BOOLEAN): INTEGER;
-  BEGIN
-    IF import = prev THEN Texts.Write(W, " ")
-    ELSE EndLine; Texts.WriteString(W, "  ");
-      Texts.WriteString(W, import.name); Texts.WriteString(W, " imported by ")
+  PROCEDURE WriteClient(mod, imp: Modules.Module; VAR continue: BOOLEAN): INTEGER;  (*handler*)
+  BEGIN (*mod imports imp*)
+    IF M = imp THEN Texts.Write(W, " ")
+    ELSE M := imp; EndLine; Texts.WriteString(W, "  "); Texts.WriteString(W, imp.name); Texts.WriteString(W, " imported by ")
     END ;
-    Texts.WriteString(W, client.name); RETURN 1
+    Texts.WriteString(W, mod.name); RETURN 1
   END WriteClient;
 
   PROCEDURE FreeMods(this, clients, imports: BOOLEAN);
     VAR S: Texts.Scanner; hide: BOOLEAN; res: INTEGER;
   BEGIN Modules.Deselect; Select(S, TRUE, this, clients, imports, WriteName); EndLine;
-    hide := (S.class = Texts.Char) & (S.c = "/") & (S.nextCh = "f"); (*force option*)
-    Modules.Select("System", FALSE, TRUE, FALSE, TRUE); (*deselect "System" and its imports*)
+    hide := (S.class = Texts.Char) & (S.c = "/") & (S.nextCh = "f");  (*force option*)
+    Modules.Select("System", FALSE, TRUE, FALSE, TRUE);  (*deselect module "System" and its imports*)
     IF Modules.NofSelected > 0 THEN Texts.Write(W, " "); WriteSelection; Modules.FreeSelection(hide);
       IF Modules.res = Modules.noref THEN Texts.WriteString(W, " unloading"); EndLine
       ELSE
         IF hide & (Modules.res > Modules.clients) THEN Texts.WriteString(W, " removing from module list")
         ELSE Texts.WriteString(W, " unloading failed");
-          IF Modules.res = Modules.clients THEN Modules.FindClients(WriteClient, res) END
+          IF Modules.res = Modules.clients THEN M := NIL; Modules.FindClients(WriteClient, res) END
         END ;
         EndLine; WriteRefs
       END ;
@@ -461,15 +468,15 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
     END
   END FreeMods;
 
-  PROCEDURE Free*; (*free the specified modules as a group; the force option /f hides the modules if refs exist*)
+  PROCEDURE Free*;  (*free the specified modules as a group; the force option /f hides the modules if refs exist*)
   BEGIN Texts.WriteString(W, "System.Free"); FreeMods(TRUE, FALSE, FALSE)
   END Free;
 
-  PROCEDURE FreeImports*; (*free the specified modules and their imports*)
+  PROCEDURE FreeImports*;  (*free the specified modules and their imports*)
   BEGIN Texts.WriteString(W, "System.FreeImports"); FreeMods(TRUE, FALSE, TRUE)
   END FreeImports;
 
-  PROCEDURE FreeClients*; (*free the specified modules and their clients*)
+  PROCEDURE FreeClients*;  (*free the specified modules and their clients*)
   BEGIN Texts.WriteString(W, "System.FreeClients"); FreeMods(TRUE, TRUE, FALSE)
   END FreeClients;
 
@@ -557,7 +564,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
             f := Files.Old(name);
             IF f # NIL THEN g := Files.New(S.s);
               Files.Set(Rf, f, 0); Files.Set(Rg, g, 0); Files.Read(Rf, ch);
-              WHILE ~Rf.eof DO Files.Write(Rg, ch); Files.Read(Rf, ch) END;
+              WHILE ~Rf.eof DO Files.Write(Rg, ch); Files.Read(Rf, ch) END ;
               Files.Register(g)
             ELSE Texts.WriteString(W, " failed")
             END ;
@@ -582,7 +589,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
           IF S.class = Texts.Name THEN
             Texts.WriteString(W, name); Texts.WriteString(W, " => "); Texts.WriteString(W, S.s);
             Texts.WriteString(W, " renaming"); Files.Rename(name, S.s, res);
-            IF res > 1 THEN Texts.WriteString(W, " failed") END;
+            IF res > 1 THEN Texts.WriteString(W, " failed") END ;
             EndLine
           END
         END
@@ -598,7 +605,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
     WHILE S.class = Texts.Name DO
       Texts.WriteString(W, S.s); Texts.WriteString(W, " deleting");
       Files.Delete(S.s, res);
-      IF res # 0 THEN Texts.WriteString(W, " failed") END;
+      IF res # 0 THEN Texts.WriteString(W, " failed") END ;
       EndLine; Texts.Scan(S)
     END
   END DeleteFiles;
@@ -635,7 +642,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
       END ;
       IF Modules.Selected(M) THEN Texts.WriteString(W, " *") END ;
       Texts.WriteLn(W); M := M.next
-    END;
+    END ;
     Texts.Append(T, W.buf)
   END ShowModules;
 
@@ -675,12 +682,12 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
     Texts.Append(Oberon.Log, W.buf)
   END ShowFonts;
 
-  PROCEDURE Unmark*; (*heap*)
+  PROCEDURE Unmark*;  (*heap*)
     VAR resType, resProc: INTEGER;
   BEGIN Kernel.Scan(NIL, NIL, "System.Unmark", resType, resProc)
   END Unmark;
 
-  PROCEDURE Load*; (*module*)
+  PROCEDURE Load*;  (*module*)
     VAR M: Modules.Module; S: Texts.Scanner;
   BEGIN GetArg(S);
     IF S.class = Texts.Name THEN Modules.Load(S.s, M) END
@@ -718,14 +725,13 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
     END
   END ReadCode;
 
-  PROCEDURE RunRsc*; (*extract, load and execute code section of program  M.rsc*)
+  PROCEDURE RunRsc*;  (*extract, load and execute code section of program  M.rsc*)
     CONST maxCode = 8000;
-    TYPE Command = PROCEDURE;
     VAR code: ARRAY maxCode OF LONGINT;
       size, start, nofimps, res: INTEGER;
       F: Files.File; R: Files.Rider;
       S: Texts.Scanner;
-      body: Command;
+      body: Modules.Command;
   BEGIN GetArg(S);
     Texts.WriteString(W, "System.RunRsc ");
     IF S.class = Texts.Name THEN (*name of object file*)
@@ -736,7 +742,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
         IF res = 0 THEN
           IF nofimps = 0 THEN
             Texts.WriteInt(W, size*4, 6); Texts.WriteInt(W, start, 6); (*bytes*)
-            body := SYSTEM.VAL(Command, SYSTEM.ADR(code) + start);
+            body := SYSTEM.VAL(Modules.Command, SYSTEM.ADR(code) + start);
             body (*call module initialization body*)
           ELSE Texts.WriteString(W, "  imports not allowed")
           END
@@ -749,21 +755,20 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
     END
   END RunRsc;
 
-  PROCEDURE Trap1(VAR a: INTEGER; b, c, d: INTEGER); (*trap routine installed by RunBin*)
+  PROCEDURE Trap1(VAR a: INTEGER; b, c, d: INTEGER);  (*trap routine installed by RunBin*)
     VAR u, v, w: INTEGER;
   BEGIN u := SYSTEM.REG(15); SYSTEM.GET(u - 4, v); w := v DIV 10H MOD 10H; (*trap number*)
     LED(w + 192); REPEAT UNTIL FALSE
   END Trap1;
 
-  PROCEDURE RunBin*; (*load and execute pre-linked binary  M.bin*)
+  PROCEDURE RunBin*;  (*load and execute pre-linked binary  M.bin*)
     CONST maxBin = 16000; MT = 12;
-    TYPE Command = PROCEDURE;
     VAR bin: ARRAY maxBin OF INTEGER;
       MTOrg, Start, i, x: INTEGER;
       M, p: Modules.Module;
       F: Files.File; R: Files.Rider;
       S: Texts.Scanner;
-      body: Command;
+      body: Modules.Command;
   BEGIN GetArg(S);
     Texts.WriteString(W, "System.RunBin ");
     IF S.class = Texts.Name THEN (*name of binary file*)
@@ -794,7 +799,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
           Kernel.Install(SYSTEM.ADR(Trap1), MTOrg); (*install trap in MTOrg[0]*)
           x := SYSTEM.REG(MT); (*save MT register*)
           SYSTEM.LDREG(MT, MTOrg);
-          body := SYSTEM.VAL(Command, Start);
+          body := SYSTEM.VAL(Modules.Command, Start);
           body; (*call initialization body of the top module*)
           SYSTEM.LDREG(MT, x) (*restore MT register*)
         ELSE Texts.WriteString(W, " program too long")
@@ -805,7 +810,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
     END
   END RunBin;
 
-  PROCEDURE InitMod(name: ARRAY OF CHAR);
+  PROCEDURE InitMod(name: ARRAY OF CHAR);  (*call the module initialization body of the specified module*)
     VAR mod: Modules.Module; body: Modules.Command; w: INTEGER;
   BEGIN mod := Modules.root;
     WHILE (mod # NIL) & (name # mod.name) DO mod := mod.next END ;
@@ -814,7 +819,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 9.1.19 Experimental
     END
   END InitMod;
 
-  PROCEDURE RunInit*; (*call module initialization body*)
+  PROCEDURE RunInit*;  (*call module initialization body*)
     VAR S: Texts.Scanner;
   BEGIN GetArg(S);
     IF S.class = Texts.Name THEN InitMod(S.s) END

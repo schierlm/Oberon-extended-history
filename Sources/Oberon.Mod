@@ -1,4 +1,4 @@
-MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 31.12.18*)
+MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 22.2.19*)
   IMPORT SYSTEM, Kernel, Files, Modules, Input, Display, Viewers, Fonts, Texts;
 
   CONST off = 0; idle = 1; active = 2; (*task states*)
@@ -96,7 +96,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 31.1
       IF X > CL + DW - 15 THEN X := CL + DW - 15 END
     END ;
     IF Y < 14 THEN Y := 14 ELSIF Y > DH THEN Y := DH END ;
-    Display.CopyPattern(Display.white, Display.arrow, X, Y - 14, 0, 0, Display.invert)
+    Display.CopyPattern(Display.white, Display.arrow, X, Y - 14, 0, 0, 0, 0, Display.invert)
   END FlipArrow;
      
   PROCEDURE FlipStar (X, Y: INTEGER);
@@ -107,7 +107,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 31.1
       IF X < CL + 7 THEN X := CL + 7 ELSIF X > CL + DW - 8 THEN X := CL + DW - 8 END
     END ;
     IF Y < 7 THEN Y := 7 ELSIF Y > DH - 8 THEN Y := DH - 8 END ;
-    Display.CopyPattern(Display.white, Display.star, X - 7, Y - 7, 0, 0, Display.invert)
+    Display.CopyPattern(Display.white, Display.star, X - 7, Y - 7, 0, 0, 0, 0, Display.invert)
   END FlipStar;
 
   PROCEDURE OpenCursor(VAR c: Cursor);
@@ -321,7 +321,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 31.1
   BEGIN Par.vwr := Viewers.ThisViewer(F); Par.frame := F; Par.text := T; Par.pos := pos
   END SetPar;
 
-  PROCEDURE Activate*(F: Viewers.Frame; T: Texts.Text; pos: LONGINT);  (*command*)
+  PROCEDURE Call*(F: Viewers.Frame; T: Texts.Text; pos: LONGINT; new: BOOLEAN);  (*command*)
     VAR S: Texts.Scanner; res: INTEGER;
   BEGIN Texts.OpenScanner(S, T, pos); Texts.Scan(S);
     IF ((S.class = Texts.Name) OR (S.class = Texts.String)) & (S.line = 0) THEN
@@ -341,7 +341,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 31.1
         Texts.WriteLn(W); Texts.Append(Log, W.buf)
       END
     END
-  END Activate;
+  END Call;
 
   (*task management*)
 
@@ -436,5 +436,8 @@ BEGIN User[0] := 0X;
 
   ActCnt := 0; CurTask := NewTask(GC, 1000); Install(CurTask);
   Texts.OpenWriter(W); Log := NIL;
-  Modules.Load("System", Mod); Mod := NIL; Loop
+
+  IF Modules.importing = "Oberon" THEN (*loaded by the regular loader*)
+    Modules.Load("System", Mod); Mod := NIL; Loop
+  END
 END Oberon.
