@@ -1,7 +1,7 @@
 MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*)
   IMPORT Input, Display, Viewers, Fonts, Texts, Oberon;
 
-  CONST replace* = 0; insert* = 1; delete* = 2; unmark* = 3; (*message id*)
+  CONST replace* = 0; insert* = 1; delete* = 2; unmark* = 3;  (*message id*)
     BS = 8X; TAB = 9X; CR = 0DX; DEL = 7FX;
 
   TYPE Line = POINTER TO LineDesc;
@@ -9,7 +9,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
       len: LONGINT;
       wid: INTEGER;
       eot: BOOLEAN;
-      lsp, asr, dsr: BYTE; (*largest line space, ascender and descender in the line*)
+      lsp, asr, dsr: BYTE;  (*largest line space, ascender and descender in the line*)
       next: Line
     END;
 
@@ -31,8 +31,8 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
       carloc*: Location;
       selbeg*, selend*: Location;
       trailer: Line;
-      voff: INTEGER; (*vertical offset relative to baseline*)
-      pool: Line (*line pool to minimize heap space consumption during continuous scrolling*)
+      voff: INTEGER;  (*vertical offset relative to baseline*)
+      pool: Line  (*line pool to minimize heap space consumption during continuous scrolling*)
     END;
 
     UpdateMsg* = RECORD (Viewers.FrameMsg)
@@ -47,11 +47,11 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
     END;
 
   VAR TBuf*, DelBuf: Texts.Buffer;
-    menuH*, barW*, left*, right*, top*, bot*, lsp*: INTEGER; (*standard sizes*)
+    menuH*, barW*, left*, right*, top*, bot*, lsp*: INTEGER;  (*standard sizes*)
     asr, dsr, selH, markW, eolW: INTEGER;
     nextCh: CHAR;
     ScrollMarker: Oberon.Marker;
-    W, KW: Texts.Writer; (*keyboard writer*)
+    W, KW: Texts.Writer;  (*keyboard writer*)
 
   PROCEDURE Min (i, j: INTEGER): INTEGER;
   BEGIN IF i < j THEN j := i END ;
@@ -63,16 +63,16 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
     RETURN j
   END Max;
 
-  PROCEDURE NewLine (F: Frame; VAR L: Line); (*reuse line from line pool if possible*)
+  PROCEDURE NewLine (F: Frame; VAR L: Line);  (*reuse line from line pool if possible*)
   BEGIN IF F.pool # NIL THEN L := F.pool; F.pool := L.next ELSE NEW(L) END
   END NewLine;
 
-  PROCEDURE PoolLines (F: Frame; L, L1: Line); (*move lines from L.next to L1 to line pool*)
+  PROCEDURE PoolLines (F: Frame; L, L1: Line);  (*move lines from L.next to L1 to line pool*)
     VAR l: Line;
   BEGIN IF L # L1 THEN l := L1.next; L1.next := F.pool; F.pool := L.next; L.next := l END
   END PoolLines;
 
-  PROCEDURE LastLine (F: Frame; L: Line); (*move all lines after L to line pool*)
+  PROCEDURE LastLine (F: Frame; L: Line);  (*move all lines after L to line pool*)
     VAR l: Line;
   BEGIN (*L in closed F.trailer ring*)
     IF L.next # F.trailer THEN l := L;
@@ -109,7 +109,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
     Display.CopyPattern(Display.white, Display.updown, X-4, Y-4, 0, 0, 0, 0, Display.invert)
   END FlipSM;
 
-  PROCEDURE UpdateMark (F: Frame); (*in scroll bar*)
+  PROCEDURE UpdateMark (F: Frame);  (*in scroll bar*)
     VAR h, oldH: INTEGER;
   BEGIN oldH := F.markH; h := Min(F.H - 2, 20); F.markH := Max(F.org * F.H DIV (F.text.len + 1), 1);
     IF (h > 0) & F.hasMark & (F.left >= barW) & (F.markH # oldH) THEN
@@ -118,7 +118,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
     END
   END UpdateMark;
 
-  PROCEDURE Mark* (F: Frame; on: BOOLEAN); (*in scroll bar*)
+  PROCEDURE Mark* (F: Frame; on: BOOLEAN);  (*in scroll bar*)
     VAR h: INTEGER;
   BEGIN h := Min(F.H - 2, 20);
     IF (F.H > 0) & (F.left >= barW) & ((F.hasMark & ~on) OR (~F.hasMark & on)) THEN
@@ -127,7 +127,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
     F.hasMark := on
   END Mark;
 
-  PROCEDURE SetChangeMark (F: Frame; on: BOOLEAN); (*in corner*)
+  PROCEDURE SetChangeMark (F: Frame; on: BOOLEAN);  (*in corner*)
   BEGIN
     IF F.H > menuH THEN
       IF on THEN Display.CopyPattern(Display.white, Display.block, F.X+F.W-12, F.Y+F.H-12, 0, 0, 0, 0, Display.paint)
@@ -158,11 +158,11 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
     l.eot := R.fnt = NIL; Texts.Read(R, nextCh)
   END MeasureLine;
 
-  PROCEDURE PrepareLine (L: Line; VAR R: Texts.Reader); (*pass 1*)
+  PROCEDURE PrepareLine (L: Line; VAR R: Texts.Reader);  (*pass 1*)
   BEGIN MeasureLine(L^, R)
   END PrepareLine;
 
-  PROCEDURE DisplayLine (F: Frame; L: Line; (*pass 2*)
+  PROCEDURE DisplayLine (F: Frame; L: Line;  (*pass 2*)
     VAR R: Texts.Reader; X, Y, topY, botY: INTEGER; len: LONGINT);
     VAR patadr, NX, dx, x, y, w, h, left, right, top, bot: INTEGER;
   BEGIN NX := F.X + F.W - F.right; left := 0;
@@ -236,7 +236,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
     END;
     IF (L # F.trailer) & (curY < botY0) THEN
       Texts.OpenReader(R, F.text, org - L.len); Texts.Read(R, nextCh);
-      DisplayLine(F, L, R, F.X + F.left, curY + L.dsr, botY0, botY, 0) (*old fractional bottom line*)
+      DisplayLine(F, L, R, F.X + F.left, curY + L.dsr, botY0, botY, 0)  (*old fractional bottom line*)
     ELSE Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh)
     END;
     IF topY > botY THEN
@@ -262,17 +262,15 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
       END
     END;
     LastLine(F, L);
-    IF F.H >= F.top + F.bot THEN
-      Display.ReplConst(F.col, F.X + F.left, F.Y, F.W - F.left, F.bot, Display.replace)
-    ELSIF F.H > F.top THEN
-      Display.ReplConst(F.col, F.X + F.left, F.Y, F.W - F.left, F.H - F.top, Display.replace)
+    IF F.H >= F.top + F.bot THEN Display.ReplConst(F.col, F.X + F.left, F.Y, F.W - F.left, F.bot, Display.replace)
+    ELSIF F.H > F.top THEN Display.ReplConst(F.col, F.X + F.left, F.Y, F.W - F.left, F.H - F.top, Display.replace)
     END;
     F.markH := F.org * F.H DIV (F.text.len + 1); Mark(F, TRUE)
   END Reduce;
 
   (*------------------fractional line scrolling------------------------*)
 
-  PROCEDURE ScrollDown (F: Frame; org: LONGINT; voff, dY: INTEGER; lin: ARRAY OF LineDesc; beg, end: INTEGER);
+  PROCEDURE ScrollDown (F: Frame; org: LONGINT; voff, dY: INTEGER; insert: ARRAY OF LineDesc; beg, end: INTEGER);
     VAR R: Texts.Reader; L, L0, l: Line;
       curY, topY, botY, Y0, Y1, Y2, h, k: INTEGER;
   BEGIN topY := F.Y + F.H - F.top; botY := F.Y + F.bot;
@@ -289,23 +287,23 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
     Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
     WHILE ~L.eot & (curY > Y0) DO
       NewLine(F, l);
-      IF k < end THEN l^ := lin[k]; INC(k) ELSE PrepareLine(l, R) END;
+      IF k < end THEN (*use line from cache*) l^ := insert[k]; INC(k) ELSE PrepareLine(l, R) END;
       Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
       DisplayLine(F, l, R, F.X + F.left, curY - l.asr, topY, Y0, 0);
       L.next := l; L := l; org := org + L.len; curY := curY - L.lsp
     END;
     L.next := L0;
     IF (L0 # F.trailer) & (curY > Y1) THEN
-      DisplayLine(F, L0, R, F.X + F.left, curY - L0.asr, topY, Y1, 0) (*old fractional top line*)
+      DisplayLine(F, L0, R, F.X + F.left, curY - L0.asr, topY, Y1, 0)  (*old fractional top line*)
     END;
     UpdateMark(F)
   END ScrollDown;
 
-  PROCEDURE ScrollUp (F: Frame; org: LONGINT; voff, dY: INTEGER);
+  PROCEDURE ScrollUp (F: Frame; org: LONGINT; voff, dY: INTEGER; skipto: Line);
     VAR R: Texts.Reader; L, l: Line;
       curY, topY, botY, Y0, Y1, h: INTEGER;
   BEGIN topY := F.Y + F.H - F.top; botY := F.Y + F.bot; curY := topY + voff - dY;
-    F.org := org; F.voff := voff; L := F.trailer;
+    F.org := org; F.voff := voff; L := F.trailer; PoolLines(F, L, skipto);
     WHILE (L.next # F.trailer) & (curY > botY) DO
       L := L.next; org := org + L.len; curY := curY - L.lsp
     END;
@@ -313,9 +311,9 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
     IF h > 0 THEN Display.CopyBlock(F.X + F.left, Y1, F.W - F.left, h, F.X + F.left, Y0, 0) END;
     ReplConst(F.col, F, F.X + F.left, Y1, F.W - F.left, Y0 - Y1, Display.replace);
     curY := curY + dY;
-    IF curY - dY < botY THEN
+    IF (L # F.trailer) & (curY - dY < botY) THEN
       Texts.OpenReader(R, F.text, org - L.len); Texts.Read(R, nextCh);
-      DisplayLine(F, L, R, F.X + F.left, curY + L.dsr, Y0, botY, 0) (*old fractional bottom line*)
+      DisplayLine(F, L, R, F.X + F.left, curY + L.dsr, Y0, botY, 0)  (*old fractional bottom line*)
     ELSE Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh)
     END;
     WHILE ~L.eot & (curY > botY) DO
@@ -328,35 +326,35 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
     L.next := F.trailer; UpdateMark(F)
   END ScrollUp;
 
-  PROCEDURE Scroll* (F: Frame; dY: INTEGER); (*scroll displayed text dY pixels up or down*)
-    CONST K = 100; len = 75; (*assumed number of lines and average line length*)
+  PROCEDURE Scroll* (F: Frame; dY: INTEGER);  (*scroll displayed text dY pixels up or down*)
+    CONST K = 100; len = 75;  (*assumed number of lines and average line length*)
     VAR R: Texts.Reader; L, L0: Line; l: LineDesc;
       org, org0, q: LONGINT; dy, i, k: INTEGER;
-      lin: ARRAY K OF LineDesc; (*cache*)
+      lin: ARRAY K OF LineDesc;  (*cache*)
   BEGIN (*dY # 0*)
     IF F.trailer.next # F.trailer THEN
       IF dY < 0 THEN dY := -dY;
         IF dY <= F.voff THEN ScrollDown(F, F.org, F.voff - dY, dY, lin, 0, 0)
         ELSIF F.org = 0 THEN ScrollDown(F, 0, 0, F.voff, lin, 0, 0)
         ELSE (*F.org > 0 & dY > F.voff*) k := F.trailer.next.lsp;
-          q := F.org - len*((dY - F.voff + k - 1) DIV k - 1); (*first guess*)
+          q := F.org - len*((dY - F.voff + k - 1) DIV k - 1);  (*first guess backward*)
           REPEAT DEC(q, len); org := q; Validate(F.text, org) UNTIL org < F.org;
           REPEAT org0 := org; k := 0; dy := 0;
             Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
             WHILE org < F.org DO
               MeasureLine(l, R);
               org := org + l.len; dy := dy + l.lsp;
-              IF k < K THEN lin[k] := l; INC(k) END
+              IF k < K THEN lin[k] := l; INC(k) END  (*to prevent re-reading of lines*)
             END;
             IF dy + F.voff >= dY THEN org := org0; i := 0;
               WHILE (i < k) & (dy + F.voff - lin[i].lsp >= dY) DO
                 org := org + lin[i].len; dy := dy - lin[i].lsp; INC(i)
               END;
               IF (i < K) OR (org = F.org) THEN ScrollDown(F, org, F.voff + dy - dY, dY, lin, i, k); org := -1 END
-            ELSIF org0 > 0 THEN (*next guess backward*)
+            ELSIF org0 > 0 THEN  (*next guess backward*)
               REPEAT DEC(q, len); org := q; Validate(F.text, org) UNTIL org < org0
             ELSE (*reached beginning of text*) org := -1;
-               IF dy + F.voff > 0 THEN ScrollDown(F, 0, 0, dy + F.voff, lin, 0, k) END
+              IF dy + F.voff > 0 THEN ScrollDown(F, 0, 0, dy + F.voff, lin, 0, k) END
             END
           UNTIL org < 0
         END
@@ -365,7 +363,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
         WHILE (L # F.trailer) & (dy + L.lsp <= dY + F.voff) DO
           org := org + L.len; dy := dy + L.lsp; L0 := L; L := L.next
         END;
-        IF L # F.trailer THEN PoolLines(F, F.trailer, L0); ScrollUp(F, org, F.voff + dY - dy, dY)
+        IF L # F.trailer THEN ScrollUp(F, org, F.voff + dY - dy, dY, L0)
         ELSIF org < F.text.len THEN
           Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh); MeasureLine(l, R);
           WHILE ~l.eot & (org < F.text.len) & (dy + l.lsp <= dY + F.voff) DO
@@ -380,11 +378,11 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
     END
   END Scroll;
 
-  PROCEDURE Show* (F: Frame; pos: LONGINT); (*scroll specified text position to the top*)
-    CONST K = 100; (*assumed number of lines*)
+  PROCEDURE Show* (F: Frame; pos: LONGINT);  (*scroll specified text position to the top*)
+    CONST K = 100;  (*assumed number of lines*)
     VAR R: Texts.Reader; L, L0: Line; l: LineDesc;
       org: LONGINT; dy, h, k: INTEGER;
-      lin: ARRAY K OF LineDesc; (*cache*)
+      lin: ARRAY K OF LineDesc;  (*cache*)
   BEGIN
     IF F.trailer.next # F.trailer THEN
       Validate(F.text, pos);
@@ -394,7 +392,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
         WHILE (org < F.org) & (dy < h) DO
           MeasureLine(l, R);
           org := org + l.len; dy := dy + l.lsp;
-          IF k < K THEN lin[k] := l; INC(k) END
+          IF k < K THEN lin[k] := l; INC(k) END  (*to prevent re-reading of lines*)
         END;
         IF (org = F.org) & (dy < h) THEN ScrollDown(F, pos, 0, dy + F.voff, lin, 0, k)
         ELSE Mark(F, FALSE); F.org := pos; F.voff := 0; LastLine(F, F.trailer); Restore(F); Mark(F, TRUE)
@@ -404,7 +402,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
         WHILE (L # F.trailer) & (org < pos) DO
           org := org + L.len; dy := dy + L.lsp; L0 := L; L := L.next
         END;
-        IF L # F.trailer THEN PoolLines(F, F.trailer, L0); ScrollUp(F, org, 0, dy - F.voff)
+        IF L # F.trailer THEN ScrollUp(F, org, 0, dy - F.voff, L0)
         ELSIF pos < F.text.len THEN
           Mark(F, FALSE); F.org := pos; F.voff := 0; LastLine(F, F.trailer); Restore(F); Mark(F, TRUE)
         END
@@ -577,14 +575,14 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
       REPEAT prev := loc.pos;
         Input.Mouse(keys, X, Y);
         keysum := keysum + keys;
-        IF Y < botY THEN (*scroll text up*)
+        IF Y < botY THEN  (*scroll text up*)
           IF (F.selbeg.org = F.selend.org) OR (prev <= start) THEN L := F.selbeg; R := F.selend
           ELSE R := F.selend; L.org := F.selend.org; L.pos := L.org; L.x := F.left
           END;
           FlipSelection(F, L, R); Oberon.FadeMouse;
           Scroll(F, botY - Y); Y := botY;
           FlipSelection(F, L, R)
-        ELSIF (Y > topY - 1) & ((F.org > 0) OR (F.voff > 0)) THEN (*scroll text down*)
+        ELSIF (Y > topY - 1) & ((F.org > 0) OR (F.voff > 0)) THEN  (*scroll text down*)
           IF (F.selbeg.org = F.selend.org) OR (prev > start) THEN L := F.selbeg; R := F.selend
           ELSE L := F.selbeg; R.org := F.selbeg.org; R.pos := F.selbeg.lin.len; R.x := F.left + F.selbeg.lin.wid
           END;
@@ -829,33 +827,33 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
   PROCEDURE Write* (F: Frame; ch: CHAR; fnt: Fonts.Font; col, voff: INTEGER);
     VAR buf: Texts.Buffer;
   BEGIN (*F.hasCar*)
-    IF ch = BS THEN (*backspace*)
+    IF ch = BS THEN  (*backspace*)
       IF F.carloc.pos > F.org THEN
         Texts.Delete(F.text, F.carloc.pos - 1, F.carloc.pos, DelBuf); SetCaret(F, F.carloc.pos - 1)
       END
-    ELSIF ch = 1X THEN (*ctrl-a  select-all*)
+    ELSIF ch = 1X THEN  (*ctrl-a  select-all*)
       IF F.hasSel THEN FlipSelection(F, F.selbeg, F.selend) END;
       F.selbeg.org := 0; F.selbeg.pos := 0; F.selbeg.x := F.left;
       F.selend.org := F.text.len; F.selend.pos := F.text.len; F.selend.x := F.left;
       FlipSelection(F, F.selbeg, F.selend); F.time := Oberon.Time(); F.hasSel := TRUE
-    ELSIF ch = 3X THEN (*ctrl-c  copy*)
+    ELSIF ch = 3X THEN  (*ctrl-c  copy*)
       IF F.hasSel THEN
         NEW(TBuf); Texts.OpenBuf(TBuf); Texts.Save(F.text, F.selbeg.pos, F.selend.pos, TBuf)
       END
-    ELSIF ch = 16X THEN (*ctrl-v  paste*)
+    ELSIF ch = 16X THEN  (*ctrl-v  paste*)
       NEW(buf); Texts.OpenBuf(buf); Texts.Copy(TBuf, buf); Texts.Insert(F.text, F.carloc.pos, buf);
       SetCaret(F, F.carloc.pos + TBuf.len)
-    ELSIF ch = 18X THEN (*ctrl-x  cut*)
+    ELSIF ch = 18X THEN  (*ctrl-x  cut*)
       IF F.hasSel THEN
         NEW(TBuf); Texts.OpenBuf(TBuf); Texts.Delete(F.text, F.selbeg.pos, F.selend.pos, TBuf)
       END
-    (*ELSIF ch = 11X THEN (*cursor left*)
+    (*ELSIF ch = 11X THEN  (*cursor left*)
       IF F.carloc.pos > 0 THEN RemoveCaret(F); SetCaret(F, F.carloc.pos - 1) END
-    ELSIF ch = 12X THEN (*cursor right*)
+    ELSIF ch = 12X THEN  (*cursor right*)
       IF F.carloc.pos < F.text.len THEN RemoveCaret(F); SetCaret(F, F.carloc.pos + 1) END
-    ELSIF ch = 13X THEN (*cursor up*)
+    ELSIF ch = 13X THEN  (*cursor up*)
       RemoveCaret(F); SetCaret(F, Pos(F, F.X + F.carloc.x, F.Y + F.carloc.y + F.lsp))
-    ELSIF ch = 14X THEN (*cursor down*)
+    ELSIF ch = 14X THEN  (*cursor down*)
       RemoveCaret(F); SetCaret(F, Pos(F, F.X + F.carloc.x, F.Y + F.carloc.y - F.lsp))*)
     ELSIF (20X <= ch) & (ch <= DEL) OR (ch = CR) OR (ch = TAB) THEN
       KW.fnt := fnt; KW.col := col; KW.voff := voff; Texts.Write(KW, ch);
@@ -920,8 +918,8 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
   BEGIN
     IF F.hasSel THEN
       IF F.text = text THEN
-        IF F.selbeg.pos < beg THEN beg := F.selbeg.pos END ; (*leftmost*)
-        IF F.time > time THEN end := F.selend.pos; time := F.time END (*last selected*)
+        IF F.selbeg.pos < beg THEN beg := F.selbeg.pos END ;  (*leftmost*)
+        IF F.time > time THEN end := F.selend.pos; time := F.time END  (*last selected*)
       ELSIF F.time > time THEN
         text := F.text; beg := F.selbeg.pos; end := F.selend.pos; time := F.time
       END
@@ -948,9 +946,9 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
       fnt: Fonts.Font;
       col, voff, Y0, SL, SR: INTEGER;
   BEGIN SL := F.X + Min(F.left, barW); keys := Keys;
-    IF X < SL THEN (*cursor starts in scroll bar*)
+    IF X < SL THEN  (*cursor starts in scroll bar*)
       Oberon.DrawMouse(ScrollMarker, X, Y); keysum := Keys;
-      IF Keys = {2} THEN (*ML: continuous scroll*)
+      IF Keys = {2} THEN  (*ML: continuous scroll*)
         Y0 := F.Y + F.H - 1 - F.markH; SR := SL + Min(100, F.W DIV 2);
         WHILE Keys # {} DO Oberon.DrawMouse(ScrollMarker, X, Y);
           IF Y # Y0 THEN
@@ -961,7 +959,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
           END;
           Input.Mouse(Keys, X, Y)
         END
-      ELSIF Keys = {1} THEN (*MM: positional scrolling*) keysum := Keys;
+      ELSIF Keys = {1} THEN  (*MM: positional scrolling*) keysum := Keys;
         REPEAT Input.Mouse(Keys, X, Y); keysum := keysum + Keys;
           Oberon.DrawMouse(ScrollMarker, X, Y)
         UNTIL Keys = {};
@@ -974,42 +972,42 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
           RemoveMarks(F); Oberon.RemoveMarks(F.X, F.Y, F.W, F.H);
           Show(F, pos)
         END
-      ELSIF Keys = {0} THEN (*MR: track line and scroll up or down*)
+      ELSIF Keys = {0} THEN  (*MR: track line and scroll up or down*)
         TrackLine(F, X, Y, pos, keysum);
         IF keysum # {0, 1, 2} THEN
-          IF (pos >= 0) & (keysum = {0}) THEN (*MR, scroll up*)
+          IF (pos >= 0) & (keysum = {0}) THEN  (*MR, scroll up*)
             SetChangeMark(F, FALSE);
             RemoveMarks(F); Oberon.RemoveMarks(F.X, F.Y, F.W, F.H);
             Show(F, pos)
-          ELSIF (keysum = {0,1}) THEN (*MR and MM, scroll down*)
+          ELSIF (keysum = {0,1}) THEN  (*MR and MM, scroll down*)
             SetChangeMark(F, FALSE);
             RemoveMarks(F); Oberon.RemoveMarks(F.X, F.Y, F.W, F.H);
             Show(F, F.org*2 - pos - 100)
           END
         END
       END
-    ELSE (*cursor is in text area*)
+    ELSE  (*cursor is in text area*)
       Oberon.DrawMouseArrow(X, Y);
-      IF 0 IN Keys THEN (*MR: select*)
+      IF 0 IN Keys THEN  (*MR: select*)
         TrackSelection(F, X, Y, keysum);
         IF F.hasSel THEN
-          IF keysum = {0, 2} THEN (*MR, ML: delete text*)
+          IF keysum = {0, 2} THEN  (*MR, ML: delete text*)
             Oberon.GetSelection(text, beg, end, time);
             Texts.Delete(text, beg, end, TBuf);
             Viewers.PassFocus(Viewers.ThisViewer(F)); SetCaret(F, beg)
-          ELSIF keysum = {0, 1} THEN (*MR, MM: copy to caret*)
+          ELSIF keysum = {0, 1} THEN  (*MR, MM: copy to caret*)
             Oberon.GetSelection(text, beg, end, time);
             M.text := text; M.beg := beg; M.end := end;
             Viewers.FocusViewer.handle(Viewers.FocusViewer, M)
           END
         END
-      ELSIF 1 IN Keys THEN (*MM: call*)
+      ELSIF 1 IN Keys THEN  (*MM: call*)
         TrackWord(F, X, Y, pos, keysum);
         IF (pos >= 0) & ~(0 IN keysum) THEN Call(F, pos, 2 IN keysum) END
-      ELSIF 2 IN Keys THEN (*ML: set caret*)
+      ELSIF 2 IN Keys THEN  (*ML: set caret*)
         Viewers.PassFocus(Viewers.ThisViewer(F));
         TrackCaret(F, X, Y, keysum);
-        IF keysum = {2, 1} THEN (*ML, MM: copy from selection to caret*)
+        IF keysum = {2, 1} THEN  (*ML, MM: copy from selection to caret*)
           Oberon.GetSelection(text, beg, end, time);
           IF time >= 0 THEN
             NEW(TBuf); Texts.OpenBuf(TBuf);
@@ -1021,7 +1019,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
             Texts.Copy(TBuf, buf); Texts.Insert(F.text, F.carloc.pos, buf);
             SetCaret(F, F.carloc.pos + buf.len)
           END
-        ELSIF keysum = {2, 0} THEN (*ML, MR: copy looks*)
+        ELSIF keysum = {2, 0} THEN  (*ML, MR: copy looks*)
           Oberon.GetSelection(text, beg, end, time);
           IF time >= 0 THEN
             Texts.Attributes(F.text, F.carloc.pos, fnt, col, voff);
