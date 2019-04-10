@@ -5,14 +5,14 @@ Experimental Oberon is a revision of the FPGA Oberon operating system and its co
 * Multiple logical displays ("virtual displays")
 * Safe module unloading
 * System building and maintenance tools
-* A compiler for the Revised Oberon-2 programming language (implementing a strict superset of the Oberon-07 language) with various features, including
+* A compiler for the *Revised Oberon-2* programming language (implementing a superset of the Oberon-07 language) with various features, including
   * Type-bound procedures
   * Dynamic heap allocation procedure for fixed-length and open arrays
   * Numeric case statement
   * Exporting and importing of string constants
-  * Forward references and forward declarations of procedures
   * No access to intermediate objects within nested scopes
-  * Module contexts
+
+Note that the Experimental Oberon compiler also implements a number of additional features, which are not part of the official *Revised Oberon-2* language definition, such as forward references and forward declarations of procedures and module contexts.
 
 **DOCUMENTATION**:
 

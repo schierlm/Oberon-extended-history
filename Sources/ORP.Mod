@@ -1,4 +1,4 @@
-MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07 / AP 1.4.19 Experimental Oberon*)
+MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07 / AP 8.4.19 Experimental Oberon*)
   IMPORT Texts, Oberon, ORS, ORB, ORG;
   (*Author: Niklaus Wirth, 2014. Revised Oberon-2 extensions by Andreas Pirklbauer, 2019.
     Parser of Oberon-RISC compiler. Uses Scanner ORS to obtain symbols (tokens),
@@ -77,10 +77,10 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
     IF x.mode # ORB.Const THEN ORS.Mark("not a constant"); x.mode := ORB.Const END
   END CheckConst;
 
-  PROCEDURE CheckCase(VAR x: ORG.Item);
+  PROCEDURE CheckCaseExpr(VAR x: ORG.Item);
   BEGIN
     IF ~(x.type.form IN {ORB.Int, ORB.Byte, ORB.Char}) THEN ORS.Mark("invalid type"); x.type := ORB.intType END
-  END CheckCase;
+  END CheckCaseExpr;
 
   PROCEDURE CheckReadOnly(VAR x: ORG.Item);
   BEGIN
@@ -156,7 +156,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
           IF x.type.form = ORB.Record THEN
             obj := ORB.thisfield(x.type); ORS.Get(sym);
             IF obj # NIL THEN
-              IF obj.type.form = ORB.TProc THEN  (*type-bound procedure*)
+              IF obj.type.form = ORB.TProc THEN (*type-bound procedure*)
                 IF sym = ORS.arrow THEN (*super call*)
                   ORS.Get(sym); xt := x.type; fld := ORB.FindFld(obj.name, xt, FALSE);
                   IF fld # NIL THEN fld := NIL;
@@ -165,7 +165,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
                       CheckReceiver(obj, wasderef); ORG.Method(x, obj, wasderef, TRUE); DisallowMethods(x.type.base)
                     ELSE ORS.Mark("method unknown in base types")
                     END
-                  ELSE ORS.Mark("method undefined at current extension level")
+                  ELSE ORS.Mark("method undefined at this extension level")
                   END
                 ELSE (*method call*) CheckReceiver(obj, wasderef); ORG.Method(x, obj, wasderef, FALSE)
                 END
@@ -583,7 +583,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
     PROCEDURE NumericCasePart;
       VAR x: ORG.Item; L0, L1, L2: LONGINT; n, labelform: INTEGER;
         tab: ARRAY NofCases OF ORG.LabelRange;  (*ordered table of label ranges*)
-    BEGIN expression(x); CheckCase(x); ORG.CaseHead(x, L0);
+    BEGIN expression(x); CheckCaseExpr(x); ORG.CaseHead(x, L0);
       Check(ORS.of, "OF expected"); n := 0; L2 := 0; labelform := x.type.form;
       WHILE (sym < ORS.end) OR (sym = ORS.bar) DO
         IF sym = ORS.bar THEN ORS.Get(sym) ELSE NumericCase(labelform, n, tab); ORG.FJump(L2) END

@@ -565,6 +565,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
   BEGIN
     IF F.trailer.next # F.trailer THEN topY := F.Y + F.H - F.top; botY := F.Y + F.bot;
       IF F.hasSel THEN FlipSelection(F, F.selbeg, F.selend) END;
+      IF F.hasCar THEN FlipCaret(F) END;
       LocateChar(F, X - F.X, Y - F.Y, loc);
       IF F.hasSel & (loc.pos = F.selbeg.pos) & (F.selend.pos = F.selbeg.pos + 1) THEN
         LocateChar(F, F.left, Y - F.Y, F.selbeg)
@@ -579,14 +580,14 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
           IF (F.selbeg.org = F.selend.org) OR (prev <= start) THEN L := F.selbeg; R := F.selend
           ELSE R := F.selend; L.org := F.selend.org; L.pos := L.org; L.x := F.left
           END;
-          FlipSelection(F, L, R); Oberon.FadeMouse;
+          FlipSelection(F, L, R); Oberon.FadeMouse; SetChangeMark(F, FALSE);
           Scroll(F, botY - Y); Y := botY;
           FlipSelection(F, L, R)
         ELSIF (Y > topY - 1) & ((F.org > 0) OR (F.voff > 0)) THEN  (*scroll text down*)
           IF (F.selbeg.org = F.selend.org) OR (prev > start) THEN L := F.selbeg; R := F.selend
           ELSE L := F.selbeg; R.org := F.selbeg.org; R.pos := F.selbeg.lin.len; R.x := F.left + F.selbeg.lin.wid
           END;
-          FlipSelection(F, L, R); Oberon.FadeMouse;
+          FlipSelection(F, L, R); Oberon.FadeMouse; SetChangeMark(F, FALSE);
           Scroll(F, topY - 1 - Y); Y := topY - 1;
           FlipSelection(F, L, R)
         END;
@@ -606,7 +607,8 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
         ELSIF loc.pos < F.selbeg.pos THEN FlipSelection(F, loc, F.selbeg); F.selbeg := loc
         END
       UNTIL keys = {};
-      F.time := Oberon.Time(); F.hasSel := TRUE
+      F.time := Oberon.Time(); F.hasSel := TRUE;
+      IF F.hasCar THEN SetCaret(F, F.carloc.pos) END
     END
   END TrackSelection;
 
