@@ -1,4 +1,4 @@
-MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.4.19 Experimental Oberon*)
+MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 13.4.19 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules,
     Input, Viewers, Fonts, Texts, Oberon, MenuViewers, TextFrames;
 
@@ -8,7 +8,8 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.4.19 Experimental
 
   TYPE Handler = PROCEDURE(name: ARRAY OF CHAR);
 
-  VAR W: Texts.Writer; M: Modules.Module;
+  VAR W: Texts.Writer;
+    M: Modules.Module;
     pat: ARRAY 32 OF CHAR;
 
   PROCEDURE GetArg(VAR S: Texts.Scanner);
@@ -31,9 +32,9 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.4.19 Experimental
       user: ARRAY 8 OF CHAR;
       password: ARRAY 16 OF CHAR;
   BEGIN i := 0; Input.Read(ch);
-    WHILE (ch # "/") & (i < 7) DO user[i] := ch; INC(i); Input.Read(ch) END ;
+    WHILE (ch # "/") & (i < 7) DO user[i] := ch; INC(i); Input.Read(ch) END;
     user[i] := 0X; i := 0; Input.Read(ch);
-    WHILE (ch > " ") & (i < 15) DO password[i] := ch; INC(i); Input.Read(ch) END ;
+    WHILE (ch > " ") & (i < 15) DO password[i] := ch; INC(i); Input.Read(ch) END;
     password[i] := 0X; Oberon.SetUser(user, password)
   END SetUser;
 
@@ -88,7 +89,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.4.19 Experimental
     VAR logV, toolV, menu, main: Viewers.Frame; X, Y: INTEGER;
   BEGIN
     IF Viewers.CurDisplay # NIL THEN
-      Texts.WriteString(W, "Experimental Oberon  AP 1.4.19 / Display ");
+      Texts.WriteString(W, "Experimental Oberon  AP 13.4.19 / Display ");
       Texts.WriteInt(W, Viewers.CurDisplay.id, 2); Texts.Write(W, " ");
       Texts.WriteString(W, Viewers.CurDisplay.name); EndLine;
       Oberon.AllocateSystemViewer(0, X, Y);
@@ -218,7 +219,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.4.19 Experimental
     END
   END Open;
 
-  PROCEDURE Clear*;  (*used to clear Log*)
+  PROCEDURE Clear*;  (*clear Log*)
     VAR T: Texts.Text; F: Viewers.Frame; buf: Texts.Buffer;
   BEGIN F := Oberon.Par.frame;
     IF (F # NIL) & (F.next IS TextFrames.Frame) & (F = Oberon.Par.vwr.dsc) THEN
@@ -226,10 +227,21 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.4.19 Experimental
     END
   END Clear;
 
-  PROCEDURE Close*;
+  PROCEDURE OpenLog*;  (*open another viewer for Log*)
+    VAR V: Viewers.Viewer; X, Y: INTEGER;
+  BEGIN Oberon.AllocateSystemViewer(0, X, Y);
+    IF Oberon.Log = NIL THEN Oberon.OpenLog(TextFrames.Text("")) END ;
+    V := MenuViewers.New(
+      TextFrames.NewMenu("System.Log", LogMenu),
+      TextFrames.NewText(Oberon.Log, 0), TextFrames.menuH, X, Y)
+  END OpenLog;
+
+  PROCEDURE Close*;  (*close viewer*)
     VAR V: Viewers.Viewer;
   BEGIN
-    IF Oberon.Par.frame = Oberon.Par.vwr.dsc THEN V := Oberon.Par.vwr ELSE V := Oberon.MarkedViewer() END ;
+    IF Oberon.Par.frame = Oberon.Par.vwr.dsc THEN V := Oberon.Par.vwr
+    ELSE V := Oberon.MarkedViewer()
+    END;
     Viewers.Close(V)
   END Close;
 
@@ -257,15 +269,6 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.4.19 Experimental
       Viewers.Open(Viewers.CurDisplay, V, V.X, V.Y + V.H); M.id := Viewers.restore; V.handle(V, M)
     END
   END RecallFocus;
-
-  PROCEDURE OpenLog*;  (*open a(nother) log viewer for the system-wide central log*)
-    VAR V: Viewers.Viewer; X, Y: INTEGER;
-  BEGIN Oberon.AllocateSystemViewer(0, X, Y);
-    IF Oberon.Log = NIL THEN Oberon.OpenLog(TextFrames.Text("")) END ;
-    V := MenuViewers.New(
-      TextFrames.NewMenu("System.Log", LogMenu),
-      TextFrames.NewText(Oberon.Log, 0), TextFrames.menuH, X, Y)
-  END OpenLog;
 
   PROCEDURE Copy*;  (*create a copy of the viewer in the current display*)
     VAR V, V1: Viewers.Viewer; M: Viewers.CopyMsg; N: Viewers.ViewerMsg;
@@ -523,7 +526,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.4.19 Experimental
       beg, end, time: LONGINT;
       pre: ARRAY 32 OF CHAR;
   BEGIN Texts.OpenReader(R, Oberon.Par.text, Oberon.Par.pos); Texts.Read(R, ch);
-    WHILE ch = " " DO Texts.Read(R, ch) END ;
+    WHILE ch = " " DO Texts.Read(R, ch) END ; (*spaces*)
     IF (ch = "^") OR (ch = 0DX) THEN
       Oberon.GetSelection(T, beg, end, time);
       IF time >= 0 THEN
@@ -564,7 +567,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.4.19 Experimental
             f := Files.Old(name);
             IF f # NIL THEN g := Files.New(S.s);
               Files.Set(Rf, f, 0); Files.Set(Rg, g, 0); Files.Read(Rf, ch);
-              WHILE ~Rf.eof DO Files.Write(Rg, ch); Files.Read(Rf, ch) END ;
+              WHILE ~Rf.eof DO Files.Write(Rg, ch); Files.Read(Rf, ch) END;
               Files.Register(g)
             ELSE Texts.WriteString(W, " failed")
             END ;
@@ -589,7 +592,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.4.19 Experimental
           IF S.class = Texts.Name THEN
             Texts.WriteString(W, name); Texts.WriteString(W, " => "); Texts.WriteString(W, S.s);
             Texts.WriteString(W, " renaming"); Files.Rename(name, S.s, res);
-            IF res > 1 THEN Texts.WriteString(W, " failed") END ;
+            IF res > 1 THEN Texts.WriteString(W, " failed") END;
             EndLine
           END
         END
@@ -605,7 +608,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.4.19 Experimental
     WHILE S.class = Texts.Name DO
       Texts.WriteString(W, S.s); Texts.WriteString(W, " deleting");
       Files.Delete(S.s, res);
-      IF res # 0 THEN Texts.WriteString(W, " failed") END ;
+      IF res # 0 THEN Texts.WriteString(W, " failed") END;
       EndLine; Texts.Scan(S)
     END
   END DeleteFiles;
@@ -642,7 +645,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 28.11.15 / AP 1.4.19 Experimental
       END ;
       IF Modules.Selected(M) THEN Texts.WriteString(W, " *") END ;
       Texts.WriteLn(W); M := M.next
-    END ;
+    END;
     Texts.Append(T, W.buf)
   END ShowModules;
 

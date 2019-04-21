@@ -1,4 +1,4 @@
-MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*)
+MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 13.4.19 Experimental Oberon*)
   IMPORT Input, Display, Viewers, Fonts, Texts, Oberon;
 
   CONST replace* = 0; insert* = 1; delete* = 2; unmark* = 3;  (*message id*)
@@ -270,7 +270,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
 
   (*------------------fractional line scrolling------------------------*)
 
-  PROCEDURE ScrollDown (F: Frame; org: LONGINT; voff, dY: INTEGER; insert: ARRAY OF LineDesc; beg, end: INTEGER);
+  PROCEDURE ScrollDown (F: Frame; org: LONGINT; voff, dY: INTEGER; lines: ARRAY OF LineDesc; beg, end: INTEGER);
     VAR R: Texts.Reader; L, L0, l: Line;
       curY, topY, botY, Y0, Y1, Y2, h, k: INTEGER;
   BEGIN topY := F.Y + F.H - F.top; botY := F.Y + F.bot;
@@ -287,7 +287,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
     Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
     WHILE ~L.eot & (curY > Y0) DO
       NewLine(F, l);
-      IF k < end THEN (*use line from cache*) l^ := insert[k]; INC(k) ELSE PrepareLine(l, R) END;
+      IF k < end THEN l^ := lines[k]; INC(k) ELSE PrepareLine(l, R) END;
       Texts.OpenReader(R, F.text, org); Texts.Read(R, nextCh);
       DisplayLine(F, l, R, F.X + F.left, curY - l.asr, topY, Y0, 0);
       L.next := l; L := l; org := org + L.len; curY := curY - L.lsp
@@ -330,12 +330,12 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
     CONST K = 100; len = 75;  (*assumed number of lines and average line length*)
     VAR R: Texts.Reader; L, L0: Line; l: LineDesc;
       org, org0, q: LONGINT; dy, i, k: INTEGER;
-      lin: ARRAY K OF LineDesc;  (*cache*)
+      lines: ARRAY K OF LineDesc;  (*cache to prevent re-reading of lines*)
   BEGIN (*dY # 0*)
     IF F.trailer.next # F.trailer THEN
       IF dY < 0 THEN dY := -dY;
-        IF dY <= F.voff THEN ScrollDown(F, F.org, F.voff - dY, dY, lin, 0, 0)
-        ELSIF F.org = 0 THEN ScrollDown(F, 0, 0, F.voff, lin, 0, 0)
+        IF dY <= F.voff THEN ScrollDown(F, F.org, F.voff - dY, dY, lines, 0, 0)
+        ELSIF F.org = 0 THEN ScrollDown(F, 0, 0, F.voff, lines, 0, 0)
         ELSE (*F.org > 0 & dY > F.voff*) k := F.trailer.next.lsp;
           q := F.org - len*((dY - F.voff + k - 1) DIV k - 1);  (*first guess backward*)
           REPEAT DEC(q, len); org := q; Validate(F.text, org) UNTIL org < F.org;
@@ -344,17 +344,17 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
             WHILE org < F.org DO
               MeasureLine(l, R);
               org := org + l.len; dy := dy + l.lsp;
-              IF k < K THEN lin[k] := l; INC(k) END  (*to prevent re-reading of lines*)
+              IF k < K THEN lines[k] := l; INC(k) END
             END;
             IF dy + F.voff >= dY THEN org := org0; i := 0;
-              WHILE (i < k) & (dy + F.voff - lin[i].lsp >= dY) DO
-                org := org + lin[i].len; dy := dy - lin[i].lsp; INC(i)
+              WHILE (i < k) & (dy + F.voff - lines[i].lsp >= dY) DO
+                org := org + lines[i].len; dy := dy - lines[i].lsp; INC(i)
               END;
-              IF (i < K) OR (org = F.org) THEN ScrollDown(F, org, F.voff + dy - dY, dY, lin, i, k); org := -1 END
+              IF (i < K) OR (org = F.org) THEN ScrollDown(F, org, F.voff + dy - dY, dY, lines, i, k); org := -1 END
             ELSIF org0 > 0 THEN  (*next guess backward*)
               REPEAT DEC(q, len); org := q; Validate(F.text, org) UNTIL org < org0
             ELSE (*reached beginning of text*) org := -1;
-              IF dy + F.voff > 0 THEN ScrollDown(F, 0, 0, dy + F.voff, lin, 0, k) END
+              IF dy + F.voff > 0 THEN ScrollDown(F, 0, 0, dy + F.voff, lines, 0, k) END
             END
           UNTIL org < 0
         END
@@ -382,7 +382,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
     CONST K = 100;  (*assumed number of lines*)
     VAR R: Texts.Reader; L, L0: Line; l: LineDesc;
       org: LONGINT; dy, h, k: INTEGER;
-      lin: ARRAY K OF LineDesc;  (*cache*)
+      lines: ARRAY K OF LineDesc;  (*cache to prevent re-reading of lines*)
   BEGIN
     IF F.trailer.next # F.trailer THEN
       Validate(F.text, pos);
@@ -392,9 +392,9 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
         WHILE (org < F.org) & (dy < h) DO
           MeasureLine(l, R);
           org := org + l.len; dy := dy + l.lsp;
-          IF k < K THEN lin[k] := l; INC(k) END  (*to prevent re-reading of lines*)
+          IF k < K THEN lines[k] := l; INC(k) END
         END;
-        IF (org = F.org) & (dy < h) THEN ScrollDown(F, pos, 0, dy + F.voff, lin, 0, k)
+        IF (org = F.org) & (dy < h) THEN ScrollDown(F, pos, 0, dy + F.voff, lines, 0, k)
         ELSE Mark(F, FALSE); F.org := pos; F.voff := 0; LastLine(F, F.trailer); Restore(F); Mark(F, TRUE)
         END
       ELSIF pos > F.org THEN
@@ -406,7 +406,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.4.19 Experimental Oberon*
         ELSIF pos < F.text.len THEN
           Mark(F, FALSE); F.org := pos; F.voff := 0; LastLine(F, F.trailer); Restore(F); Mark(F, TRUE)
         END
-      ELSIF F.voff > 0 THEN ScrollDown(F, pos, 0, F.voff, lin, 0, 0)
+      ELSIF F.voff > 0 THEN ScrollDown(F, pos, 0, F.voff, lines, 0, 0)
       END;
       SetChangeMark(F, F.text.changed)
     END

@@ -1,4 +1,4 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 15.3.19 Experimental Oberon*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 13.4.19 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, Files;
   CONST versionkey = 1X; MT = 12; DescSize = 84; MnLength = 32; context = "EO";
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5; nocmd* = 6; badcmd* = 7; nomod* = 8;
@@ -272,7 +272,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 15.3.19 
     IF ("0" <= ch) & (ch <= "9") THEN (*module number*) j := 0;
       REPEAT j := 10*j + (ORD(ch) - 30H); INC(i); ch := name[i] UNTIL (ch < "0") OR (ch > "9");
       IF ch = "." THEN INC(i); mod := root;
-        WHILE (mod # NIL) & (mod.num # j) DO mod := mod.next END ;
+        WHILE (mod # NIL) & (mod.name[0] # 0X) & (mod.num # j) DO mod := mod.next END ;
         IF (mod # NIL) & (mod.name[0] # 0X) THEN res := noerr; j := 0;
           REPEAT ch := mod.name[j]; Mname[j] := ch; INC(j) UNTIL ch = 0X
         ELSE res := nomod

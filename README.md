@@ -1,20 +1,13 @@
 # The Experimental Oberon Operating System
-Experimental Oberon is a revision of the FPGA Oberon operating system and its compiler (www.projectoberon.com), containing a number of enhancements, including
+Experimental Oberon is a revision of the FPGA Oberon system and its compiler (www.projectoberon.com), featuring
 
 * Smooth line scrolling with variable line spaces
-* Multiple logical displays ("virtual displays")
+* Multiple logical displays
 * Safe module unloading
 * System building and maintenance tools
-* A compiler for the *Revised Oberon-2* programming language (implementing a superset of the Oberon-07 language) with various features, including
-  * Type-bound procedures
-  * Dynamic heap allocation procedure for fixed-length and open arrays
-  * Numeric case statement
-  * Exporting and importing of string constants
-  * No access to intermediate objects within nested scopes
+* Revised Oberon-2 programming language
 
-Note that the Experimental Oberon compiler also implements a number of additional features, which are not part of the official *Revised Oberon-2* language definition, such as forward references and forward declarations of procedures and module contexts.
-
-**DOCUMENTATION**:
+**DOCUMENTATION**
 
 | Topic  | Documentation |
 | :------------- | :------------- |
@@ -25,17 +18,28 @@ Note that the Experimental Oberon compiler also implements a number of additiona
 | Historical notes on module unloading  | [**Historical-notes-on-module-unloading-in-Oberon.pdf**](Documentation/Historical-notes-on-module-unloading-in-Oberon.pdf)  |
 | Symbol files  | [**Streamlining-symbol-files-in-FPGA-Oberon.pdf**](Documentation/Streamlining-symbol-files-in-FPGA-Oberon.pdf)  |
 
-Additional background material can be found in the [**Documentation**](Documentation) directory.
+**EMULATORS**
 
-**PREREQUISITES**: A current version of FPGA Oberon 2013 (see http://www.projectoberon.com).
+| Emulator  | Link |
+| :------------- | :------------- |
+| Oberon emulator on the desktop (Linux, macOS, Windows)  | [**Oberon emulator in C**](http://github.com/pdewacht/oberon-risc-emu) |
+| Oberon emulator on the web (run in the browser)  | [**Oberon emulator in Javascript**](http://schierlm.github.io/OberonEmulator/emu.html?image=ExperimentalOberonDiskImageWithSource) |
 
-*Note:* The latest version of Experimental Oberon is always at http://github.com/andreaspirklbauer/Oberon-experimental. All other repositories at http://github.com/andreaspirklbauer are just a series of small experiments that people are free to use, but without ANY guarantee that they will be kept current or in sync with Experimental Oberon.
+**DEMOS**
+
+| Demo  | Link (click on the "View raw" or "Download" button) |
+| :------------- | :------------- |
+| Smooth fractional line scrolling  | [**DemoFractionalLineScrollVariableLineSpace.mov**](Documentation/DemoFractionalLineScrollVariableLineSpace.mov)  |
+| Multiple logical displays (1/2)  | [**DemoMultipleVirtualDisplays.mov**](Documentation/DemoMultipleVirtualDisplays.mov)  |
+| Multiple logical displays (2/2)  | [**DemoCloningViewersIntoNewVirtualDisplays.mov**](Documentation/DemoCloningViewersIntoNewVirtualDisplays.mov)  |
 
 ------------------------------------------------------
 
 # Instructions for converting an existing FPGA Oberon system to Experimental Oberon
 
-**NOTE**: If you run Oberon in an emulator (e.g., https://github.com/pdewacht/oberon-risc-emu), you can simply backup your existing S3RISCinstall directory, download the compressed archive [**S3RISCinstall.tar.gz**](Documentation/S3RISCinstall.tar.gz) from this repository (containing Experimental Oberon) to your emulator directory, run the command *tar xvzf S3RISCinstall.tar.gz* in that directory and then restart the emulator, instead of going through the instructions outlined below.
+**PREREQUISITES**: A current version of the FPGA Oberon 2013 system (see http://www.projectoberon.com).
+
+**NOTE**: If you run Oberon in an emulator on the desktop (e.g., http://github.com/pdewacht/oberon-risc-emu), you can simply backup your existing S3RISCinstall directory, download the compressed archive [**S3RISCinstall.tar.gz**](Documentation/S3RISCinstall.tar.gz) from this repository (containing Experimental Oberon) to your emulator directory, run the command *tar xvzf S3RISCinstall.tar.gz* in that directory and then restart the emulator, instead of going through the instructions outlined below.
 
 ------------------------------------------------------
 
