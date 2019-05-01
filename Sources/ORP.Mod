@@ -1,4 +1,4 @@
-MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07 / AP 8.4.19 Experimental Oberon*)
+MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07 / AP 1.5.19 Experimental Oberon*)
   IMPORT Texts, Oberon, ORS, ORB, ORG;
   (*Author: Niklaus Wirth, 2014. Revised Oberon-2 extensions by Andreas Pirklbauer, 2019.
     Parser of Oberon-RISC compiler. Uses Scanner ORS to obtain symbols (tokens),
@@ -156,7 +156,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
           IF x.type.form = ORB.Record THEN
             obj := ORB.thisfield(x.type); ORS.Get(sym);
             IF obj # NIL THEN
-              IF obj.type.form = ORB.TProc THEN (*type-bound procedure*)
+              IF obj.type.form = ORB.TProc THEN  (*type-bound procedure*)
                 IF sym = ORS.arrow THEN (*super call*)
                   ORS.Get(sym); xt := x.type; fld := ORB.FindFld(obj.name, xt, FALSE);
                   IF fld # NIL THEN fld := NIL;
@@ -1190,7 +1190,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 17.9.2018  Oberon compiler for RISC in Oberon-07
     Oberon.Collect(0)
   END Compile;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Compiler  17.9.2018 / AP 1.4.19");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Compiler  17.9.2018 / AP 1.5.19");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
   NEW(dummy); dummy.class := ORB.Var; dummy.type := ORB.intType;
   expression := expression0; Type := Type0; FormalType := FormalType0

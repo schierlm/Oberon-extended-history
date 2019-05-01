@@ -1,4 +1,4 @@
-MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 15.3.19 Experimental Oberon*)
+MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.5.19 Experimental Oberon*)
   IMPORT Files, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
@@ -15,8 +15,8 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 15.3.19 Experimental
     (* form values*)
       Byte* = 1; Bool* = 2; Char* = 3; Int* = 4; Real* = 5; Set* = 6;
       Pointer* = 7; NilTyp* = 8; NoTyp* = 9; Proc* = 10;
-      String* = 11; Array* = 12; Record* = 13; TProc* = 14;
-      Ptrs* = {Pointer, NilTyp}; Procs* = {Proc, NoTyp}; TProcs = {TProc, Byte}; (*with hidden variants*)
+      String* = 11; Array* = 12; Record* = 13; TProc* = 14; maxForm = TProc;
+      Ptrs* = {Pointer, NilTyp}; Procs* = {Proc, NoTyp}; TProcs = {TProc, Byte};
 
   TYPE Object* = POINTER TO ObjDesc;
     Module* = POINTER TO ModDesc;
@@ -116,12 +116,12 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 15.3.19 Experimental
   PROCEDURE InsertMethod*(rec: Type; mth: Object);
     VAR fld, bot: Object;
 
-    PROCEDURE UpdateExtensions(rec: Type; old, new: Object);  (*update links between field lists of extensions*)
+    PROCEDURE UpdateLinks(rec: Type; old, new: Object);  (*between field lists of extensions*)
       VAR obj, fld, fld0: Object;
     BEGIN obj := rec.typobj.next;
       WHILE obj # NIL DO
         IF (obj.class = Typ) & (obj.type.form = Record) & (obj.type.base = rec) THEN
-          IF obj.type.dsc = old THEN obj.type.dsc := new; UpdateExtensions(obj.type, old, new)
+          IF obj.type.dsc = old THEN obj.type.dsc := new; UpdateLinks(obj.type, old, new)
           ELSE fld := obj.type.dsc; fld0 := NIL;
             WHILE (fld # NIL) & (fld # old) DO fld0 := fld; fld := fld.next END ;
             IF fld = old THEN fld0.next := new END
@@ -129,11 +129,11 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 15.3.19 Experimental
         END ;
         obj := obj.next
       END
-    END UpdateExtensions;
+    END UpdateLinks;
 
   BEGIN (*rec.lev = 0*)
     IF rec.base # NIL THEN bot := rec.base.dsc ELSE bot := NIL END ;
-    IF rec.dsc = bot THEN UpdateExtensions(rec, rec.dsc, mth); rec.dsc := mth
+    IF rec.dsc = bot THEN UpdateLinks(rec, rec.dsc, mth); rec.dsc := mth
     ELSE fld := rec.dsc;
       WHILE fld.next # bot DO fld := fld.next END ;
       fld.next := mth
@@ -164,9 +164,9 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 15.3.19 Experimental
 
   PROCEDURE MakeFileName*(VAR FName: ARRAY OF CHAR; context, name, ext: ARRAY OF CHAR);
     VAR i, j, k: INTEGER;
-  BEGIN i := 0; j := 0; k := 0;
+  BEGIN i := 0; k := 0;
     WHILE (i < ORS.IdLen-1) & (context[i] # 0X) DO FName[i] := context[i]; INC(i) END ;
-    IF context[i] = 0X THEN
+    IF context[i] = 0X THEN j := 0;
       IF (i > 0) & (i < ORS.IdLen-1) THEN FName[i] := "."; INC(i) END ;
       WHILE (i < ORS.IdLen-1) & (name[j] # 0X) DO FName[i] := name[j]; INC(i); INC(j) END ;
       IF name[j] = 0X THEN j := 0;
@@ -181,7 +181,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 15.3.19 Experimental
     VAR mod: Module; obj, obj1: Object;
   BEGIN obj1 := topScope; obj := obj1.next;  (*search for module name*)
     WHILE (obj # NIL) & (obj.name # name) DO obj1 := obj; obj := obj1.next END ;
-    IF obj = NIL THEN obj1 := topScope; obj := obj1.next;  (*search for module orgname*)
+    IF obj = NIL THEN obj1 := topScope; obj := obj1.next;
       WHILE (obj # NIL) & (obj IS Module) & (obj(Module).orgname # orgname) DO obj1 := obj; obj := obj1.next END
     END ;
     IF obj = NIL THEN  (*insert new module*)
@@ -229,11 +229,11 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 15.3.19 Experimental
             IF fld.name[0] # 0X THEN
               fld.expo := TRUE; InType(R, thismod, fld.type); fld.type.typobj := fld;
               Files.ReadNum(R, fld.lev); (*mthno*) Files.ReadNum(R, fld.val) (*exno*)
-            ELSE (*hidden method*) fld.expo := FALSE; Files.ReadNum(R, fld.lev); (*mthno*) fld.type := byteType (*mth*)
+            ELSE (*hidden method*) fld.expo := FALSE; Files.ReadNum(R, fld.lev); (*mthno*) fld.type := byteType (*method*)
             END
           ELSIF fld.name[0] # 0X THEN fld.expo := TRUE; InType(R, thismod, fld.type); Files.ReadNum(R, fld.val) (*offset*)
           ELSE (*hidden field*) fld.expo := FALSE; Files.ReadNum(R, fld.val); (*offset*)
-            IF fld.val < 0 THEN fld.val := -fld.val-1; fld.type := noType (*proc*) ELSE fld.type := nilType (*ptr*) END
+            IF fld.val < 0 THEN fld.val := -fld.val-1; fld.type := noType (*proc*) ELSE fld.type := nilType (*pointer*) END
           END ;
           Read(R, class)
         END ;
@@ -338,7 +338,8 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 15.3.19 Experimental
         Files.WriteNum(R, t.nofpar); Files.WriteNum(R, t.size);
         fld := t.dsc;
         WHILE fld # bot DO  (*fields*)
-          IF (fld.class = Const) & (fld.type.form IN TProcs) THEN (*type-bound procedure*) Write(R, Const);
+          IF (fld.class = Const) & (fld.type.form IN TProcs) THEN  (*type-bound procedure*)
+            Write(R, Const);
             IF fld.expo THEN
               Files.WriteString(R, fld.name); OutType(R, fld.type); Files.WriteNum(R, fld.lev); (*mthno*)
               IF t.mno > 0 THEN Files.WriteNum(R, fld.val) (*exno*) ELSE Files.WriteNum(R, fld.exno) END
@@ -369,7 +370,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 15.3.19 Experimental
       obj: Object;
       filename: ORS.Ident;
       F, F1: Files.File; R, R1: Files.Rider;
-  BEGIN Ref := TProc + 1; MakeFileName(filename, context, modid, ".smb");
+  BEGIN Ref := maxForm + 1; MakeFileName(filename, context, modid, ".smb");
     F := Files.New(filename); Files.Set(R, F, 0);
     Files.WriteInt(R, 0); (*placeholder*)
     Files.WriteInt(R, 0); (*placeholder for key to be inserted at the end*)
@@ -390,7 +391,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 15.3.19 Experimental
       obj := obj.next
     END ;
     REPEAT Write(R, 0) UNTIL Files.Length(F) MOD 4 = 0;
-    FOR Ref := TProc+1 TO maxTypTab-1 DO typtab[Ref] := NIL END ;
+    FOR Ref := maxForm+1 TO maxTypTab-1 DO typtab[Ref] := NIL END ;
     Files.Set(R, F, 0); sum := 0; Files.ReadInt(R, x);  (* compute key (checksum) *)
     WHILE ~R.eof DO sum := sum + x; Files.ReadInt(R, x) END ;
     F1 := Files.Old(filename); (*sum is new key*)

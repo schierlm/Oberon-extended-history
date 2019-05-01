@@ -7,6 +7,8 @@ Experimental Oberon is a revision of the FPGA Oberon system and its compiler (ww
 * System building and maintenance tools
 * Revised Oberon-2 programming language
 
+**REVISION:** 1.5.2019, **UPDATE:** 1.5.2019
+
 **DOCUMENTATION**
 
 | Topic  | Documentation |
@@ -27,7 +29,7 @@ Experimental Oberon is a revision of the FPGA Oberon system and its compiler (ww
 
 **DEMOS**
 
-| Demo  | Link (click on the "View raw" or "Download" button) |
+| Demo  | Link (click on "View raw" or "Download") |
 | :------------- | :------------- |
 | Smooth fractional line scrolling  | [**DemoFractionalLineScrollVariableLineSpace.mov**](Documentation/DemoFractionalLineScrollVariableLineSpace.mov)  |
 | Multiple logical displays (1/2)  | [**DemoMultipleVirtualDisplays.mov**](Documentation/DemoMultipleVirtualDisplays.mov)  |

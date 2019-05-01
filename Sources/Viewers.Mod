@@ -1,6 +1,6 @@
-MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 10.10.18*)
+MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 15.4.19*)
   CONST restore* = 0; modify* = 1; suspend* = 2; consume* = 3; track* = 4;
-    defocus* = 5; neutralize* = 6; mark* = 7; inf = 65535; DnLength* = 24;
+    defocus* = 5; neutralize* = 6; mark* = 7; inf = 65535; DnLength* = 32;
 
   TYPE Frame* = POINTER TO FrameDesc;
     FrameMsg* = RECORD END;
@@ -268,9 +268,7 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 10.10.18*)
   PROCEDURE Remove* (F: Frame); (*subframe F from its parent frame*)
   BEGIN
     IF F = F.parent.dsc THEN F.parent.dsc := F.next ELSE F.prev.next := F.next END;
-    IF F.next # NIL THEN F.next.prev := F.prev
-    ELSIF F.prev # F THEN F.parent.dsc.prev := F.prev
-    END
+    IF F.next # NIL THEN F.next.prev := F.prev ELSIF F.prev # F THEN F.parent.dsc.prev := F.prev END
   END Remove;
 
   PROCEDURE InitFiller (X, Y, W, H, minH: INTEGER; Filler: Viewer); (*except handle, parent, dsc*)
@@ -341,17 +339,10 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 10.10.18*)
     END
   END Broadcast;
 
-  PROCEDURE SetDisplayName* (D: Display; name: ARRAY OF CHAR);
-    VAR i: INTEGER;
-  BEGIN i := 0;
-    WHILE (i < DnLength) & (name[i] > 0X) DO D.name[i] := name[i]; INC(i) END;
-    IF i < DnLength THEN D.name[i] := 0X END
-  END SetDisplayName;
-
   PROCEDURE InitDisplay* (D: Display; W, H: INTEGER; name: ARRAY OF CHAR);
     VAR fillerTrack: Track; fillerViewer: Viewer;
   BEGIN D.id := nextId;
-    SetDisplayName(D, name); D.curW := 0; D.focus := NIL; D.backup := NIL;
+    D.name := name; D.curW := 0; D.focus := NIL; D.backup := NIL;
     D.X := 0; D.Y := 0; D.W := W; D.H := H; D.minH := 1; D.state := 0; D.parent := NIL;
     NEW(fillerTrack); InitFiller(0, 0, inf, H, 0, fillerTrack); D.dsc := fillerTrack;
     NEW(fillerViewer); InitFiller(0, 0, inf, H, 0, fillerViewer); fillerTrack.dsc := fillerViewer;

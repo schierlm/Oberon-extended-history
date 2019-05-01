@@ -1,9 +1,9 @@
-MODULE Boot;  (*Oberon boot linker/loader for RISC / AP 1.4.19 Experimental Oberon*)
+MODULE Boot;  (*Oberon boot linker/loader for RISC / AP 1.5.19 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, Files, Modules, Texts, Oberon;
   CONST versionkey = 1X; versionkey0 = 0X; MT = 12; DescSize = 84; MnLength = 32; CR = 0DX; maxCode = 8000;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5;
 
-  TYPE (*copied from Modules for use as cross linker/loader*)
+  TYPE  (*copied from Modules for use as cross linker/loader*)
     Module* = POINTER TO ModDesc;
     Command* = PROCEDURE;
     ModuleName* = ARRAY MnLength OF CHAR;
@@ -12,7 +12,7 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC / AP 1.4.19 Experimental Ober
       next*: Module;
       key*, num*, size*, refcnt*: INTEGER;
       data*, code*, imp*, cmd*, ent*, ptr*, pvr*: INTEGER;  (*addresses*)
-      selected, marked, hidden, sel: BOOLEAN
+      selected*, marked, hidden, sel: BOOLEAN
     END ;
 
   VAR root: Module;
@@ -22,9 +22,9 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC / AP 1.4.19 Experimental Ober
 
   PROCEDURE MakeFileName(VAR FName: ARRAY OF CHAR; context, name, ext: ARRAY OF CHAR);
     VAR i, j, k: INTEGER;
-  BEGIN i := 0; j := 0; k := 0;
+  BEGIN i := 0; k := 0;
     WHILE (i < MnLength-1) & (context[i] # 0X) DO FName[i] := context[i]; INC(i) END ;
-    IF context[i] = 0X THEN
+    IF context[i] = 0X THEN j := 0;
       IF (i > 0) & (i < MnLength-1) THEN FName[i] := "."; INC(i) END ;
       WHILE (i < MnLength-1) & (name[j] # 0X) DO FName[i] := name[j]; INC(i); INC(j) END ;
       IF name[j] = 0X THEN j := 0;
@@ -111,7 +111,7 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC / AP 1.4.19 Experimental Ober
       IF res = noerr THEN (*read file*)
         INC(p, DescSize); (*allocate descriptor*)
         mod.name := name; mod.key := key; mod.refcnt := 0;
-        mod.selected := FALSE; mod.marked := FALSE; mod.hidden := FALSE; mod.sel := FALSE;
+        mod.selected := FALSE; mod.hidden := FALSE; mod.marked := FALSE; mod.sel := FALSE;
         mod.data := p;  (*data*)
         SYSTEM.PUT(mod.num * 4 + MTOrg, p);  (*module table entry*)
         Files.ReadInt(R, n);
@@ -462,6 +462,6 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC / AP 1.4.19 Experimental Ober
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END WriteStream;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 1.4.19");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 1.5.19");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); limit := Kernel.stackOrg - Kernel.stackSize
 END Boot.
