@@ -5,9 +5,17 @@ Experimental Oberon is a revision of the FPGA Oberon system and its compiler (ww
 * Multiple logical displays
 * Safe module unloading
 * System building and maintenance tools
-* Revised Oberon-2 programming language
+* Revised Oberon-2 programming language, implementing a strict superset of Revised Oberon (Oberon-07)
 
-**REVISION:** 1.5.2019, **UPDATE:** 1.5.2019
+Planned
+
+* Unicode characters and fonts
+* Larger maximum file sizes
+* Multiple file system partitions
+* Plug & Play Oberon images (automatically loaded onto dynamically created partitions)
+* A variant of the Oberon-2 compiler that accepts programs written in Original Oberon-2 (as defined in 1991/1993)
+
+**REVISION:** 1.6.2019
 
 **DOCUMENTATION**
 
@@ -45,7 +53,7 @@ Experimental Oberon is a revision of the FPGA Oberon system and its compiler (ww
 
 ------------------------------------------------------
 
-**STEP 1**: Build a slightly modified Oberon compiler on your FPGA Oberon system
+**STEP 1**: Build a slightly modified FPGA Oberon compiler on your FPGA Oberon system
 
 Edit the file *ORG.Mod* on your Original system and set the following constants to the indicated new values:
 

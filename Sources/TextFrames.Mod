@@ -1,4 +1,4 @@
-MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 13.4.19 Experimental Oberon*)
+MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 11.5.19 Experimental Oberon*)
   IMPORT Input, Display, Viewers, Fonts, Texts, Oberon;
 
   CONST replace* = 0; insert* = 1; delete* = 2; unmark* = 3;  (*message id*)
@@ -373,8 +373,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 13.4.19 Experimental Oberon
             F.org := org; F.voff := F.voff + dY - dy; LastLine(F, F.trailer); Restore(F); Mark(F, TRUE)
           END
         END
-      END;
-      SetChangeMark(F, F.text.changed)
+      END
     END
   END Scroll;
 
@@ -407,8 +406,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 13.4.19 Experimental Oberon
           Mark(F, FALSE); F.org := pos; F.voff := 0; LastLine(F, F.trailer); Restore(F); Mark(F, TRUE)
         END
       ELSIF F.voff > 0 THEN ScrollDown(F, pos, 0, F.voff, lines, 0, 0)
-      END;
-      SetChangeMark(F, F.text.changed)
+      END
     END
   END Show;
 
@@ -572,7 +570,9 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 13.4.19 Experimental Oberon
       ELSE F.selbeg := loc
       END;
       INC(loc.pos); loc.x := loc.x + loc.dx; F.selend := loc;
-      FlipSelection(F, F.selbeg, F.selend); keysum := {}; start := F.selbeg.pos;
+      FlipSelection(F, F.selbeg, F.selend);
+      SetChangeMark(F, FALSE); Oberon.RemoveMarks(F.X, F.Y, F.W, F.H);
+      keysum := {}; start := F.selbeg.pos;
       REPEAT prev := loc.pos;
         Input.Mouse(keys, X, Y);
         keysum := keysum + keys;
@@ -580,14 +580,14 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 13.4.19 Experimental Oberon
           IF (F.selbeg.org = F.selend.org) OR (prev <= start) THEN L := F.selbeg; R := F.selend
           ELSE R := F.selend; L.org := F.selend.org; L.pos := L.org; L.x := F.left
           END;
-          FlipSelection(F, L, R); Oberon.FadeMouse; SetChangeMark(F, FALSE);
+          FlipSelection(F, L, R); Oberon.FadeMouse;
           Scroll(F, botY - Y); Y := botY;
           FlipSelection(F, L, R)
         ELSIF (Y > topY - 1) & ((F.org > 0) OR (F.voff > 0)) THEN  (*scroll text down*)
           IF (F.selbeg.org = F.selend.org) OR (prev > start) THEN L := F.selbeg; R := F.selend
           ELSE L := F.selbeg; R.org := F.selbeg.org; R.pos := F.selbeg.lin.len; R.x := F.left + F.selbeg.lin.wid
           END;
-          FlipSelection(F, L, R); Oberon.FadeMouse; SetChangeMark(F, FALSE);
+          FlipSelection(F, L, R); Oberon.FadeMouse;
           Scroll(F, topY - 1 - Y); Y := topY - 1;
           FlipSelection(F, L, R)
         END;
@@ -607,7 +607,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 13.4.19 Experimental Oberon
         ELSIF loc.pos < F.selbeg.pos THEN FlipSelection(F, loc, F.selbeg); F.selbeg := loc
         END
       UNTIL keys = {};
-      F.time := Oberon.Time(); F.hasSel := TRUE;
+      SetChangeMark(F, F.text.changed); F.time := Oberon.Time(); F.hasSel := TRUE;
       IF F.hasCar THEN SetCaret(F, F.carloc.pos) END
     END
   END TrackSelection;
@@ -952,15 +952,15 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 13.4.19 Experimental Oberon
       Oberon.DrawMouse(ScrollMarker, X, Y); keysum := Keys;
       IF Keys = {2} THEN  (*ML: continuous scroll*)
         Y0 := F.Y + F.H - 1 - F.markH; SR := SL + Min(100, F.W DIV 2);
+        SetChangeMark(F, FALSE); RemoveMarks(F);
         WHILE Keys # {} DO Oberon.DrawMouse(ScrollMarker, X, Y);
-          IF Y # Y0 THEN
-            SetChangeMark(F, FALSE);
-            RemoveMarks(F); Oberon.RemoveMarks(F.X, F.Y, F.W, F.H);
+          IF Y # Y0 THEN Oberon.RemoveMarks(F.X, F.Y, F.W, F.H);
             IF X < SR THEN Show(F, (F.Y + F.H - Y) * (F.text.len) DIV F.H) ELSE Scroll(F, Y0 - Y) END;
             Y0 := Y
           END;
           Input.Mouse(Keys, X, Y)
-        END
+        END ;
+        SetChangeMark(F, F.text.changed)
       ELSIF Keys = {1} THEN  (*MM: positional scrolling*) keysum := Keys;
         REPEAT Input.Mouse(Keys, X, Y); keysum := keysum + Keys;
           Oberon.DrawMouse(ScrollMarker, X, Y)
@@ -972,7 +972,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 13.4.19 Experimental Oberon
           END;
           SetChangeMark(F, FALSE);
           RemoveMarks(F); Oberon.RemoveMarks(F.X, F.Y, F.W, F.H);
-          Show(F, pos)
+          Show(F, pos); SetChangeMark(F, F.text.changed)
         END
       ELSIF Keys = {0} THEN  (*MR: track line and scroll up or down*)
         TrackLine(F, X, Y, pos, keysum);
@@ -980,11 +980,11 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 13.4.19 Experimental Oberon
           IF (pos >= 0) & (keysum = {0}) THEN  (*MR, scroll up*)
             SetChangeMark(F, FALSE);
             RemoveMarks(F); Oberon.RemoveMarks(F.X, F.Y, F.W, F.H);
-            Show(F, pos)
+            Show(F, pos); SetChangeMark(F, F.text.changed)
           ELSIF (keysum = {0,1}) THEN  (*MR and MM, scroll down*)
             SetChangeMark(F, FALSE);
             RemoveMarks(F); Oberon.RemoveMarks(F.X, F.Y, F.W, F.H);
-            Show(F, F.org*2 - pos - 100)
+            Show(F, F.org*2 - pos - 100); SetChangeMark(F, F.text.changed)
           END
         END
       END

@@ -1,4 +1,4 @@
-MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.5.19 Experimental Oberon*)
+MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 15.5.19 Experimental Oberon*)
   IMPORT Files, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
@@ -16,7 +16,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.5.19 Experimental 
       Byte* = 1; Bool* = 2; Char* = 3; Int* = 4; Real* = 5; Set* = 6;
       Pointer* = 7; NilTyp* = 8; NoTyp* = 9; Proc* = 10;
       String* = 11; Array* = 12; Record* = 13; TProc* = 14; maxForm = TProc;
-      Ptrs* = {Pointer, NilTyp}; Procs* = {Proc, NoTyp}; TProcs = {TProc, Byte};
+      Ptrs* = {Pointer, NilTyp}; Procs* = {Proc, NoTyp};
 
   TYPE Object* = POINTER TO ObjDesc;
     Module* = POINTER TO ModDesc;
@@ -80,76 +80,89 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.5.19 Experimental 
     END
   END NewObj;
 
-  PROCEDURE FindObj*(id: ORS.Ident; list: Object): Object;  (*search id in list*)
-    VAR x: Object;
-  BEGIN x := list;
-    WHILE (x # NIL) & (x.name # id) DO x := x.next END ;
-    RETURN x
-  END FindObj;
-
-  PROCEDURE FindFld*(id: ORS.Ident; rec: Type; all: BOOLEAN): Object;  (*search id in rec fields, 'all' includes base types*)
-    VAR x, bot: Object;
-  BEGIN x := rec.dsc;
-    IF ~all & (rec.base # NIL) THEN bot := rec.base.dsc ELSE bot := NIL END ;
-    WHILE (x # bot) & (x.name # id) DO x := x.next END ;
-    IF x = bot THEN x := NIL END ;
-    RETURN x
-  END FindFld;
-
   PROCEDURE thisObj*(): Object;
     VAR s, x: Object;
   BEGIN s := topScope;
-    REPEAT x := FindObj(ORS.id, s.next); s := s.dsc UNTIL (x # NIL) OR (s = NIL);
+    REPEAT x := s.next;
+      WHILE (x # NIL) & (x.name # ORS.id) DO x := x.next END ;
+      s := s.dsc
+    UNTIL (x # NIL) OR (s = NIL);
     RETURN x
   END thisObj;
 
   PROCEDURE thisimport*(mod: Object): Object;
+    VAR obj: Object;
   BEGIN
-    IF (mod.rdo) & (mod.name[0] # 0X) THEN mod := FindObj(ORS.id, mod.dsc) ELSE mod := NIL END ;
-    RETURN mod
+    IF mod.rdo THEN
+      IF mod.name[0] # 0X THEN
+        obj := mod.dsc;
+        WHILE (obj # NIL) & (obj.name # ORS.id) DO obj := obj.next END
+      ELSE obj := NIL
+      END
+    ELSE obj := NIL
+    END ;
+    RETURN obj
   END thisimport;
 
   PROCEDURE thisfield*(rec: Type): Object;
-  BEGIN RETURN FindObj(ORS.id, rec.dsc)
+    VAR fld: Object;
+  BEGIN fld := rec.dsc;
+    WHILE (fld # NIL) & (fld.name # ORS.id) DO fld := fld.next END ;
+    RETURN fld
   END thisfield;
 
-  PROCEDURE InsertMethod*(rec: Type; mth: Object);
+  PROCEDURE FindFld*(id: ORS.Ident; rec: Type): Object;  (*search id in fields of rec proper, but not its base types*)
     VAR fld, bot: Object;
+  BEGIN fld := rec.dsc;
+    IF rec.base # NIL THEN bot := rec.base.dsc ELSE bot := NIL END ;
+    WHILE (fld # bot) & (fld.name # id) DO fld := fld.next END ;
+    IF fld = bot THEN fld := NIL END ;
+    RETURN fld
+  END FindFld;
 
-    PROCEDURE UpdateLinks(rec: Type; old, new: Object);  (*between field lists of extensions*)
-      VAR obj, fld, fld0: Object;
+  PROCEDURE NofMethods*(rec: Type): INTEGER;  (*number of methods bound to rec and its base types*)
+    VAR fld: Object; max: INTEGER;
+  BEGIN fld := rec.dsc; max := -1;
+    WHILE fld # NIL DO
+      IF (fld.class = Const) & (fld.lev > max) THEN max := fld.lev END ;
+      fld := fld.next
+    END ;
+    RETURN max + 1
+  END NofMethods;
+
+  PROCEDURE NewMethod*(rec: Type; VAR mth, redef: Object; id: ORS.Ident);  (*insert new Method with name id*)
+    VAR fld, fld0, bot, s: Object;
+
+    PROCEDURE UpdateLinks(rec: Type; mth, bot: Object);  (*between field lists of extensions*)
+      VAR obj, fld: Object;
     BEGIN obj := rec.typobj.next;
       WHILE obj # NIL DO
         IF (obj.class = Typ) & (obj.type.form = Record) & (obj.type.base = rec) THEN
-          IF obj.type.dsc = old THEN obj.type.dsc := new; UpdateLinks(obj.type, old, new)
-          ELSE fld := obj.type.dsc; fld0 := NIL;
-            WHILE (fld # NIL) & (fld # old) DO fld0 := fld; fld := fld.next END ;
-            IF fld = old THEN fld0.next := new END
+          IF obj.type.dsc = bot THEN obj.type.dsc := mth; UpdateLinks(obj.type, mth, bot)
+          ELSE fld := obj.type.dsc;
+            WHILE fld.next # bot DO fld := fld.next END ;
+            fld.next := mth
           END
         END ;
         obj := obj.next
       END
     END UpdateLinks;
 
-  BEGIN (*rec.lev = 0*)
-    IF rec.base # NIL THEN bot := rec.base.dsc ELSE bot := NIL END ;
-    IF rec.dsc = bot THEN UpdateLinks(rec, rec.dsc, mth); rec.dsc := mth
-    ELSE fld := rec.dsc;
-      WHILE fld.next # bot DO fld := fld.next END ;
-      fld.next := mth
+  BEGIN (*rec.typobj # NIL & rec.mno = -level*)
+    IF rec.base # NIL THEN bot := rec.base.dsc; fld := bot;
+      WHILE (fld # NIL) & (fld.name # id) DO fld := fld.next END ;  (*search id in fields of base types of rec*)
+      IF (fld = NIL) OR (fld.class = Const) THEN redef := fld ELSE ORS.Mark("mult def"); redef := NIL END
+    ELSE bot := NIL; redef := NIL
     END ;
-    mth.next := bot
-  END InsertMethod;
-
-  PROCEDURE NofMethods*(rec: Type): INTEGER;  (*number of methods bound to rec and its base types*)
-    VAR fld: Object; max: INTEGER;
-  BEGIN fld := rec.dsc; max := -1;
-    WHILE fld # NIL DO
-      IF (fld.class = Const) & (fld.type.form IN TProcs) & (fld.lev > max) THEN max := fld.lev END ;
-      fld := fld.next
-    END ;
-    RETURN max + 1
-  END NofMethods;
+    fld := rec.dsc;
+    WHILE (fld # bot) & (fld.name # id) DO fld0 := fld; fld := fld.next END ;  (*search id in fields of rec proper*)
+    IF fld = bot THEN
+      NEW(fld); fld.name := id; fld.class := Const; fld.rdo := FALSE; fld.dsc := NIL; fld.next := bot; mth := fld;
+      IF redef # NIL THEN fld.lev := redef.lev ELSE fld.lev := NofMethods(rec) END ;  (*mthno*)
+      IF rec.dsc = bot THEN rec.dsc := mth; UpdateLinks(rec, mth, bot) ELSE fld0.next := mth END
+    ELSE mth := fld; ORS.Mark("mult def")
+    END
+  END NewMethod;
 
   PROCEDURE OpenScope*;
     VAR s: Object;
@@ -162,19 +175,12 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.5.19 Experimental 
 
   (*------------------------------- Import ---------------------------------*)
 
-  PROCEDURE MakeFileName*(VAR FName: ARRAY OF CHAR; context, name, ext: ARRAY OF CHAR);
-    VAR i, j, k: INTEGER;
-  BEGIN i := 0; k := 0;
-    WHILE (i < ORS.IdLen-1) & (context[i] # 0X) DO FName[i] := context[i]; INC(i) END ;
-    IF context[i] = 0X THEN j := 0;
-      IF (i > 0) & (i < ORS.IdLen-1) THEN FName[i] := "."; INC(i) END ;
-      WHILE (i < ORS.IdLen-1) & (name[j] # 0X) DO FName[i] := name[j]; INC(i); INC(j) END ;
-      IF name[j] = 0X THEN j := 0;
-        WHILE (i < ORS.IdLen-1) & (ext[j] # 0X) DO FName[i] := ext[j]; INC(i); INC(j) END ;
-        IF ext[j] = 0X THEN k := i END
-      END
-    END ;
-    FName[k] := 0X
+  PROCEDURE MakeFileName*(VAR FName: ORS.Ident; name, ext: ARRAY OF CHAR);
+    VAR i, j: INTEGER;
+  BEGIN i := 0; j := 0;  (*assume name suffix less than 4 characters*)
+    WHILE (i < ORS.IdLen-5) & (name[i] > 0X) DO FName[i] := name[i]; INC(i) END ;
+    REPEAT FName[i]:= ext[j]; INC(i); INC(j) UNTIL ext[j] = 0X;
+    FName[i] := 0X
   END MakeFileName;
 
   PROCEDURE ThisModule(name, orgname: ORS.Ident; non: BOOLEAN; key: LONGINT): Object;
@@ -263,7 +269,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.5.19 Experimental 
     END
   END InType;
 
-  PROCEDURE Import*(VAR modid, modid1, context: ORS.Ident);
+  PROCEDURE Import*(VAR modid, modid1: ORS.Ident);
     VAR key: LONGINT; class: INTEGER;
       obj, thismod: Object;
       modname, fname: ORS.Ident;
@@ -272,7 +278,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.5.19 Experimental 
     IF modid1 = "SYSTEM" THEN
       thismod := ThisModule(modid, modid1, TRUE, key); DEC(nofmod);
       thismod.lev := 0; thismod.dsc := system; thismod.rdo := TRUE
-    ELSE MakeFileName(fname, context, modid1, ".smb"); F := Files.Old(fname);
+    ELSE MakeFileName(fname, modid1, ".smb"); F := Files.Old(fname);
       IF F # NIL THEN
         Files.Set(R, F, 0); Files.ReadInt(R, key); Files.ReadInt(R, key); Files.ReadString(R, modname);
         thismod := ThisModule(modid, modid1, TRUE, key); thismod.rdo := TRUE;
@@ -338,8 +344,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.5.19 Experimental 
         Files.WriteNum(R, t.nofpar); Files.WriteNum(R, t.size);
         fld := t.dsc;
         WHILE fld # bot DO  (*fields*)
-          IF (fld.class = Const) & (fld.type.form IN TProcs) THEN  (*type-bound procedure*)
-            Write(R, Const);
+          IF fld.class = Const THEN (*type-bound procedure*) Write(R, Const);
             IF fld.expo THEN
               Files.WriteString(R, fld.name); OutType(R, fld.type); Files.WriteNum(R, fld.lev); (*mthno*)
               IF t.mno > 0 THEN Files.WriteNum(R, fld.val) (*exno*) ELSE Files.WriteNum(R, fld.exno) END
@@ -365,12 +370,12 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.5.19 Experimental 
     END
   END OutType;
 
-  PROCEDURE Export*(VAR modid, context: ORS.Ident; VAR newSF: BOOLEAN; VAR key: LONGINT);
+  PROCEDURE Export*(VAR modid: ORS.Ident; VAR newSF: BOOLEAN; VAR key: LONGINT);
     VAR x, sum, oldkey: LONGINT;
       obj: Object;
       filename: ORS.Ident;
       F, F1: Files.File; R, R1: Files.Rider;
-  BEGIN Ref := maxForm + 1; MakeFileName(filename, context, modid, ".smb");
+  BEGIN Ref := maxForm + 1; MakeFileName(filename, modid, ".smb");
     F := Files.New(filename); Files.Set(R, F, 0);
     Files.WriteInt(R, 0); (*placeholder*)
     Files.WriteInt(R, 0); (*placeholder for key to be inserted at the end*)

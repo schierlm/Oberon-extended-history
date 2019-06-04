@@ -1,4 +1,4 @@
-MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 17.9.2018  Oberon compiler; code generator for RISC / AP 1.5.19 Experimental Oberon*)
+MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 15.5.19 Experimental Oberon*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser ORP; result in array "code".
@@ -381,7 +381,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 17.9.2018  Oberon compiler; code 
       END ;
       fld := fld.next
     END ;
-    FOR k := nofmth TO 1 BY -1 DO  (*insert displacements in ascending order, keep last -1 entry as sentinel*)
+    FOR k := nofmth TO 1 BY -1 DO  (*insert displacements in ascending order; keep last -1 entry as sentinel*)
       IF td[tdw-k] # -1 THEN td[tdw-k] := td[tdw-k] + tdw - k - fixorgM; fixorgM := tdw - k ELSE td[tdw-k] := 0 END
     END ;
     s := T.size; (*convert size for heap allocation*)
@@ -401,20 +401,25 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 17.9.2018  Oberon compiler; code 
 
   PROCEDURE TypeTest*(VAR x: Item; T: ORB.Type; varpar, isguard: BOOLEAN);
     VAR pc0: LONGINT;
-  BEGIN (*fetch tag into RH*)
-    IF varpar THEN Put2(Ldr, RH, SP, x.a+4+frame)
-    ELSE load(x);
-      pc0 := pc; Put3(BC, EQ, 0);  (*NIL belongs to every pointer type*)
-      Put2(Ldr, RH, x.r, -8)
-    END ;
-    Put2(Ldr, RH, RH, T.nofpar*4); incR;
-    loadTypTagAdr(T);  (*tag of T*)
-    Put0(Cmp, RH-1, RH-1, RH-2); DEC(RH, 2);
-    IF ~varpar THEN fix(pc0, pc - pc0 - 1) END ;
-    IF isguard THEN
-      IF check THEN Trap(NE, 2) END
-    ELSE SetCC(x, EQ);
-      IF ~varpar THEN DEC(RH) END
+  BEGIN
+    IF T = NIL THEN
+      IF x.mode >= Reg THEN DEC(RH) END ;
+      SetCC(x, 7)
+    ELSE (*fetch tag into RH*)
+      IF varpar THEN Put2(Ldr, RH, SP, x.a+4+frame)
+      ELSE load(x);
+        pc0 := pc; Put3(BC, EQ, 0);  (*NIL belongs to every pointer type*)
+        Put2(Ldr, RH, x.r, -8)
+      END ;
+      Put2(Ldr, RH, RH, T.nofpar*4); incR;
+      loadTypTagAdr(T);  (*tag of T*)
+      Put0(Cmp, RH-1, RH-1, RH-2); DEC(RH, 2);
+      IF ~varpar THEN fix(pc0, pc - pc0 - 1) END ;
+      IF isguard THEN
+        IF check THEN Trap(NE, 2) END
+      ELSE SetCC(x, EQ);
+        IF ~varpar THEN DEC(RH) END
+      END
     END
   END TypeTest;
 
@@ -1150,7 +1155,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 17.9.2018  Oberon compiler; code 
     END
   END FindRefs;
 
-  PROCEDURE Close*(VAR modid, context: ORS.Ident; key, nofent: LONGINT);
+  PROCEDURE Close*(VAR modid: ORS.Ident; key, nofent: LONGINT);
     VAR obj: ORB.Object;
       i, comsize, nofimps, nofrefs, size, tdx, base: LONGINT;
       name: ORS.Ident;
@@ -1175,7 +1180,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 17.9.2018  Oberon compiler; code 
       obj := obj.next
     END ;
     size := tdx + tdw*4 + comsize + (pc + nofimps + nofent + nofrefs + 2)*4;
-    ORB.MakeFileName(name, context, modid, ".rsc");  (*write code file*)
+    ORB.MakeFileName(name, modid, ".rsc");  (*write code file*)
     F := Files.New(name); Files.Set(R, F, 0); Files.WriteString(R, modid); Files.WriteInt(R, key); Files.Write(R, CHR(version));
     Files.WriteInt(R, size);
     obj := ORB.topScope.next;

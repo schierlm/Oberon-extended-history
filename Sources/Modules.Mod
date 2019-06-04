@@ -1,6 +1,6 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 15.4.19 Experimental Oberon*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 11.5.19 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, Files;
-  CONST versionkey = 1X; MT = 12; DescSize = 84; MnLength = 32; context = "EO";
+  CONST versionkey = 1X; MT = 12; DescSize = 84; MnLength = 32;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5; nocmd* = 6; badcmd* = 7; nomod* = 8;
     noref* = 0; clients* = 9; dyntypes* = 10; dynprocs* = 11; statprocs* = 12;
 
@@ -24,28 +24,13 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 15.4.19 
     importing*, imported*: ModuleName;
     limit, NofSelected*, NofHidden*: INTEGER;
 
-  PROCEDURE MakeFileName(VAR FName: ARRAY OF CHAR; context, name, ext: ARRAY OF CHAR);
-    VAR i, j, k: INTEGER;
-  BEGIN i := 0; k := 0;
-    WHILE (i < MnLength-1) & (context[i] # 0X) DO FName[i] := context[i]; INC(i) END ;
-    IF context[i] = 0X THEN j := 0;
-      IF (i > 0) & (i < MnLength-1) THEN FName[i] := "."; INC(i) END ;
-      WHILE (i < MnLength-1) & (name[j] # 0X) DO FName[i] := name[j]; INC(i); INC(j) END ;
-      IF name[j] = 0X THEN j := 0;
-        WHILE (i < MnLength-1) & (ext[j] # 0X) DO FName[i] := ext[j]; INC(i); INC(j) END ;
-        IF ext[j] = 0X THEN k := i END
-      END
-    END ;
-    FName[k] := 0X
-  END MakeFileName;
-
   PROCEDURE ThisFile(name: ARRAY OF CHAR): Files.File;
-    VAR F: Files.File;
+    VAR i: INTEGER;
       filename: ModuleName;
-  BEGIN MakeFileName(filename, context, name, ".rsc");
-    IF filename[0] # 0X THEN F := Files.Old(filename) ELSE F := NIL END ;
-    IF F = NIL THEN MakeFileName(filename, "", name, ".rsc"); F := Files.Old(filename) END ;
-    RETURN F
+  BEGIN i := 0;
+    WHILE name[i] # 0X DO filename[i] := name[i]; INC(i) END ;
+    filename[i] := "."; filename[i+1] := "r"; filename[i+2] := "s"; filename[i+3] := "c"; filename[i+4] := 0X;
+    RETURN Files.Old(filename)
   END ThisFile;
 
   PROCEDURE error(n: INTEGER; name: ARRAY OF CHAR);
@@ -397,7 +382,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 15.4.19 
   BEGIN i := 0;
     IF dst # 0 THEN mod := root;
       WHILE (mod # NIL) & ~((mod.name[0] # 0X) & mod.selected & (mod.data <= dst) & (dst < mod.imp)) DO mod := mod.next END ;
-      IF mod # NIL THEN (*reference exists*) i := 1; continue := FALSE END
+      IF mod # NIL THEN (*dst references mod*) i := 1; continue := FALSE END
     END ;
     RETURN i
   END HandleRef;
