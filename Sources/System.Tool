@@ -26,16 +26,16 @@ Hilbert.Draw  Sierpinski.Draw  Blink.Run  Stars.Open
 Tools.Inspect 0  Tools.Sector 1  Tools.ShowFile
 Tools.Recall  Tools.Clear
 
-# ------------ rebuilding the system on the local machine ----------------
+# ------------ building the system ----------------
 
-ORP.Compile ORS.Mod/s ORB.Mod/s ~
+ORP.Compile ORS.Mod/s ORB.Mod/s ~         Edit.Open Build.Tool ~
 ORP.Compile ORG.Mod/s ORP.Mod/s ~
-ORP.Compile Boot.Mod/s ORTool.Mod/s ~           Edit.Open Build.Tool ~
+ORP.Compile Boot.Mod/s ORTool.Mod/s ~
 System.Free ORTool Boot ORP ORG ORB ORS ~
 
 ORP.Compile Kernel.Mod/s FileDir.Mod/s Files.Mod/s Modules.Mod/s ~
-Boot.Link Modules ~
-Boot.Load Modules.bin ~
+Boot.Link Modules ~            # generate a regular boot file
+Boot.Load Modules.bin ~     # load the boot file onto the boot area
 
 ORP.Compile Input.Mod Display.Mod/s Viewers.Mod/s ~
 ORP.Compile Fonts.Mod/s Texts.Mod/s ~
@@ -55,17 +55,3 @@ ORP.Compile Curves.Mod/s Sierpinski.Mod ~
 ORP.Compile Hilbert.Mod Stars.Mod ~
 ORP.Compile Rectangles.Mod/s Checkers.Mod ~
 ORP.Compile Math.Mod/s PIO.Mod/s Blink.Mod/s ~
-
-# ------------ rebuilding the system on a remote target machine ----------------
-
-ORP.Compile Kernel.Mod FileDir.Mod Files.Mod Modules.Mod ~      # modules for the "regular" boot file
-ORP.Compile RS232.Mod PCLink0.Mod Oberon0.Mod ~    # additional modules for the "build-up" boot file
-ORP.Compile ORC.Mod/s Oberon0Tool.Mod/s ~     # partner program ORC and Oberon0 tool module
-ORP.Compile BootLoadDisk.Mod/s ~    # a boot loader for booting the target system from the local disk
-ORP.Compile BootLoadLine.Mod/s ~    # a boot loader for booting the target system over the data link
-ORP.Compile Boot.Mod/s ~            # the Oberon boot linker/loader (system building tool)
-
-Boot.Link Modules ~       # generate a pre-linked binary file of the "regular" boot file (Modules.bin)
-Boot.Link Oberon0 ~       # generate a pre-linked binary file of the "build-up" boot file (Oberon0.bin)
-
-Boot.Load Modules.bin ~   # load the "regular" boot file onto the boot area of the local disk
