@@ -25,7 +25,6 @@ Planned
 | Programming language  | [**The-Revised-Oberon2-Programming-Language.pdf**](Documentation/The-Revised-Oberon2-Programming-Language.pdf)  |
 | System building tools  | [**The-Oberon-system-building-tools.pdf**](Documentation/The-Oberon-system-building-tools.pdf)  |
 | Safe module unloading  | [**Safe-module-unloading-in-Oberon.pdf**](Documentation/Safe-module-unloading-in-Oberon.pdf) |
-| Historical notes on module unloading  | [**Historical-notes-on-module-unloading-in-Oberon.pdf**](Documentation/Historical-notes-on-module-unloading-in-Oberon.pdf)  |
 | Symbol files  | [**Streamlining-symbol-files-in-FPGA-Oberon.pdf**](Documentation/Streamlining-symbol-files-in-FPGA-Oberon.pdf)  |
 
 **EMULATORS**
