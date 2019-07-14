@@ -15,7 +15,7 @@ Planned
 * Plug & Play Oberon images (automatically loaded onto dynamically created partitions)
 * A variant of the Oberon-2 compiler that accepts programs written in Original Oberon-2 (as defined in 1991/1993)
 
-**REVISION:** 1.6.2019
+**REVISION:** 1.7.2019
 
 **DOCUMENTATION**
 
