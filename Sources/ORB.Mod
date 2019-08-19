@@ -1,4 +1,4 @@
-MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 15.5.19 Experimental Oberon*)
+MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.7.19 Experimental Oberon*)
   IMPORT Files, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
@@ -158,7 +158,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 15.5.19 Experimental
     WHILE (fld # bot) & (fld.name # id) DO fld0 := fld; fld := fld.next END ;  (*search id in fields of rec proper*)
     IF fld = bot THEN
       NEW(fld); fld.name := id; fld.class := Const; fld.rdo := FALSE; fld.dsc := NIL; fld.next := bot; mth := fld;
-      IF redef # NIL THEN fld.lev := redef.lev ELSE fld.lev := NofMethods(rec) END ;  (*mthno*)
+      IF redef # NIL THEN fld.lev := redef.lev ELSE fld.lev := NofMethods(rec) END ;  (*assign mthno*)
       IF rec.dsc = bot THEN rec.dsc := mth; UpdateLinks(rec, mth, bot) ELSE fld0.next := mth END
     ELSE mth := fld; ORS.Mark("mult def")
     END

@@ -4,6 +4,7 @@
 ORP.Compile Kernel.Mod FileDir.Mod Files.Mod Modules.Mod ~      # modules for the "regular" boot file
 ORP.Compile RS232.Mod PCLink0.Mod Oberon0.Mod ~    # additional modules for the "build-up" boot file
 ORP.Compile ORC.Mod/s Oberon0Tool.Mod/s ~     # partner program ORC and Oberon0 tool module
+ORP.Compile BootLoad.Mod/s ~        # the regular Oberon boot loader
 ORP.Compile BootLoadDisk.Mod/s ~    # a boot loader for booting the target system from the local disk
 ORP.Compile BootLoadLine.Mod/s ~    # a boot loader for booting the target system over the data link
 ORP.Compile Boot.Mod/s ~            # the Oberon boot linker/loader (system building tool)

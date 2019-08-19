@@ -1,4 +1,4 @@
-MODULE Boot;  (*Oberon boot linker/loader for RISC / AP 1.7.19 Experimental Oberon*)
+MODULE Boot;  (*Oberon boot linker/loader for RISC / AP 1.8.19 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, Files, Modules, Texts, Oberon;
   CONST versionkey = 1X; versionkey0 = 0X; MT = 12; DescSize = 84; MnLength = 32; CR = 0DX; maxCode = 8000;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5;
@@ -215,7 +215,7 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC / AP 1.7.19 Experimental Ober
     newmod := mod
   END LinkOne;
 
-  PROCEDURE Link*; (*link object files together and create a single boot file F.bin from them*)
+  PROCEDURE Link*;  (*link multiple object files together and create a single boot file F.bin from them*)
     VAR i, x: INTEGER;
       F: Files.File; R: Files.Rider;
       S: Texts.Scanner;
@@ -265,7 +265,7 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC / AP 1.7.19 Experimental Ober
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END Link;
 
-  PROCEDURE Load*; (*load prelinked boot file F.bin onto the boot area of the local disk, starting at sector 2*)
+  PROCEDURE Load*;  (*load prelinked boot file F.bin onto the boot area of the local disk, starting at sector 2*)
     VAR i, secno: LONGINT; b: BYTE;
       F: Files.File; R: Files.Rider;
       S: Texts.Scanner;
@@ -322,7 +322,7 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC / AP 1.7.19 Experimental Ober
     END
   END ReadCode;
 
-  PROCEDURE WriteHex(VAR R: Files.Rider; x: LONGINT); (*write a 4 byte LONGINT in 8 digit hex format*)
+  PROCEDURE WriteHex(VAR R: Files.Rider; x: LONGINT);  (*write a 4 byte LONGINT in 8 digit hex format*)
     VAR i: INTEGER; y: LONGINT;
       a: ARRAY 10 OF CHAR;
   BEGIN i := 0;
@@ -333,47 +333,46 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC / AP 1.7.19 Experimental Ober
     REPEAT DEC(i); Files.Write(R, a[i]) UNTIL i = 0
   END WriteHex;
 
-  PROCEDURE WriteFile*; (*write code section of M.rsc in PROM format with specified size to output file*)
-    VAR if, of: Files.File; ir, or: Files.Rider;
+  PROCEDURE WriteFile*;  (*write code section of M.rsc in PROM format with specified size (nof opcodes) to output file*)
+    VAR f, g: Files.File; Rf, Rg: Files.Rider;
       code: ARRAY maxCode OF LONGINT;
-      i, len, size, start, nofimps, res: INTEGER;
+      i, size, outsize, start, nofimps, res: INTEGER;
       name: ARRAY 32 OF CHAR;
       S: Texts.Scanner;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S); res := -1;
     IF S.class = Texts.Name THEN name := S.s; Texts.Scan(S);
-      IF S.class = Texts.Int THEN len := S.i; Texts.Scan(S);
+      IF S.class = Texts.Int THEN outsize := S.i; Texts.Scan(S);
         IF S.class = Texts.Name THEN res := 0; Texts.WriteString(W, "  WriteFile ");
-          Texts.WriteString(W, name); Texts.WriteInt(W, len, 5); Texts.Write(W, " "); Texts.WriteString(W, S.s);
-          IF len > 0 THEN if := Files.Old(name);
-            IF if # NIL THEN of := Files.New(S.s);
-              IF of # NIL THEN Files.Set(ir, if, 0); ReadCode(ir, code, size, start, nofimps, res);
-                IF res = 0 THEN
-                  IF nofimps = 0 THEN
-                    IF size <= len THEN Files.Set(or, of, 0); i := 0;
-                      WHILE i < size DO WriteHex(or, code[i]); Files.Write(or, CR); INC(i) END ;
-                      WHILE i < len DO WriteHex(or, 0); Files.Write(or, CR); INC(i) END ;
-                      Files.Register(of); Texts.WriteString(W, "  done")
-                    ELSE  Texts.WriteString(W, "  insufficent size")
-                    END
-                  ELSE Texts.WriteString(W, " imports not allowed")
+          Texts.WriteString(W, name); Texts.WriteInt(W, outsize, 5); Texts.Write(W, " "); Texts.WriteString(W, S.s);
+          IF outsize > 0 THEN f := Files.Old(name);
+            IF f # NIL THEN g := Files.New(S.s); Files.Set(Rf, f, 0);
+              ReadCode(Rf, code, size, start, nofimps, res);
+              IF res = 0 THEN
+                IF nofimps = 0 THEN
+                  IF size <= outsize THEN Files.Set(Rg, g, 0); i := 0;
+                    WHILE i < size DO WriteHex(Rg, code[i]); Files.Write(Rg, CR); INC(i) END ;
+                    WHILE i < outsize DO WriteHex(Rg, 0); Files.Write(Rg, CR); INC(i) END ;
+                    Files.Register(g); Texts.WriteString(W, "  done")
+                  ELSE  Texts.WriteString(W, "  insufficent size")
                   END
-                ELSIF res = 1 THEN Texts.WriteString(W, "  input file format error")
-                ELSIF res = 2 THEN Texts.WriteString(W, "  program too long")
+                ELSE Texts.WriteString(W, " imports not allowed")
                 END
+              ELSIF res = 1 THEN Texts.WriteString(W, "  input file format error")
+              ELSIF res = 2 THEN Texts.WriteString(W, "  program too long")
               END
             ELSE Texts.WriteString(W, "  input file not found")
             END
-          ELSE Texts.WriteString(W, "  size must be positive")
+          ELSE Texts.WriteString(W, "  outputsize must be positive")
           END
         END
       END
     END ;
-    IF res = -1 THEN Texts.WriteString(W, "Usage: Boot.WriteFile M.rsc outputsize outputfile") END ;
+    IF res = -1 THEN Texts.WriteString(W, "Usage: Boot.WriteFile M.rsc outputsize M.mem") END ;
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END WriteFile;
 
-  PROCEDURE WriteCode*; (*write code section of M.rsc in binary format with prefix (size, adr) to output file*)
-    VAR if, of: Files.File; ir, or: Files.Rider;
+  PROCEDURE WriteCode*;  (*write code section of M.rsc in binary format with prefix (size, adr) to output file*)
+    VAR f, g: Files.File; Rf, Rg: Files.Rider;
       code: ARRAY maxCode OF LONGINT;
       i, size, start, nofimps, res: INTEGER;
       name: ARRAY 32 OF CHAR;
@@ -382,20 +381,19 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC / AP 1.7.19 Experimental Ober
     IF S.class = Texts.Name THEN name := S.s; Texts.Scan(S);
       IF S.class = Texts.Name THEN res := 0; Texts.WriteString(W, "  WriteCode ");
         Texts.WriteString(W, name); Texts.Write(W, " "); Texts.WriteString(W, S.s);
-        if := Files.Old(name);
-        IF if # NIL THEN of := Files.New(S.s);
-          IF of # NIL THEN Files.Set(ir, if, 0); ReadCode(ir, code, size, start, nofimps, res);
-            IF res = 0 THEN
-              IF nofimps = 0 THEN Files.Set(or, of, 0); i := 0;
-                Texts.WriteInt(W, size*4, 6); Texts.WriteInt(W, start, 6);
-                Files.WriteInt(or, size*4); Files.WriteInt(or, start); (*prefix*)
-                WHILE i < size DO Files.WriteInt(or, code[i]); INC(i) END ;
-                Files.Register(of); Texts.WriteString(W, "  done")
-              ELSE Texts.WriteString(W, "  imports not allowed")
-              END
-            ELSIF res = 1 THEN Texts.WriteString(W, "  input file format error")
-            ELSIF res = 2 THEN Texts.WriteString(W, "  program too long")
+        f := Files.Old(name);
+        IF f # NIL THEN g := Files.New(S.s); Files.Set(Rf, f, 0);
+          ReadCode(Rf, code, size, start, nofimps, res);
+          IF res = 0 THEN
+            IF nofimps = 0 THEN Files.Set(Rg, g, 0); i := 0;
+              Texts.WriteInt(W, size*4, 6); Texts.WriteInt(W, start, 6);
+              Files.WriteInt(Rg, size*4); Files.WriteInt(Rg, start); (*prefix*)
+              WHILE i < size DO Files.WriteInt(Rg, code[i]); INC(i) END ;
+              Files.Register(g); Texts.WriteString(W, "  done")
+            ELSE Texts.WriteString(W, "  imports not allowed")
             END
+          ELSIF res = 1 THEN Texts.WriteString(W, "  input file format error")
+          ELSIF res = 2 THEN Texts.WriteString(W, "  program too long")
           END
         ELSE Texts.WriteString(W, "  input file not found")
         END
@@ -405,21 +403,19 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC / AP 1.7.19 Experimental Ober
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END WriteCode;
 
-  PROCEDURE MakeStream(VAR ir, or: Files.Rider; blksize, destadr: INTEGER);
+  PROCEDURE MakeStream(VAR Rf, Rg: Files.Rider; blksize, destadr: INTEGER);
     VAR i, a: INTEGER; b: BYTE;
-  BEGIN Files.ReadByte(ir, b); i := 0; a := destadr;
-    WHILE ~ir.eof DO
-      IF i MOD blksize = 0 THEN i := 0;
-        Files.WriteInt(or, blksize); Files.WriteInt(or, a); INC(a, blksize)
-      END ;
-      Files.WriteByte(or, b); INC(i); Files.ReadByte(ir, b)
+  BEGIN Files.ReadByte(Rf, b); i := 0; a := destadr;
+    WHILE ~Rf.eof DO
+      IF i MOD blksize = 0 THEN Files.WriteInt(Rg, blksize); Files.WriteInt(Rg, a); INC(a, blksize); i := 0 END ;
+      Files.WriteByte(Rg, b); INC(i); Files.ReadByte(Rf, b)
     END ;
-    WHILE i < blksize DO Files.WriteByte(or, 0); INC(i) END ;
-    Files.WriteInt(or, 0)  (*size of last block*)
+    WHILE i < blksize DO Files.WriteByte(Rg, 0); INC(i) END ;
+    Files.WriteInt(Rg, 0)  (*size of last block*)
   END MakeStream;
 
-  PROCEDURE WriteStream*; (*convert boot file to stream format with specified block size and dest adr*)
-    VAR if, of: Files.File; ir, or: Files.Rider;
+  PROCEDURE WriteStream*;  (*convert boot file to stream format with specified block size and dest adr*)
+    VAR f, g: Files.File; Rf, Rg: Files.Rider;
       len, blksize, res: INTEGER;
       name, name1: ARRAY 32 OF CHAR;
       S: Texts.Scanner;
@@ -431,14 +427,12 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC / AP 1.7.19 Experimental Ober
             Texts.WriteString(W, name); Texts.Write(W, " "); Texts.WriteString(W, name1);
             Texts.WriteInt(W, blksize, 5); Texts.WriteInt(W, S.i, 5);
             IF blksize >= 0 THEN
-              IF S.i >= 0 THEN if := Files.Old(name);
-                IF if # NIL THEN len := Files.Length(if);
-                  IF len > 0 THEN of := Files.New(name1);
-                    IF of # NIL THEN
-                      IF blksize = 0 THEN blksize := len END ;
-                      Files.Set(ir, if, 0); Files.Set(or, of, 0); MakeStream(ir, or, blksize, S.i);
-                      Files.Register(of); Texts.WriteString(W, "  done")
-                    END
+              IF S.i >= 0 THEN f := Files.Old(name);
+                IF f # NIL THEN len := Files.Length(f);
+                  IF len > 0 THEN g := Files.New(name1);
+                    IF blksize = 0 THEN blksize := len END ;
+                    Files.Set(Rf, f, 0); Files.Set(Rg, g, 0); MakeStream(Rf, Rg, blksize, S.i);
+                    Files.Register(g); Texts.WriteString(W, "  done")
                   ELSE Texts.WriteString(W, "  input file empty")
                   END
                 ELSE Texts.WriteString(W, "  input file not found")
@@ -455,6 +449,6 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC / AP 1.7.19 Experimental Ober
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END WriteStream;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 1.7.19");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 1.8.19");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); limit := Kernel.stackOrg - Kernel.stackSize
 END Boot.

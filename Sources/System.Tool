@@ -37,7 +37,7 @@ ORP.Compile Kernel.Mod/s FileDir.Mod/s Files.Mod/s Modules.Mod/s ~
 Boot.Link Modules ~            # generate a regular boot file
 Boot.Load Modules.bin ~     # load the boot file onto the boot area
 
-ORP.Compile Input.Mod Display.Mod/s Viewers.Mod/s ~
+ORP.Compile Input.Mod/s Display.Mod/s Viewers.Mod/s ~
 ORP.Compile Fonts.Mod/s Texts.Mod/s ~
 ORP.Compile Oberon.Mod/s ~                      Edit.Open Oberon.Mod
 ORP.Compile MenuViewers.Mod/s ~             Edit.Open MenuViewers.Mod
@@ -45,13 +45,13 @@ ORP.Compile TextFrames.Mod/s ~                Edit.Open TextFrames.Mod
 ORP.Compile System.Mod/s ~                       Edit.Open System.Mod
 ORP.Compile Edit.Mod/s Tools.Mod/s ~        Edit.Open Edit.Mod
 
-ORP.Compile PCLink1.Mod/s Clipboard.Mod Out.Mod ~
+ORP.Compile PCLink1.Mod/s Clipboard.Mod/s Out.Mod/s ~
 ORP.Compile RS232.Mod/s SCC.Mod/s Net.Mod/s ~
 
 ORP.Compile Graphics.Mod/s GraphicFrames.Mod/s ~
-ORP.Compile GraphTool.Mod MacroTool.Mod/s Draw.Mod ~
+ORP.Compile GraphTool.Mod/s MacroTool.Mod/s Draw.Mod/s ~
 
-ORP.Compile Curves.Mod/s Sierpinski.Mod ~
-ORP.Compile Hilbert.Mod Stars.Mod ~
-ORP.Compile Rectangles.Mod/s Checkers.Mod ~
+ORP.Compile Curves.Mod/s Sierpinski.Mod/s ~
+ORP.Compile Hilbert.Mod/s Stars.Mod/s ~
+ORP.Compile Rectangles.Mod/s Checkers.Mod/s ~
 ORP.Compile Math.Mod/s PIO.Mod/s Blink.Mod/s ~

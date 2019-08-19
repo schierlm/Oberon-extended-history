@@ -1,4 +1,4 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 11.5.19 Experimental Oberon*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.8.19 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, Files;
   CONST versionkey = 1X; MT = 12; DescSize = 84; MnLength = 32;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5; nocmd* = 6; badcmd* = 7; nomod* = 8;
@@ -238,7 +238,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 11.5.19 
     RETURN SYSTEM.VAL(Command, w)
   END ThisCommand;
 
-  PROCEDURE Call* (name: ARRAY OF CHAR);
+  PROCEDURE Call*(name: ARRAY OF CHAR);
     (*call the command named 'name' of the form M.P, where M is either a module name or
       a module number; if M is not loaded, load module hierarchy M* before calling P.
       res = noerr: module loaded, command found and executed;
@@ -382,7 +382,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 11.5.19 
   BEGIN i := 0;
     IF dst # 0 THEN mod := root;
       WHILE (mod # NIL) & ~((mod.name[0] # 0X) & mod.selected & (mod.data <= dst) & (dst < mod.imp)) DO mod := mod.next END ;
-      IF mod # NIL THEN (*dst references mod*) i := 1; continue := FALSE END
+      IF mod # NIL THEN (*src references mod*) i := 1; continue := FALSE END
     END ;
     RETURN i
   END HandleRef;

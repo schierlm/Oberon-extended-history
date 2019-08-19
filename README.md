@@ -15,7 +15,7 @@ Planned
 * Plug & Play Oberon images (automatically loaded onto dynamically created partitions)
 * A variant of the Oberon-2 compiler that accepts programs written in Original Oberon-2 (as defined in 1991/1993)
 
-**REVISION:** 1.7.2019
+**REVISION:** 1.8.2019
 
 **DOCUMENTATION**
 
@@ -101,15 +101,15 @@ If you just follow the compilation sequence shown in *System.Tool*, you should b
 
 Compile the *inner core* of Experimental Oberon and load it onto the boot area of the local disk:
 
-     ORP.Compile Kernel.Mod FileDir.Mod Files.Mod Modules.Mod ~    # modules for the "regular" boot file for Experimental Oberon
-     Boot.Link Modules ~                                           # generate a pre-linked binary file of the "regular" boot file (Modules.bin)
-     Boot.Load Modules.bin ~                                       # load the "regular" boot file onto the boot area of the local disk
+     ORP.Compile Kernel.Mod/s FileDir.Mod/s Files.Mod/s Modules.Mod/s ~    # modules for the "regular" boot file for Experimental Oberon
+     Boot.Link Modules ~                                                   # generate a pre-linked binary file of the "regular" boot file (Modules.bin)
+     Boot.Load Modules.bin ~                                               # load the "regular" boot file onto the boot area of the local disk
 
 This step is possible, because module *Boot* is written such that it can be executed on both the FPGA Oberon 2013 and the Experimental Oberon system. It produces output using the Experimental Oberon module and object file format.
 
 Compile the remaining modules of Experimental Oberon:
 
-     ORP.Compile Input.Mod Display.Mod/s Viewers.Mod/s ~
+     ORP.Compile Input.Mod/s Display.Mod/s Viewers.Mod/s ~
      ORP.Compile Fonts.Mod/s Texts.Mod/s Oberon.Mod/s ~
      ORP.Compile MenuViewers.Mod/s TextFrames.Mod/s ~
      ORP.Compile System.Mod/s Edit.Mod/s Tools.Mod/s ~

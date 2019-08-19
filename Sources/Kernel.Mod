@@ -1,4 +1,4 @@
-MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 15.4.19 Experimental Oberon*)
+MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.8.19 Experimental Oberon*)
   IMPORT SYSTEM;
   CONST SectorLength* = 1024;
     timer = -64; spiData = -48; spiCtrl = -44;
@@ -66,10 +66,11 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 15.4.19 Experimental
   END GetBlock32;
 
   PROCEDURE New*(VAR ptr: LONGINT; tag, len, elemsize: LONGINT);
-    (*called by NEW via MT[0]; ptr is a pointer; tag is a pointer or blktyp; len and elemsize describe arrays*)
+    (*called by NEW via MT[0]; ptr is a pointer; tag (or tag-1) is a pointer or blktyp; len and elemsize describe arrays*)
     VAR p, size, lim: LONGINT;
   BEGIN
-    IF len < 0 THEN (*record*) SYSTEM.GET(tag, size); (*size already converted for heap allocation with 8 byte prefix*)
+    IF tag MOD 4 = 0 THEN (*record*)
+      SYSTEM.GET(tag, size);  (*size already converted for heap allocation with 8 byte prefix*)
       IF size = 32 THEN GetBlock32(p)
       ELSIF size = 64 THEN GetBlock64(p)
       ELSIF size = 128 THEN GetBlock128(p)
@@ -79,20 +80,18 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 15.4.19 Experimental
       ELSE ptr := p+8; SYSTEM.PUT(p, tag); lim := p + size; INC(p, 4); INC(allocated, size);
         WHILE p < lim DO SYSTEM.PUT(p, 0); INC(p, 4) END
       END
-    ELSIF len > 0 THEN (*array*) size := len*elemsize; (*convert size for heap allocation with 24 byte prefix*)
+    ELSE (*array*)
+      size := len*elemsize;  (*convert size for heap allocation with 24 byte prefix*)
       IF size <= 8 THEN size := 32; GetBlock32(p)
       ELSIF size <= 40 THEN size := 64; GetBlock64(p)
       ELSIF size <= 104 THEN size := 128; GetBlock128(p)
       ELSE size := (size+279) DIV 256 * 256; GetBlock(p, size)
       END ;
       IF p = 0 THEN ptr := 0
-      ELSE ptr := p+8;
-        IF tag > 7 THEN (*array of record*) INC(tag) END ;
-        SYSTEM.PUT(p, tag); SYSTEM.PUT(p+4, 0); SYSTEM.PUT(p+8, len); SYSTEM.PUT(p+12, elemsize);
-        SYSTEM.PUT(p+16, size); lim := p + size; INC(p, 20); INC(allocated, size);
+      ELSE ptr := p+8; SYSTEM.PUT(p, tag); SYSTEM.PUT(p+4, 0); SYSTEM.PUT(p+8, len);
+        SYSTEM.PUT(p+12, elemsize); SYSTEM.PUT(p+16, size); lim := p + size; INC(p, 20); INC(allocated, size);
         WHILE p < lim DO SYSTEM.PUT(p, 0); INC(p, 4) END
       END
-    ELSE ptr := 0
     END
   END New;
 
@@ -121,7 +120,7 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 15.4.19 Experimental
               IF offset >= len*4 THEN offset := -1 END
             END ;
             SYSTEM.PUT(p+12, offset)
-          ELSE (*array of procedure or array of basic type*)
+          ELSE (*blktyp = 3, array of procedure or array of basic type*)
             offset := -1; SYSTEM.PUT(p+12, -1); SYSTEM.PUT(p-4, p+12) (*offadr*)
           END ;
           IF offset # -1 THEN (*down*)
@@ -194,7 +193,7 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 15.4.19 Experimental
             ELSIF blktyp = 1 THEN (*array of record*)
               IF type # NIL THEN INC(resType, type(p, tag-1, s, continue)) END ;
               IF continue & (proc # NIL) THEN offadr := tag + 15; SYSTEM.GET(offadr, offset);
-                WHILE offset # -1 DO (*pointers*) INC(offadr, 4); SYSTEM.GET(offadr, offset) END ;
+                WHILE offset # -1 DO (*skip pointers*) INC(offadr, 4); SYSTEM.GET(offadr, offset) END ;
                 INC(offadr, 4); SYSTEM.GET(offadr, offset);
                 SYSTEM.GET(p+8, len); SYSTEM.GET(p+12, elemsize); len := p + 24 + len*elemsize;
                 WHILE continue & (offset # -1) DO (*procedures*) pos := p + 24;

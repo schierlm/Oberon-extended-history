@@ -1,4 +1,4 @@
-MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 15.5.19 Experimental Oberon*)
+MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 1.8.19 Experimental Oberon*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser ORP; result in array "code".
@@ -956,21 +956,23 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
 
   PROCEDURE New*(VAR x, y: Item);
     VAR z: Item; xt: ORB.Type; xf: INTEGER;
-  BEGIN loadAdr(x); z.mode := ORB.Const; z.type := ORB.intType;
-    IF y.type = ORB.noType THEN (*record*) xt:= x.type.base; z.a := xt.size;
-      loadTypTagAdr(xt); Put1(Mov, RH, 0, -1); (*len*) incR
-    ELSE (*array*) xt:= x.type.base.base; z.a := xt.size; xf := xt.form;
-      IF xf = ORB.Record THEN loadTypTagAdr(xt) (*tag > 7*)
-      ELSIF xf = ORB.Proc THEN Put1(Mov, RH, 0, 7); incR
-      ELSIF xf = ORB.Pointer THEN Put1(Mov, RH, 0, 2); incR
-      ELSIF xf < ORB.Pointer THEN (*basic type*) Put1(Mov, RH, 0, 3); incR
+  BEGIN loadAdr(x);
+    IF y.type = ORB.noType THEN (*record*) loadTypTagAdr(x.type.base)
+    ELSE (*array*) xt:= x.type.base.base; xf := xt.form;
+      IF xf = ORB.Record THEN loadTypTagAdr(xt); Put1(Add, RH-1, RH-1, 1)  (*array of record => blktyp = 1*)
+      ELSIF xf = ORB.Pointer THEN Put1(Mov, RH, 0, 2); incR  (*array of pointer => blktyp = 2*)
+      ELSIF xf = ORB.Proc THEN Put1(Mov, RH, 0, 7); incR  (*array of procedure => blktyp = 3, tag = 7*)
+      ELSIF xf < ORB.Pointer THEN Put1(Mov, RH, 0, 3); incR  (*array of basic type, blktyp = 3, tag = 3*)
       ELSE ORS.Mark("no valid ptr base type")
       END ;
-      IF (y.mode = ORB.Const) & (y.a <= 0) THEN ORS.Mark("not a valid dyn array length") END ;
-      load(y); (*len*)
-      IF check THEN Trap(LE, 1) END
+      IF y.mode = ORB.Const THEN
+        IF y.a > 0 THEN load(y) (*len*) ELSE ORS.Mark("not a valid dyn array length") END
+      ELSE load(y); (*len*)
+        IF check THEN Trap(LE, 1) END
+      END ;
+      z.mode := ORB.Const; z.type := ORB.intType; z.a := xt.size; load(z) (*elemsize*)
     END ;
-    load(z); (*elemsize*) Trap(7, 0); RH := 0
+    Trap(7, 0); RH := 0
   END New;
 
   PROCEDURE Pack*(VAR x, y: Item);
