@@ -1,4 +1,4 @@
-MODULE Boot;  (*Oberon boot linker/loader for RISC / AP 1.8.19 Experimental Oberon*)
+MODULE Boot;  (*Oberon boot linker/loader for RISC / AP 1.9.19 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, Files, Modules, Texts, Oberon;
   CONST versionkey = 1X; versionkey0 = 0X; MT = 12; DescSize = 84; MnLength = 32; CR = 0DX; maxCode = 8000;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5;
@@ -449,6 +449,6 @@ MODULE Boot;  (*Oberon boot linker/loader for RISC / AP 1.8.19 Experimental Ober
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END WriteStream;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 1.8.19");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 1.9.19");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); limit := Kernel.stackOrg - Kernel.stackSize
 END Boot.
