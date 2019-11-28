@@ -1,14 +1,15 @@
-MODULE M1;
-  IMPORT M0;
+MODULE M1; (*AP 1.10.19 Experimental Oberon*)
+  IMPORT SYSTEM, M0;
 
   TYPE Ptr* = POINTER TO Rec;
     Rec* = RECORD (M0.Rec) END ;  (*extension of M0.Rec*)
     PtrArr* = M0.PtrArr;
     PtrArrProc* = M0.PtrArrProc;
 
-  VAR gptr*: Ptr;
+  VAR gptr*, sptr*: Ptr; grec*: Rec;
     gptrarr*: PtrArr;
     gproc*: M0.Proc;
+    garrptr*: M0.PtrArrPtr;
     garrproc*: M0.PtrArrProc;
 
   PROCEDURE P*; BEGIN END P;
@@ -27,5 +28,20 @@ MODULE M1;
 
   PROCEDURE Init*; BEGIN END Init;
 
-BEGIN NEW(gptr); NEW (gptrarr, 10); NEW(garrproc, 150)
+  (*
+   * pointer variable references to static module data -> these are only possible by resorting to low-level facilitie
+   *)
+  PROCEDURE SetStaticPtrRef*(adr: LONGINT); BEGIN sptr := SYSTEM.VAL(Ptr, adr) END SetStaticPtrRef;
+  PROCEDURE UnSetStaticPtrRef*(); BEGIN sptr := NIL END UnSetStaticPtrRef;
+
+  PROCEDURE SetDynamicPtrRef*(adr: LONGINT); BEGIN gptr.ptr := SYSTEM.VAL(Ptr, adr) END SetDynamicPtrRef;
+  PROCEDURE UnSetDynamicPtrRef*(); BEGIN gptr.ptr := NIL END UnSetDynamicPtrRef;
+
+  PROCEDURE SetDynamicArrRecPtrRef*(adr: LONGINT); BEGIN gptrarr[2].ptr := SYSTEM.VAL(Ptr, adr) END SetDynamicArrRecPtrRef;
+  PROCEDURE UnSetDynamicArrRecPtrRef*; BEGIN gptrarr[2].ptr := NIL END UnSetDynamicArrRecPtrRef;
+
+  PROCEDURE SetDynamicArrPtrPtrRef*(adr: LONGINT); BEGIN garrptr[3] := SYSTEM.VAL(Ptr, adr) END SetDynamicArrPtrPtrRef;
+  PROCEDURE UnSetDynamicArrPtrPtrRef*; BEGIN garrptr[3] := NIL END UnSetDynamicArrPtrPtrRef;
+
+BEGIN NEW(gptr); NEW (gptrarr, 10); NEW(garrproc, 150); NEW(garrptr, 100)
 END M1.

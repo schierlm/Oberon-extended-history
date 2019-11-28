@@ -7,18 +7,18 @@ ORP.Compile ORC.Mod/s Oberon0Tool.Mod/s ~     # partner program ORC and Oberon0 
 ORP.Compile BootLoad.Mod/s ~        # the regular Oberon boot loader
 ORP.Compile BootLoadDisk.Mod/s ~    # a boot loader for booting the target system from the local disk
 ORP.Compile BootLoadLine.Mod/s ~    # a boot loader for booting the target system over the data link
-ORP.Compile Boot.Mod/s ~            # the Oberon boot linker/loader (system building tool)
+ORP.Compile ORL.Mod/s ORX.Mod/s ~   # the Oberon boot linker/loader and boot converter
 
 # ---------------------------------------------------------------------------------------------------------------------
 #  2. Link the modules needed for Oberon system building
 # ---------------------------------------------------------------------------------------------------------------------
-Boot.Link Modules ~       # generate a pre-linked binary file of the "regular" boot file (Modules.bin)
-Boot.Link Oberon0 ~       # generate a pre-linked binary file of the "build-up" boot file (Oberon0.bin)
+ORL.Link Modules ~        # generate a pre-linked binary file of the "regular" boot file (Modules.bin)
+ORL.Link Oberon0 ~        # generate a pre-linked binary file of the "build-up" boot file (Oberon0.bin)
 
 # ---------------------------------------------------------------------------------------------------------------------
 #  3. Update the boot area of the local disk with the "regular" boot file
 # ---------------------------------------------------------------------------------------------------------------------
-Boot.Load Modules.bin ~   # load the "regular" boot file onto the boot area of the local disk
+ORL.Load Modules.bin ~    # load the "regular" boot file onto the boot area of the local disk
 
 # ---------------------------------------------------------------------------------------------------------------------
 #  4. Build Oberon on the target system connected to the host system via a data link (e.g., RS232 line)
@@ -31,7 +31,7 @@ ORC.Send Modules.bin Oberon10.Scn.Fnt System.Tool
       Input.rsc Display.rsc Viewers.rsc
       Fonts.rsc Texts.rsc Oberon.rsc
       MenuViewers.rsc TextFrames.rsc System.rsc
-      BootLoadDisk.rsc Boot.rsc
+      BootLoadDisk.rsc ORL.rsc
       RS232.rsc PCLink0.rsc
       Oberon0.rsc Oberon0Tool.rsc
       Edit.rsc PCLink1.rsc
@@ -46,7 +46,7 @@ ORC.SR 20 Oberon ~                         # alternatively, one can simply load 
 #     (restart the target system over the data link, then execute the following commands on the host system)
 # ---------------------------------------------------------------------------------------------------------------------
 ORP.Compile System1.Mod/s ~                # compile the files needed to include an ENTIRE Oberon system in a boot file
-Boot.Link System1 ~                        # generate a boot file containing the ENTIRE Oberon system (System1.bin)
+ORL.Link System1 ~                         # generate a boot file containing the ENTIRE Oberon system (System1.bin)
 ORC.Load System1.bin ~                     # load the ENTIRE Oberon system over the data link to the target system AND start it
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -54,12 +54,12 @@ ORC.Load System1.bin ~                     # load the ENTIRE Oberon system over 
 #     (restart the target system over the data link, then execute the following commands on the host system)
 # ---------------------------------------------------------------------------------------------------------------------
 ORP.Compile Kernel1.Mod/s System1.Mod/s ~                # compile the files needed to include an ENTIRE Oberon system in a single boot file
-Boot.Link System1 ~                                      # generate a boot file containing the ENTIRE Oberon system (System1.bin)
-Boot.Link Modules ~                                      # (optional) generate a REGULAR boot file (Modules.bin, with Kernel built from Kernel1.Mod)
+ORL.Link System1 ~                                       # generate a boot file containing the ENTIRE Oberon system (System1.bin)
+ORL.Link Modules ~                                       # (optional) generate a REGULAR boot file (Modules.bin, with Kernel built from Kernel1.Mod)
 ORC.Load System1.bin ~                                   # load the ENTIRE Oberon system over the data link to the target system AND start it
 ORC.SR 101 ~                                             # clear the file directory on the target system
 ORC.Send System1.bin Oberon10.Scn.Fnt System.Tool
-      BootLoadDisk.rsc Boot.rsc
+      BootLoadDisk.rsc ORL.rsc
       RS232.rsc PCLink0.rsc
       Oberon0.rsc Oberon0Tool.rsc
       Edit.rsc PCLink1.rsc
@@ -76,8 +76,14 @@ ORC.SR 100 Modules.bin ~        # OR load the REGULAR boot file onto the boot ar
 # Reboot the target system
 ORC.SR 102 BootLoadDisk.rsc ~   # reboot the target system from its local disk (i.e. initiate the "regular" boot process)
 
+# ---------------------------------------------------------------------------------------------------------------------
+#  7. Extract the code section of the boot loader and convert it to a PROM file in hex format
+# ---------------------------------------------------------------------------------------------------------------------
+ORP.Compile BootLoad.Mod/s ~
+ORX.WriteFile BootLoad.rsc BootLoad.mem ~
+
 # -------------------------------------------------------------------------------------------------
-#  7. Other Oberon-0 commands
+#  8. Other Oberon-0 commands
 # -------------------------------------------------------------------------------------------------
 Rebooting
 
@@ -123,7 +129,7 @@ Disk
 
 Memory
 
-  ORC.SR 1 50000 16 ~                 # show memory   adr, n words (in hex) M[a], M[a+4],...,M[a+n*4]
+  ORC.SR 1 50000 16 ~                 # show memory   adr, n words (in hex) M[a], M[a+4], ..., M[a+(n-1)*4]
   ORC.SR 50 50000 3 10 20 30 ~        # write memory  adr, n, list of n values (words)
   ORC.SR 51 50000 32 ~                # clear memory  adr, n (n words))
 

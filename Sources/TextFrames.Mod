@@ -1,4 +1,4 @@
-MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 11.5.19 Experimental Oberon*)
+MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.11.19 Experimental Oberon*)
   IMPORT Input, Display, Viewers, Fonts, Texts, Oberon;
 
   CONST replace* = 0; insert* = 1; delete* = 2; unmark* = 3;  (*message id*)
@@ -32,7 +32,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 11.5.19 Experimental Oberon
       selbeg*, selend*: Location;
       trailer: Line;
       voff: INTEGER;  (*vertical offset relative to baseline*)
-      pool: Line  (*line pool to minimize heap space consumption during continuous scrolling*)
+      pool: Line  (*line pool to minimize consumption of heap space during continuous line scrolling*)
     END;
 
     UpdateMsg* = RECORD (Viewers.FrameMsg)
@@ -74,11 +74,9 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 11.5.19 Experimental Oberon
 
   PROCEDURE LastLine (F: Frame; L: Line);  (*move all lines after L to line pool*)
     VAR l: Line;
-  BEGIN (*L in closed F.trailer ring*)
-    IF L.next # F.trailer THEN l := L;
-      WHILE l.next # F.trailer DO l := l.next END;
-      l.next := F.pool; F.pool := L.next; L.next := F.trailer
-    END
+  BEGIN (*L in closed F.trailer ring*) l := L;
+    WHILE l.next # F.trailer DO l := l.next END;
+    IF l # L THEN l.next := F.pool; F.pool := L.next; L.next := F.trailer END
   END LastLine;
 
   (*------------------display support------------------------*)

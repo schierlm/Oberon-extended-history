@@ -31,6 +31,7 @@ touch ob2.dsk
 
 # start the "target" system over the serial link (connected to the host system)
  ./risc --serial-in pipe2 --serial-out pipe1 ob2.dsk --boot-from-serial &
+sleep 3
 
 # start the "host" system from a local disk
  ./risc --serial-in pipe1 --serial-out pipe2 ob1.dsk &

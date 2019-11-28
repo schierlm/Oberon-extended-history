@@ -30,12 +30,12 @@ Tools.Recall  Tools.Clear
 
 ORP.Compile ORS.Mod/s ORB.Mod/s ~         Edit.Open Build.Tool ~
 ORP.Compile ORG.Mod/s ORP.Mod/s ~
-ORP.Compile Boot.Mod/s ORTool.Mod/s ~
-System.Free ORTool Boot ORP ORG ORB ORS ~
+ORP.Compile ORL.Mod/s ORX.Mod/s ORTool.Mod/s ~
+System.Free ORTool ORP ORG ORB ORS ORL ORX ~
 
 ORP.Compile Kernel.Mod/s FileDir.Mod/s Files.Mod/s Modules.Mod/s ~
-Boot.Link Modules ~            # generate a regular boot file
-Boot.Load Modules.bin ~     # load the boot file onto the boot area
+ORL.Link Modules ~            # generate a regular boot file
+ORL.Load Modules.bin ~     # load the boot file onto the boot area
 
 ORP.Compile Input.Mod/s Display.Mod/s Viewers.Mod/s ~
 ORP.Compile Fonts.Mod/s Texts.Mod/s ~

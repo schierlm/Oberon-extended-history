@@ -1,10 +1,10 @@
-MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 1.8.19*)
+MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 1.11.19*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules, RS232, PCLink0;
   CONST swi = -60; (*switches*)
     stat = -52; (*RS-232*)
     REQ = 20H; REC = 21H; SND = 22H; ACK = 10H;
     screenbase = 0E7F00H; screensize = 1024 * 768 DIV 8; (*1024 x 768 pixel monocolor display*)
-    maxCode = 8000;
+    noerr = 0; hasimp = 1; badfile = 2; nospace = 3; maxCode = 8000;
 
   VAR pat: ARRAY 32 OF CHAR;
 
@@ -13,7 +13,7 @@ MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 1.8.1
   BEGIN RS232.RecInt(n); RS232.SendStr("Mirror "); RS232.SendInt(n)
   END Mirror;
 
-  PROCEDURE Inspect; (*a, n - show (in hex) M[a], M[a+4], ..., M[a+n*4]*)
+  PROCEDURE Inspect; (*a, n - show (in hex) M[a], M[a+4], ..., M[a+(n-1)*4]*)
     VAR m, n, adr, data: INTEGER;
   BEGIN RS232.RecInt(adr); RS232.RecInt(n); RS232.SendStr("Inspect");
     adr := adr DIV 20H * 20H;
@@ -250,57 +250,55 @@ MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 1.8.1
     Kernel.PutSector(FileDir.DirRootAdr, a)
   END ClearDirectory;
 
-  PROCEDURE ReadCode(VAR R: Files.Rider; VAR code: ARRAY OF LONGINT; VAR size, start, nofimps, res: INTEGER);
-    VAR n, data: INTEGER; ch: CHAR; b: BYTE;               (*size in words, start in bytes*)
+  PROCEDURE ExtractCode(F: Files.File; VAR code: ARRAY OF LONGINT; VAR codelen, entry, res: INTEGER);
+    VAR n, data, nofimps: INTEGER; ch: CHAR; b: BYTE;      (*codelen in words, entry in bytes*)
+      R: Files.Rider;
       name: ARRAY 32 OF CHAR;
-  BEGIN Files.ReadString(R, name); Files.ReadInt(R, data); (*key*)
+  BEGIN Files.Set(R, F, 0); Files.ReadString(R, name); Files.ReadInt(R, data); (*key*)
     Files.ReadByte(R, b); (*version*) Files.ReadInt(R, data); (*size*)
     Files.ReadString(R, name); (*imports*) nofimps := 0;
     WHILE name[0] # 0X DO INC(nofimps); Files.ReadInt(R, data); (*key*) Files.ReadString(R, name) END ;
-    Files.ReadInt(R, n); (*variable space*)
-    Files.ReadInt(R, n);
-    WHILE n > 0 DO Files.Read(R, ch); DEC(n) END ; (*strings*)
-    Files.ReadInt(R, n);
-    WHILE n > 0 DO Files.ReadInt(R, data); DEC(n, 4) END ; (*type descriptors*)
-    Files.ReadInt(R, size);
-    IF size > LEN(code) THEN (*program too long*) res := 2
-    ELSE n := 0;
-      WHILE n < size DO Files.ReadInt(R, data); code[n] := data; INC(n) END ; (*code*)
-      Files.ReadString(R, name);
-      WHILE name[0] # 0X DO Files.ReadInt(R, data); Files.ReadString(R, name) END ; (*commands*)
-      Files.ReadInt(R, n);
-      WHILE n > 0 DO Files.ReadInt(R, data); DEC(n) END ; (*entries*)
-      Files.ReadInt(R, data);
-      WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*pointer references*)
-      Files.ReadInt(R, data);
-      WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*procedure variable references*)
-      Files.ReadInt(R, data); (*fixorgP*) Files.ReadInt(R, data); (*fixorgD*)
-      Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, data); (*fixorgM*)
-      Files.ReadInt(R, start); (*entry*)
-      Files.Read(R, ch);
-      IF ch # "O" THEN (*corrupted file*) res := 1 ELSE res := 0 END
+    IF nofimps = 0 THEN
+      Files.ReadInt(R, n); (*variable space*)
+      Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n); (*strings*)
+      Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n*4); (*type descriptors*)
+      Files.ReadInt(R, codelen);
+      IF codelen > LEN(code) THEN res := nospace
+      ELSE n := 0;
+        WHILE n < codelen DO Files.ReadInt(R, data); code[n] := data; INC(n) END ; (*code*)
+        Files.ReadString(R, name);
+        WHILE name[0] # 0X DO Files.ReadInt(R, data); Files.ReadString(R, name) END ; (*commands*)
+        Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n*4); (*entries*)
+        Files.ReadInt(R, data);
+        WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*pointer references*)
+        Files.ReadInt(R, data);
+        WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*procedure variable references*)
+        Files.ReadInt(R, data); (*fixorgP*) Files.ReadInt(R, data); (*fixorgD*)
+        Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, data); (*fixorgM*)
+        Files.ReadInt(R, entry);
+        Files.Read(R, ch);
+        IF ch # "O" THEN res := badfile ELSE res := noerr END
+      END
+    ELSE res := hasimp
     END
-  END ReadCode;
+  END ExtractCode;
 
   PROCEDURE Execute; (*filename - execute standalone program  M.rsc*)
     VAR code: ARRAY maxCode OF LONGINT;
-      size, start, nofimps, res: INTEGER;
+      codelen, entry, res: INTEGER;
       name: ARRAY 32 OF CHAR;
       body: Modules.Command;
-      F: Files.File; R: Files.Rider;
+      F: Files.File;
   BEGIN RS232.RecStr(name); RS232.SendStr("Execute "); RS232.SendStr(name);
     F := Files.Old(name);
-    IF F # NIL THEN Files.Set(R, F, 0);
-      ReadCode(R, code, size, start, nofimps, res);
-      IF res = 0 THEN
-        IF nofimps = 0 THEN RS232.SendStr(" done");
-          body := SYSTEM.VAL(Modules.Command, SYSTEM.ADR(code) + start); body
-        ELSE RS232.SendStr(" imports not allowed")
-        END
-      ELSIF res = 1 THEN RS232.SendStr(" input file format error")
-      ELSIF res = 2 THEN RS232.SendStr(" program too long")
+    IF F # NIL THEN ExtractCode(F, code, codelen, entry, res);
+      IF res = noerr THEN RS232.SendStr(" done");
+        body := SYSTEM.VAL(Modules.Command, SYSTEM.ADR(code) + entry); body
+      ELSIF res = hasimp THEN RS232.SendStr(" imports not allowed")
+      ELSIF res = badfile THEN RS232.SendStr(" input file format error")
+      ELSIF res = nospace THEN RS232.SendStr(" program too long")
       END
-    ELSE RS232.SendStr(" program not found")
+    ELSE RS232.SendStr(" failed")
     END
   END Execute;
 

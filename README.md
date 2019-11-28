@@ -1,21 +1,24 @@
-# The Experimental Oberon Operating System
-Experimental Oberon is a revision of the FPGA Oberon system and its compiler (www.projectoberon.com), featuring
+# The Experimental Oberon operating system and the Revised Oberon-2 programming language
+Experimental Oberon is a revision of the FPGA Oberon 2013 operating system and its compiler (www.projectoberon.com).
 
-* Smooth line scrolling with variable line spaces
-* Multiple logical displays
+Current features
+
+* Revised Oberon-2 programming language, implementing a strict superset of Revised Oberon (Oberon-07)
 * Safe module unloading
 * System building and maintenance tools
-* Revised Oberon-2 programming language, implementing a strict superset of Revised Oberon (Oberon-07)
+* Smooth line scrolling with variable line spaces
+* Multiple logical displays
+* Improved decoder tools
+* Import any number of modules
 
-Planned
+Planned features
 
 * Unicode characters and fonts
 * Larger maximum file sizes
 * Multiple file system partitions
 * Plug & Play Oberon images (automatically loaded onto dynamically created partitions)
-* A variant of the Oberon-2 compiler that accepts programs written in Original Oberon-2 (as defined in 1991/1993)
 
-**REVISION:** 1.8.2019
+**REVISION:** 1.11.2019
 
 **DOCUMENTATION**
 
@@ -26,6 +29,7 @@ Planned
 | System building tools  | [**The-Oberon-system-building-tools.pdf**](Documentation/The-Oberon-system-building-tools.pdf)  |
 | Safe module unloading  | [**Safe-module-unloading-in-Oberon.pdf**](Documentation/Safe-module-unloading-in-Oberon.pdf) |
 | Symbol files  | [**Streamlining-symbol-files-in-FPGA-Oberon.pdf**](Documentation/Streamlining-symbol-files-in-FPGA-Oberon.pdf)  |
+| Importing modules  | [**Allow-importing-any-number-of-modules.md**](Documentation/Allow-importing-any-number-of-modules.md)  |
 
 **EMULATORS**
 
@@ -44,7 +48,7 @@ Planned
 
 ------------------------------------------------------
 
-# Instructions for converting an existing FPGA Oberon system to Experimental Oberon
+# Instructions for converting an existing FPGA Oberon 2013 system to Experimental Oberon
 
 **PREREQUISITES**: A current version of the FPGA Oberon 2013 system (see http://www.projectoberon.com).
 
@@ -52,7 +56,7 @@ Planned
 
 ------------------------------------------------------
 
-**STEP 1**: Build a slightly modified FPGA Oberon compiler on your FPGA Oberon system
+**STEP 1**: Build a slightly modified FPGA Oberon compiler on your FPGA Oberon 2013 system
 
 Edit the file *ORG.Mod* on your Original system and set the following constants to the indicated new values:
 
@@ -69,7 +73,7 @@ This step is (unfortunately) necessary since the original Oberon-07 compiler has
 
 ------------------------------------------------------
 
-**STEP 2**: Download and import the Experimental Oberon files to your FPGA Oberon system
+**STEP 2**: Download and import the Experimental Oberon files to your FPGA Oberon 2013 system
 
 Download all files from the [**Sources**](Sources/) directory of this repository. Convert the *source* files to Oberon format (Oberon uses CR as line endings) using the command [**dos2oberon**](dos2oberon), also available in this repository (example shown for Linux or MacOS):
 
@@ -80,7 +84,7 @@ Import the files to your Oberon system. If you use an emulator, click on the *PC
      cd oberon-risc-emu
      for x in *.Mod *.Tool *.Scn.Fnt ; do ./pcreceive.sh $x ; sleep 0.5 ; done
 
-Open the Experimental Oberon version of the [**System.Tool**](Sources/System.Tool) viewer in the system track of your FPGA Oberon system, so that you can directly activate the compilations needed to build Experimental Oberon:
+Open the Experimental Oberon version of the [**System.Tool**](Sources/System.Tool) viewer in the system track of your FPGA Oberon 2013 system, so that you can directly activate the compilations needed to build Experimental Oberon:
 
      System.Open System.Tool
 
@@ -92,20 +96,20 @@ If you just follow the compilation sequence shown in *System.Tool*, you should b
 
      ORP.Compile ORS.Mod/s ORB.Mod/s ~
      ORP.Compile ORG.Mod/s ORP.Mod/s ~
-     ORP.Compile Boot.Mod/s ~
-     System.Free ORP ORG ORB ORS Boot ~
+     ORP.Compile ORL.Mod/s ORX.Mod/s ORTool.Mod/s ~
+     System.Free ORTool ORP ORG ORB ORS ORL ORX ~
 
 ------------------------------------------------------
 
-**STEP 4:** Use the cross-development toolchain on your FPGA Oberon system to build Experimental Oberon
+**STEP 4:** Use the cross-development toolchain on your FPGA Oberon 2013 system to build Experimental Oberon
 
 Compile the *inner core* of Experimental Oberon and load it onto the boot area of the local disk:
 
      ORP.Compile Kernel.Mod/s FileDir.Mod/s Files.Mod/s Modules.Mod/s ~    # modules for the "regular" boot file for Experimental Oberon
-     Boot.Link Modules ~                                                   # generate a pre-linked binary file of the "regular" boot file (Modules.bin)
-     Boot.Load Modules.bin ~                                               # load the "regular" boot file onto the boot area of the local disk
+     ORL.Link Modules ~                                                    # generate a pre-linked binary file of the "regular" boot file (Modules.bin)
+     ORL.Load Modules.bin ~                                                # load the "regular" boot file onto the boot area of the local disk
 
-This step is possible, because module *Boot* is written such that it can be executed on both the FPGA Oberon 2013 and the Experimental Oberon system. It produces output using the Experimental Oberon module and object file format.
+This step is possible, because module *ORL* is written such that it can be executed on both the FPGA Oberon 2013 and the Experimental Oberon system. It produces output using the Experimental Oberon module and object file format.
 
 Compile the remaining modules of Experimental Oberon:
 
@@ -116,9 +120,11 @@ Compile the remaining modules of Experimental Oberon:
 
 Re-compile the Oberon compiler itself before (!) restarting the system:
 
-    ORP.Compile ORS.Mod/s ORB.Mod/s ORG.Mod/s ORP.Mod/s ORTool.Mod/s Boot.Mod/s ~
+     ORP.Compile ORS.Mod/s ORB.Mod/s ~
+     ORP.Compile ORG.Mod/s ORP.Mod/s ~
+     ORP.Compile ORL.Mod/s ORX.Mod/s ORTool.Mod/s ~
 
-The last step is necessary because Experimental Oberon uses a different Oberon object file format (the currently loaded Experimental Oberon compiler runs under FPGA Oberon, but wouldn't be able to execute under Experimental Oberon).
+The last step is necessary because Experimental Oberon uses a different Oberon object file format (the currently loaded Experimental Oberon compiler runs under FPGA Oberon 2013, but wouldn't be able to run under Experimental Oberon).
 
 ------------------------------------------------------
 

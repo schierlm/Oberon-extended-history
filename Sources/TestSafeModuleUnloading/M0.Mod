@@ -1,4 +1,4 @@
-MODULE M0;
+MODULE M0; (*AP 1.10.19 Experimental Oberon*)
   TYPE Proc* = PROCEDURE;
 
     Ptr* = POINTER TO Rec;
@@ -13,8 +13,12 @@ MODULE M0;
     ArrProc* = ARRAY OF Proc;
     PtrArrProc* = POINTER TO ArrProc;
 
+    ArrPtr* = ARRAY OF Ptr;
+    PtrArrPtr* = POINTER TO ArrPtr;
+
   VAR root: Ptr;
     rootarr: PtrArr;
+    rootarrptr: PtrArrPtr;
     rootarrproc: PtrArrProc;
 
   PROCEDURE InsertPtr*(p: Ptr); BEGIN p.next := root; root := p END InsertPtr;
@@ -23,9 +27,10 @@ MODULE M0;
 
   PROCEDURE InitPtr*; BEGIN root := NIL END InitPtr;
   PROCEDURE InitArr*; BEGIN rootarr := NIL END InitArr;
+  PROCEDURE InitArrPtr*; BEGIN rootarrptr := NIL END InitArrPtr;
   PROCEDURE InitArrProc*; BEGIN rootarrproc := NIL END InitArrProc;
 
   PROCEDURE Init*; BEGIN END Init;
 
-BEGIN InitPtr; InitArr; InitArrProc
+BEGIN InitPtr; InitArr; InitArrPtr; InitArrProc
 END M0.

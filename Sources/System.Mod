@@ -1,14 +1,14 @@
-MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 1.9.19 Experimental Oberon*)
+MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 1.11.19 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules,
     Input, Viewers, Fonts, Texts, Oberon, MenuViewers, TextFrames;
 
-  CONST
+  CONST noerr = 0; hasimp = 1; badfile = 2; nospace = 3; maxCode = 8000; maxBin = 16000; MT = 12;
     StandardMenu = "System.Close System.Copy System.Grow Edit.Search Edit.Store | System.Expand System.Spread System.Clone";
     LogMenu = "Edit.Locate Edit.Search System.Copy System.Grow System.Clear | System.Expand System.Spread System.Clone";
 
   TYPE Handler = PROCEDURE(name: ARRAY OF CHAR);
 
-  VAR W: Texts.Writer; M: Modules.Module;
+  VAR W: Texts.Writer; M: Modules.Module; ref: INTEGER;
     pat: ARRAY 32 OF CHAR;
 
   PROCEDURE GetArg(VAR S: Texts.Scanner);
@@ -88,7 +88,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 1.9.19 Experimenta
     VAR logV, toolV, menu, main: Viewers.Frame; X, Y: INTEGER;
   BEGIN
     IF Viewers.CurDisplay # NIL THEN
-      Texts.WriteString(W, "Experimental Oberon  AP 1.9.19 / Display ");
+      Texts.WriteString(W, "Experimental Oberon  AP 1.11.19 / Display ");
       Texts.WriteInt(W, Viewers.CurDisplay.id, 3); Texts.Write(W, " ");
       Texts.WriteString(W, Viewers.CurDisplay.name); EndLine;
       Oberon.AllocateSystemViewer(0, X, Y);
@@ -165,7 +165,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 1.9.19 Experimenta
   PROCEDURE SetDisplayName*;  (*display id and name are provided as parameters*)
     VAR D: Viewers.Display; S: Texts.Scanner;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
-    IF S.class = Texts.Int THEN  Texts.Scan(S);
+    IF S.class = Texts.Int THEN Texts.Scan(S);
       IF S.class = Texts.Name THEN D := Viewers.GetDisplay(S.i);
         IF D = NIL THEN Texts.WriteString(W, " no such display ")
         ELSE D.name := S.s; Texts.WriteString(W, " display "); Texts.WriteInt(W, D.id, 3);
@@ -362,14 +362,20 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 1.9.19 Experimenta
   PROCEDURE WriteRef(src, dst: LONGINT; s: ARRAY OF CHAR; VAR continue: BOOLEAN): INTEGER;  (*handler*)
     VAR mod: Modules.Module; i: INTEGER;
   BEGIN i := 0;
-    IF dst # 0 THEN mod := Modules.root;
+    IF (dst > 0) & (dst < Modules.AllocPtr) (*don't check references to the heap*) THEN mod := Modules.root;
       WHILE (mod # NIL) & ~((mod.name[0] # 0X) & mod.selected & (mod.data <= dst) & (dst < mod.imp)) DO mod := mod.next END ;
-      IF mod # NIL THEN (*reference exists*) i := 1;
+      IF mod # NIL THEN i := 1;
         IF (M # mod) OR (pat # s) THEN M := mod; pat := s;
-          IF dst < mod.code THEN Texts.WriteString(W, "  types of ") ELSE Texts.WriteString(W, "  procedures of ") END ;
-          Texts.WriteString(W, mod.name); Texts.WriteString(W, " in use in ");
-          IF src < Modules.AllocPtr THEN Texts.WriteString(W, "global procedures variables of ")
-          ELSE Texts.WriteString(W, "dynamic objects reachable by ")
+          IF ref = Modules.dyntypes THEN Texts.WriteString(W, "  types of "); Texts.WriteString(W, mod.name);
+            Texts.WriteString(W, " in use in dynamic objects reachable by ")
+          ELSIF ref = Modules.dynptrs THEN Texts.WriteString(W, "  static module data of "); Texts.WriteString(W, mod.name);
+            Texts.WriteString(W, " referenced by pointer variables in dynamic objects reachable by ")
+          ELSIF ref = Modules.dynpvrs THEN Texts.WriteString(W, "  procedures of "); Texts.WriteString(W, mod.name);
+            Texts.WriteString(W, " in use in dynamic objects reachable by ")
+          ELSIF ref = Modules.statptrs THEN Texts.WriteString(W, "  static module data of "); Texts.WriteString(W, mod.name);
+            Texts.WriteString(W, " referenced by global pointer variables of ")
+          ELSIF ref = Modules.statpvrs THEN Texts.WriteString(W, "  procedures of "); Texts.WriteString(W, mod.name);
+            Texts.WriteString(W, " in use in global procedure variables of ")
           END ;
           Texts.WriteString(W, s); Texts.WriteLn(W)
         END
@@ -379,14 +385,19 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 1.9.19 Experimenta
   END WriteRef;
 
   PROCEDURE WriteRefs;  (*write references from each unselected module to any of the selected modules*)
-    VAR res: INTEGER;
+    VAR resTyp, resPtr, resPvr: INTEGER;
   BEGIN Oberon.SetPar(NIL, NIL, 0);  (*exclude viewers that are reachable only via Oberon.Par.vwr*)
-    M := NIL; Modules.FindDynamicRefs(WriteRef, WriteRef, res, res, FALSE);  (*dynamic type and procedure variable refs*)
-    M := NIL; Modules.FindStaticRefs(WriteRef, res); Texts.Append(Oberon.Log, W.buf)  (*static procedure variable refs*)
+    M := NIL; ref := Modules.dyntypes; Modules.FindDynamicRefs(WriteRef, NIL, NIL, resTyp, resPtr, resPvr, FALSE);
+    M := NIL; ref := Modules.dynptrs; Modules.FindDynamicRefs(NIL, WriteRef, NIL, resTyp, resPtr, resPvr, FALSE);
+    M := NIL; ref := Modules.dynpvrs; Modules.FindDynamicRefs(NIL, NIL, WriteRef, resTyp, resPtr, resPvr, FALSE);
+    M := NIL; ref := Modules.statptrs; Modules.FindStaticRefs(WriteRef, NIL, resPtr, resPvr);
+    M := NIL; ref := Modules.statpvrs; Modules.FindStaticRefs(NIL, WriteRef, resPtr, resPvr);
+    Texts.Append(Oberon.Log, W.buf)
   END WriteRefs;
 
   PROCEDURE ShowRef(name: ARRAY OF CHAR);  (*handler*)
-  BEGIN IF Modules.NofSelected > 0 THEN WriteRefs; Modules.Deselect END
+  BEGIN
+    IF Modules.NofSelected > 0 THEN WriteRefs; Modules.Deselect END
   END ShowRef;
 
   PROCEDURE ShowRefs*;  (*show references from all modules to any of the specified modules individually*)
@@ -661,61 +672,56 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 1.9.19 Experimenta
 
   (* ------------- Toolbox for standalone and prelinked programs ---------------*)
 
-  PROCEDURE ReadCode(VAR R: Files.Rider; VAR code: ARRAY OF LONGINT; VAR size, start, nofimps, res: INTEGER);
-    VAR n, data: INTEGER; ch: CHAR; b: BYTE;               (*size in words, start in bytes*)
+  PROCEDURE ExtractCode(F: Files.File; VAR code: ARRAY OF LONGINT; VAR codelen, entry, res: INTEGER);
+    VAR n, data, nofimps: INTEGER; ch: CHAR; b: BYTE;      (*codelen in words, entry in bytes*)
+      R: Files.Rider;
       name: ARRAY 32 OF CHAR;
-  BEGIN Files.ReadString(R, name); Files.ReadInt(R, data); (*key*)
+  BEGIN Files.Set(R, F, 0); Files.ReadString(R, name); Files.ReadInt(R, data); (*key*)
     Files.ReadByte(R, b); (*version*) Files.ReadInt(R, data); (*size*)
     Files.ReadString(R, name); (*imports*) nofimps := 0;
     WHILE name[0] # 0X DO INC(nofimps); Files.ReadInt(R, data); (*key*) Files.ReadString(R, name) END ;
-    Files.ReadInt(R, n); (*variable space*)
-    Files.ReadInt(R, n);
-    WHILE n > 0 DO Files.Read(R, ch); DEC(n) END ; (*strings*)
-    Files.ReadInt(R, n);
-    WHILE n > 0 DO Files.ReadInt(R, data); DEC(n, 4) END ; (*type descriptors*)
-    Files.ReadInt(R, size);
-    IF size > LEN(code) THEN (*program too long*) res := 2
-    ELSE n := 0;
-      WHILE n < size DO Files.ReadInt(R, data); code[n] := data; INC(n) END ; (*code*)
-      Files.ReadString(R, name);
-      WHILE name[0] # 0X DO Files.ReadInt(R, data); Files.ReadString(R, name) END ; (*commands*)
-      Files.ReadInt(R, n);
-      WHILE n > 0 DO Files.ReadInt(R, data); DEC(n) END ; (*entries*)
-      Files.ReadInt(R, data);
-      WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*pointer references*)
-      Files.ReadInt(R, data);
-      WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*procedure variable references*)
-      Files.ReadInt(R, data); (*fixorgP*) Files.ReadInt(R, data); (*fixorgD*)
-      Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, data); (*fixorgM*)
-      Files.ReadInt(R, start); (*entry*)
-      Files.Read(R, ch);
-      IF ch # "O" THEN (*corrupted file*) res := 1 ELSE res := 0 END
+    IF nofimps = 0 THEN
+      Files.ReadInt(R, n); (*variable space*)
+      Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n); (*strings*)
+      Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n*4); (*type descriptors*)
+      Files.ReadInt(R, codelen);
+      IF codelen > LEN(code) THEN res := nospace
+      ELSE n := 0;
+        WHILE n < codelen DO Files.ReadInt(R, data); code[n] := data; INC(n) END ; (*code*)
+        Files.ReadString(R, name);
+        WHILE name[0] # 0X DO Files.ReadInt(R, data); Files.ReadString(R, name) END ; (*commands*)
+        Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n*4); (*entries*)
+        Files.ReadInt(R, data);
+        WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*pointer references*)
+        Files.ReadInt(R, data);
+        WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*procedure variable references*)
+        Files.ReadInt(R, data); (*fixorgP*) Files.ReadInt(R, data); (*fixorgD*)
+        Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, data); (*fixorgM*)
+        Files.ReadInt(R, entry);
+        Files.Read(R, ch);
+        IF ch # "O" THEN res := badfile ELSE res := noerr END
+      END
+    ELSE res := hasimp
     END
-  END ReadCode;
+  END ExtractCode;
 
   PROCEDURE RunRsc*;  (*extract, load and execute code section of standalone program  M.rsc*)
-    CONST maxCode = 8000;
     VAR code: ARRAY maxCode OF LONGINT;
-      size, start, nofimps, res: INTEGER;
-      F: Files.File; R: Files.Rider;
-      S: Texts.Scanner;
+      codelen, entry, res: INTEGER;
       body: Modules.Command;
+      F: Files.File;
+      S: Texts.Scanner;
   BEGIN GetArg(S);
     Texts.WriteString(W, "System.RunRsc ");
     IF S.class = Texts.Name THEN (*name of object file*)
       Texts.WriteString(W, S.s); Texts.Append(Oberon.Log, W.buf);
       F := Files.Old(S.s);
-      IF F # NIL THEN Files.Set(R, F, 0);
-        ReadCode(R, code, size, start, nofimps, res);
-        IF res = 0 THEN
-          IF nofimps = 0 THEN
-            Texts.WriteInt(W, size*4, 6); Texts.WriteInt(W, start, 6); (*bytes*)
-            body := SYSTEM.VAL(Modules.Command, SYSTEM.ADR(code) + start);
-            body (*call module initialization body*)
-          ELSE Texts.WriteString(W, "  imports not allowed")
-          END
-        ELSIF res = 1 THEN Texts.WriteString(W, "  input file format error")
-        ELSIF res = 2 THEN Texts.WriteString(W, "  program too long")
+      IF F # NIL THEN ExtractCode(F, code, codelen, entry, res);
+        IF res = noerr THEN Texts.WriteString(W, " done");
+          body := SYSTEM.VAL(Modules.Command, SYSTEM.ADR(code) + entry); body
+        ELSIF res = hasimp THEN Texts.WriteString(W, " imports not allowed")
+        ELSIF res = badfile THEN Texts.WriteString(W, " input file format error")
+        ELSIF res = nospace THEN Texts.WriteString(W, " program too long")
         END
       ELSE Texts.WriteString(W, " failed")
       END ;
@@ -730,13 +736,12 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 1.9.19 Experimenta
   END Trap1;
 
   PROCEDURE RunBin*;  (*load and execute pre-linked binary  M.bin*)
-    CONST maxBin = 16000; MT = 12;
     VAR bin: ARRAY maxBin OF INTEGER;
       MTOrg, Start, i, x: INTEGER;
       M, p: Modules.Module;
+      body: Modules.Command;
       F: Files.File; R: Files.Rider;
       S: Texts.Scanner;
-      body: Modules.Command;
   BEGIN GetArg(S);
     Texts.WriteString(W, "System.RunBin ");
     IF S.class = Texts.Name THEN (*name of binary file*)

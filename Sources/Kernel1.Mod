@@ -1,4 +1,4 @@
-MODULE Kernel; (*module Kernel for a boot file containing the entire Oberon system / AP 1.8.19 Experimental Oberon*)
+MODULE Kernel;  (*module Kernel for a boot file containing the entire Oberon system / AP 1.11.19 Experimental Oberon*)
   IMPORT SYSTEM;
   CONST SectorLength* = 1024;
     timer = -64; spiData = -48; spiCtrl = -44;
@@ -120,7 +120,7 @@ MODULE Kernel; (*module Kernel for a boot file containing the entire Oberon syst
               IF offset >= len*4 THEN offset := -1 END
             END ;
             SYSTEM.PUT(p+12, offset)
-          ELSE (*blktyp = 3, array of procedure or array of basic type*)
+          ELSE (*array of basic type (blktyp = tag = 3) or array of procedure (blktyp = 3, tag = 7)*)
             offset := -1; SYSTEM.PUT(p+12, -1); SYSTEM.PUT(p-4, p+12) (*offadr*)
           END ;
           IF offset # -1 THEN (*down*)
@@ -171,9 +171,9 @@ MODULE Kernel; (*module Kernel for a boot file containing the entire Oberon syst
 
 (* ---------- Generic heap scan ----------*)
 
-  PROCEDURE Scan*(type, proc: Handler; s: ARRAY OF CHAR; VAR resType, resProc: INTEGER);
+  PROCEDURE Scan*(typ, ptr, pvr: Handler; s: ARRAY OF CHAR; VAR resTyp, resPtr, resPvr: INTEGER);
     VAR offadr, offset, p, r, mark, tag, size, pos, len, elemsize, blktyp: LONGINT; continue: BOOLEAN;
-  BEGIN p := heapOrg; resType := 0; resProc := 0; continue := (type # NIL) OR (proc # NIL);
+  BEGIN p := heapOrg; resTyp := 0; resPtr := 0; resPvr := 0; continue := (typ # NIL) OR (ptr # NIL) OR (pvr # NIL);
     REPEAT SYSTEM.GET(p+4, mark);
       IF mark < 0 THEN (*free*) SYSTEM.GET(p, size)
       ELSE (*allocated*) SYSTEM.GET(p, tag); blktyp := tag MOD 4;
@@ -181,32 +181,50 @@ MODULE Kernel; (*module Kernel for a boot file containing the entire Oberon syst
         IF mark > 0 THEN (*marked*) SYSTEM.PUT(p+4, 0);
           IF continue THEN
             IF blktyp = 0 THEN (*record*)
-              IF type # NIL THEN INC(resType, type(p, tag, s, continue)) END ;
-              IF continue & (proc # NIL) THEN offadr := tag + 16; SYSTEM.GET(offadr, offset);
-                WHILE offset # -1 DO (*skip pointers*) INC(offadr, 4); SYSTEM.GET(offadr, offset) END ;
-                INC(offadr, 4); SYSTEM.GET(offadr, offset);
-                WHILE continue & (offset # -1) DO (*procedures*) SYSTEM.GET(p+8+offset, r);
-                  INC(resProc, proc(p+8+offset, r, s, continue));
+              IF typ # NIL THEN INC(resTyp, typ(p, tag, s, continue)) END ;
+              IF continue & ((ptr # NIL) OR (pvr # NIL)) THEN offadr := tag + 16; SYSTEM.GET(offadr, offset);
+                WHILE continue & (offset # -1) DO (*pointers*)
+                  IF ptr # NIL THEN SYSTEM.GET(p+8+offset, r); INC(resPtr, ptr(p+8+offset, r, s, continue)) END ;
                   INC(offadr, 4); SYSTEM.GET(offadr, offset)
+                END ;
+                IF continue & (pvr # NIL) THEN INC(offadr, 4); SYSTEM.GET(offadr, offset);
+                  WHILE continue & (offset # -1) DO (*procedures*) SYSTEM.GET(p+8+offset, r);
+                    INC(resPvr, pvr(p+8+offset, r, s, continue));
+                    INC(offadr, 4); SYSTEM.GET(offadr, offset)
+                  END
                 END
               END
             ELSIF blktyp = 1 THEN (*array of record*)
-              IF type # NIL THEN INC(resType, type(p, tag-1, s, continue)) END ;
-              IF continue & (proc # NIL) THEN offadr := tag + 15; SYSTEM.GET(offadr, offset);
-                WHILE offset # -1 DO (*skip pointers*) INC(offadr, 4); SYSTEM.GET(offadr, offset) END ;
-                INC(offadr, 4); SYSTEM.GET(offadr, offset);
+              IF typ # NIL THEN INC(resTyp, typ(p, tag-1, s, continue)) END ;
+              IF continue & ((ptr # NIL) OR (pvr # NIL)) THEN offadr := tag + 15; SYSTEM.GET(offadr, offset);
                 SYSTEM.GET(p+8, len); SYSTEM.GET(p+12, elemsize); len := p + 24 + len*elemsize;
-                WHILE continue & (offset # -1) DO (*procedures*) pos := p + 24;
-                  WHILE continue & (pos < len) DO SYSTEM.GET(pos+offset, r);
-                    INC(resProc, proc(pos+offset, r, s, continue)); INC(pos, elemsize)
+                WHILE continue & (offset # -1) DO (*pointers*)
+                  IF ptr # NIL THEN pos := p + 24;
+                    WHILE continue & (pos < len) DO SYSTEM.GET(pos+offset, r);
+                      INC(resPtr, ptr(pos+offset, r, s, continue)); INC(pos, elemsize)
+                    END
                   END ;
                   INC(offadr, 4); SYSTEM.GET(offadr, offset)
+                END ;
+                IF continue & (pvr # NIL) THEN INC(offadr, 4); SYSTEM.GET(offadr, offset);
+                  WHILE continue & (offset # -1) DO (*procedures*) pos := p + 24;
+                    WHILE continue & (pos < len) DO SYSTEM.GET(pos+offset, r);
+                      INC(resPvr, pvr(pos+offset, r, s, continue)); INC(pos, elemsize)
+                    END ;
+                    INC(offadr, 4); SYSTEM.GET(offadr, offset)
+                  END
                 END
               END
-            ELSIF (tag = 7) & (proc # NIL) THEN (*array of procedure*)
+            ELSIF blktyp = 2 THEN (*array of pointer*)
+              IF ptr # NIL THEN SYSTEM.GET(p+8, len); pos := p + 24; len := pos + len*4;
+                WHILE continue & (pos < len) DO SYSTEM.GET(pos, r);
+                  INC(resPtr, ptr(pos, r, s, continue)); INC(pos, 4)
+                END
+              END
+            ELSIF (tag = 7) & (pvr # NIL) THEN (*array of procedure*)
               SYSTEM.GET(p+8, len); pos := p + 24; len := pos + len*4;
               WHILE continue & (pos < len) DO SYSTEM.GET(pos, r);
-                INC(resProc, proc(pos, r, s, continue)); INC(pos, 4)
+                INC(resPvr, pvr(pos, r, s, continue)); INC(pos, 4)
               END
             END
           END

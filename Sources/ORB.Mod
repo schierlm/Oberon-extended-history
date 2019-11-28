@@ -1,4 +1,4 @@
-MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.7.19 Experimental Oberon*)
+MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.10.19 Experimental Oberon*)
   IMPORT Files, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
@@ -193,7 +193,8 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.7.19 Experimental 
     IF obj = NIL THEN  (*insert new module*)
       NEW(mod); mod.class := Mod; mod.rdo := FALSE;
       mod.name := name; mod.orgname := orgname; mod.val := key;
-      mod.lev := nofmod; INC(nofmod); mod.type := noType; mod.dsc := NIL; mod.next := NIL;
+      IF nofmod < 64 THEN mod.lev := nofmod; INC(nofmod) ELSE ORS.Mark("too many imports") END ;
+      mod.type := noType; mod.dsc := NIL; mod.next := NIL;
       obj1.next := mod; obj := mod
     ELSE (*module already present*)
       IF non THEN ORS.Mark("invalid import order") END

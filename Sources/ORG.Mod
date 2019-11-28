@@ -1,4 +1,4 @@
-MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 1.8.19 Experimental Oberon*)
+MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 1.11.19 Experimental Oberon*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser ORP; result in array "code".
@@ -77,10 +77,20 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     code[pc] := ((op * 10H + a) * 10H + b) * 100000H + (off MOD 100000H); INC(pc)
   END Put2;
 
+  PROCEDURE Put2a(op, a, mno, disp: LONGINT);
+  BEGIN (*emit load/store instruction to be fixed up by loader*)
+    code[pc] := ((op * 10H + a) * 100H + mno) * 10000H + (disp MOD 10000H); INC(pc)
+  END Put2a;
+
   PROCEDURE Put3(op, cond, off: LONGINT);
   BEGIN (*emit branch instruction*)
     code[pc] := ((op+12) * 10H + cond) * 1000000H + (off MOD 1000000H); INC(pc)
   END Put3;
+
+  PROCEDURE Put3a(op, mno, pno, disp: LONGINT);
+  BEGIN (*emit BL instruction to be fixed up by loader; 0 <= mno < 64*)
+    code[pc] := (((op+12) * 40H + mno) * 100H + pno) * 4000H + (disp MOD 4000H); INC(pc)
+  END Put3a;
 
   PROCEDURE incR;
   BEGIN
@@ -168,7 +178,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   PROCEDURE GetSB(base: LONGINT);
   BEGIN
     IF version = 0 THEN Put1(Mov, RH, 0, VarOrg0)
-    ELSE Put2(Ldr, RH, -base, pc-fixorgD); fixorgD := pc-1
+    ELSE Put2a(Ldr, RH, -base, pc-fixorgD); fixorgD := pc-1
     END
   END GetSB;
 
@@ -377,7 +387,8 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     fld := T.dsc;
     WHILE fld # NIL DO  (*build method table*)
       IF (fld.class = ORB.Const) & (fld.type.form = ORB.TProc) & (td[tdw-fld.lev-1] = -1) THEN
-        td[tdw-fld.lev-1] := (T.mno*4000H + fld.val (*mthadr/exno*)) * 4000H
+        IF T.mno = 0 THEN k := fld.val DIV 4 (*mthadr*) ELSE k := fld.val (*exno*) END ;
+        td[tdw-fld.lev-1] := (T.mno*4000H + k) * 400H
       END ;
       fld := fld.next
     END ;
@@ -388,7 +399,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     IF s <= 24 THEN s := 32 ELSIF s <= 56 THEN s := 64 ELSIF s <= 120 THEN s := 128
     ELSE s := (s+263) DIV 256 * 256
     END ;
-    T.len := tdw*4; td[tdw] := s; INC(tdw);  (*len used as offset in bytes relative to varx + strx*)
+    T.len := tdw*4; td[tdw] := s; INC(tdw);  (*len used as type descriptor offset in bytes relative to varx + strx*)
     k := T.nofpar;  (*extension level!*)
     IF k > 3 THEN ORS.Mark("ext level too large")
     ELSE Q(T, tdw);
@@ -830,25 +841,17 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   BEGIN (*x.type.form IN {ORB.Proc, ORB.TProc}*)
     IF x.type.form = ORB.TProc THEN  (*type-bound procedure*)
       IF x.b > 0 THEN (*method call*)
-        IF x.b = ORB.Var THEN (*pointer*) Put2(Ldr, RH, (*R*)0, -8) ELSE (*record*) Put0(Mov, RH, 0, (*R*)1) END ;
-        Put2(Ldr, RH, RH, -4-x.a(*mthno*)*4); Put3(BLR, 7, RH)
+        IF x.b = ORB.Var THEN Put2(Ldr, RH, 0, -8) ELSE Put0(Mov, RH, 0, 1) END ;
+        Put2(Ldr, RH, RH, -4-x.a*4); Put3(BLR, 7, RH)
       ELSE (*super call*)
-        IF x.b = 0 THEN (*global*) Put3(BL, 7, (x.a (*mthadr*) DIV 4)-pc-1)
-        ELSE (*imported*)
-          IF pc - fixorgP < 1000H THEN
-            Put3(BL, 7, ((-x.b)*100H (*mno*) + x.a (*exno*)) * 1000H + pc-fixorgP); fixorgP := pc-1
-          ELSE ORS.Mark("fixup impossible")
-          END
+        IF x.b = 0 THEN Put3(BL, 7, (x.a DIV 4)-pc-1)
+        ELSE (*imported*) Put3a(BL, -x.b, x.a, pc-fixorgP); fixorgP := pc-1
         END
       END
     ELSIF x.mode = ORB.Const THEN  (*regular procedure*)
       IF x.a < 0 THEN (*forward*) Put3(BL, 7, x.type.len); x.type.len := pc-1  (*fixed up in ORP.Body*)
-      ELSIF x.r >= 0 THEN (*global or local*) Put3(BL, 7, (x.a DIV 4)-pc-1)
-      ELSE (*imported*)
-        IF pc - fixorgP < 1000H THEN
-          Put3(BL, 7, ((-x.r) * 100H + x.a) * 1000H + pc-fixorgP); fixorgP := pc-1
-        ELSE ORS.Mark("fixup impossible")
-        END
+      ELSIF x.r >= 0 THEN Put3(BL, 7, (x.a DIV 4)-pc-1)
+      ELSE (*imported*) Put3a(BL, -x.r, x.a, pc-fixorgP); fixorgP := pc-1
       END
     ELSE  (*installed procedure*)
       IF x.mode <= ORB.Par THEN load(x); DEC(RH)
@@ -1173,10 +1176,10 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
           & (obj.type.nofpar = 0) & (obj.type.base = ORB.noType) THEN i := 0;  (*count commands*)
         WHILE obj.name[i] # 0X DO INC(i) END ;
         i := (i+4) DIV 4 * 4; INC(comsize, i+4)
-      ELSIF obj.class = ORB.Var THEN INC(nofrefs, NofRefs(ORB.Ptrs + ORB.Procs, obj.type))  (*count ptr and proc vars*)
+      ELSIF obj.class = ORB.Var THEN INC(nofrefs, NofRefs(ORB.Ptrs + ORB.Procs, obj.type))  (*count ptrs and pvrs*)
       ELSIF (obj.class = ORB.Typ) & (obj.type.form = ORB.Record) & (obj.lev = 0) THEN  (*build type descriptors*)
-        base := obj.type.len;  (*len initially used as heading of fixup chain of instructions generated in loadTypTagAdr*)
-        BuildTD(obj.type, tdw);  (*len now used as type descriptor offset relative to tdx*)
+        base := obj.type.len;  (*len used as heading of fixup chain of instructions generated in loadTypTagAdr*)
+        BuildTD(obj.type, tdw);  (*len used as type descriptor offset in bytes relative to tdx = varx + strx*)
         IF base > 0 THEN FixLinkConst(base, tdx + obj.type.len) END  (*fixup instructions with type descriptor adr*)
       END ;
       obj := obj.next

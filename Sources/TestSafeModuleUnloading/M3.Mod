@@ -1,5 +1,5 @@
-MODULE M3;  (*test safe module unloading; AP 13.4.19 Experimental Oberon*)
-  IMPORT M0, M1, M2, Out;
+MODULE M3;  (*test safe module unloading - part 1; AP 1.10.19 Experimental Oberon*)
+  IMPORT SYSTEM, M0, M1, M2, Out;
 
   PROCEDURE SetGlobalProc1*;
   BEGIN M1.SetGlobalProc(M2.P); Out.Str("  creating a global procedure variable reference to M2 from a global procedure variable in M1"); Out.Ln
@@ -178,15 +178,16 @@ Call sequence #5:  (procedure variable reference from a dynamic *array of proced
 Call sequence #6:  (type reference from a dynamic *record* allocated in the heap)
 
    M3.Init                             # load M0, M1, M2, M3
-   System.ShowRefs M1 ~                # no references to M1 exist
-   M3.SetPtr1                          # insert a variable of type M1.Ptr into a data structure rooted in M0 (create a dynamic type reference to M1 from a dynamic record allocated by M0 in the heap)
-   System.ShowRefs M1 ~                # references from M0 to M1 exist (types of M1 in use in dynamic objects reachable by M0)
+   System.ShowRefs M2 ~                # no references to M2 exist
+   M3.SetPtr2                          # insert a variable of type M2.Ptr into a data structure rooted in M0 (create a dynamic type reference to M2 from a dynamic record allocated by M0 in the heap)
+   System.ShowRefs M2 ~                # references from M0 to M1 exist (types of M2 in use in dynamic objects reachable by M0)
    System.Free M3 ~                    # M3 unloading successful (M3 is a client of M0, M1, M2)
-   System.Free M1 ~                    # M1 unloading failed (types of M1 in use in dynamic objects reachable by M0)
-   M3.UnSetPtr1                        # clear the data structure in M0 (remove the dynamic type reference to M1 from a dynamic record allocated by M0 in the heap)
+   System.Free M2 ~                    # M2 unloading failed (types of M2 in use in dynamic objects reachable by M0)
+   M3.UnSetPtr2                        # clear the data structure in M0 (remove the dynamic type reference to M2 from a dynamic record allocated by M0 in the heap)
+   System.ShowRefs M2 ~                # no more references to M2 exist
    System.Free M3 ~                    # M3 unloading successful (M3 is a client of M0, M1, M2)
-   System.Free M1 ~                    # M1 unloading now successful (as the reference from M0 to M1 no longer exists)
-   System.ShowModules                  # modules M1 and M3 no longer loaded (only M0 and M2 remain loaded)
+   System.Free M2 ~                    # M2 unloading now successful (as the reference from M0 to M2 no longer exists)
+   System.ShowModules                  # modules M2 and M3 no longer loaded (only M0 and M1 remain loaded)
 
 Call sequence #7:  (unloading of a *group* of 2 modules containing *unidirectional* references among themselves)
 
@@ -198,7 +199,7 @@ Call sequence #7:  (unloading of a *group* of 2 modules containing *unidirection
    System.Free M2 ~                    # M2 unloading failed (procedures of M2 in use in global procedure variables of M1)
    System.ShowRefs M1 M2 ~             # references from M1 to M2 exist (procedures of M2 in use in global procedure variables of M1)
    System.ShowGroupRefs M1 M2 ~        # no (external) references to the modules M1 and M2 taken *as a group* exist
-   System.Free M1 M2 M3 ~              # M2 M1 unloading taken *as a group* successful
+   System.Free M1 M2 ~                 # M2 M1 unloading taken *as a group* successful
    System.ShowModules                  # modules M1 and M2 no longer loaded (only M0 remains loaded)
 
 Call sequence #8:  (unloading of a *group* of 2 modules containing *circular* references among themselves)
@@ -217,7 +218,7 @@ Call sequence #8:  (unloading of a *group* of 2 modules containing *circular* re
    System.Free M1 ~                    # M1 unloading failed (procedures of M1 in use in dynamic *and* global procedure variables of M2)
    System.Free M2 ~                    # M2 unloading failed (procedures of M2 in use in dynamic *and* global procedure variables of M1)
    System.ShowGroupRefs M1 M2 ~        # no (external) references to modules M1 and M2 taken *as a group* exist
-   System.Free M1 M2 M3 ~              # M2 M1 unloading taken *as a group* successful
+   System.Free M1 M2 ~                 # M2 M1 unloading taken *as a group* successful
    System.ShowModules                  # modules M1 and M2 no longer loaded (only M0 remains loaded)
 
 Call sequence #9:  (unloading of a *group* of 3 modules containing *circular* references among themselves)
@@ -242,8 +243,11 @@ Call sequence #9:  (unloading of a *group* of 3 modules containing *circular* re
    System.Free M2 M0 ~                 # M2 M0 unloading *as a group* failed (types of M0 in use in dynamic objects reachable by M1, procedures of M2 in use in dynamic and global objects of M1)
    System.Free M1 M0 ~                 # M1 M0 unloading *as a group* failed (types of M0 in use in dynamic objects reachable by M2, procedures of M1 in use in dynamic and global objects of M2)
    System.ShowGroupRefs M1 M2 ~        # references from M0 to the modules M1 and M2 taken *as a group* exist (types of M1 in use in dynamic objects reachable by M0)
-   System.Free M1 M2 M3 ~              # M2 M1 unloading taken *as a group* failed (types of M1 in use in dynamic objects reachable by M0)
+   System.Free M1 M2 ~                 # M2 M1 unloading taken *as a group* failed (types of M1 in use in dynamic objects reachable by M0)
    System.ShowGroupRefs M0 M1 M2 ~     # no (external) references to modules M0, M1 and M2 taken *as a group* exist
-   System.Free M0 M1 M2 M3 ~           # M2 M1 M0 unloading taken *as a group* successful
+   System.Free M0 M1 M2 ~              # M2 M1 M0 unloading taken *as a group* successful
    System.ShowModules                  # modules M0, M1, M2 and M3 no longer loaded
 
+#
+# See module M4.Mod for additional call sequences
+#

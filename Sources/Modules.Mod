@@ -1,8 +1,8 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.8.19 Experimental Oberon*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.11.19 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, Files;
   CONST versionkey = 1X; MT = 12; DescSize = 84; MnLength = 32;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5; nocmd* = 6; badcmd* = 7; nomod* = 8;
-    noref* = 0; clients* = 9; dyntypes* = 10; dynprocs* = 11; statprocs* = 12;
+    noref* = 0; clients* = 9; dyntypes* = 10; dynptrs* = 11; dynpvrs* = 12; statptrs* = 13; statpvrs* = 14;
 
   TYPE Module* = POINTER TO ModDesc;
     Command* = PROCEDURE;
@@ -65,7 +65,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.8.19 E
       disp, adr, inst, pno, vno, dest, offset: INTEGER;
       name1, impname: ModuleName;
       F: Files.File; R: Files.Rider;
-      import: ARRAY 16 OF Module;
+      import: ARRAY 64 OF Module;
   BEGIN mod := root; error(noerr, name); nofimps := 0;
     WHILE (mod # NIL) & (name # mod.name) DO mod := mod.next END ;
     IF mod = NIL THEN (*load*)
@@ -153,9 +153,9 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.8.19 E
         adr := mod.code + fixorgP*4;
         WHILE adr # mod.code DO
           SYSTEM.GET(adr, inst);
-          mno := inst DIV 100000H MOD 10H;
-          pno := inst DIV 1000H MOD 100H;
-          disp := inst MOD 1000H;
+          mno := inst DIV 400000H MOD 40H;
+          pno := inst DIV 4000H MOD 100H;
+          disp := inst MOD 4000H;
           SYSTEM.GET(mod.imp + (mno-1)*4, impmod);
           SYSTEM.GET(impmod.ent + pno*4, dest); dest := dest + impmod.code;
           offset := (dest - adr - 4) DIV 4;
@@ -166,8 +166,8 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.8.19 E
         adr := mod.code + fixorgD*4;
         WHILE adr # mod.code DO
           SYSTEM.GET(adr, inst);
-          mno := inst DIV 100000H MOD 10H;
-          disp := inst MOD 1000H;
+          mno := inst DIV 10000H MOD 100H;
+          disp := inst MOD 10000H;
           IF mno = 0 THEN (*global*)
             SYSTEM.PUT(adr, (inst DIV 1000000H * 10H + MT) * 100000H + mod.num * 4)
           ELSE (*import*)
@@ -184,7 +184,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.8.19 E
         adr := tdx + fixorgT*4;
         WHILE adr # tdx DO
           SYSTEM.GET(adr, inst);
-          mno := inst DIV 1000000H MOD 10H;
+          mno := inst DIV 1000000H;
           vno := inst DIV 1000H MOD 1000H;
           disp := inst MOD 1000H;
           IF mno = 0 THEN (*global*) inst := tdx + vno
@@ -199,10 +199,10 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.8.19 E
         adr := tdx + fixorgM*4;
         WHILE adr # tdx DO
           SYSTEM.GET(adr, inst);
-          mno := inst DIV 10000000H;
-          vno := inst DIV 4000H MOD 4000H;
-          disp := inst MOD 4000H;
-          IF mno = 0 THEN (*global*) inst := mod.code + vno
+          mno := inst DIV 1000000H;
+          vno := inst DIV 400H MOD 4000H;
+          disp := inst MOD 400H;
+          IF mno = 0 THEN (*global*) inst := mod.code + vno*4
           ELSE (*import*)
             SYSTEM.GET(mod.imp + (mno-1)*4, impmod);
             SYSTEM.GET(impmod.ent + vno*4, offset);
@@ -328,15 +328,15 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.8.19 E
 
   (*--------------------------- reference checking ---------------------------*)
 
-  PROCEDURE FindClients*(proc: ImpHandler; VAR res: INTEGER);
+  PROCEDURE FindClients*(client: ImpHandler; VAR res: INTEGER);
     VAR mod, imp, m: Module; p, q: INTEGER; continue: BOOLEAN;
-  BEGIN res := noref; m := root; continue := proc # NIL;
+  BEGIN res := noref; m := root; continue := client # NIL;
     WHILE continue & (m # NIL) DO
       IF (m.name[0] # 0X) & m.selected & (m.refcnt > 0) THEN mod := root;
         WHILE continue & (mod # NIL) DO
           IF (mod.name[0] # 0X) & ~mod.selected THEN p := mod.imp; q := mod.cmd;
             WHILE p < q DO SYSTEM.GET(p, imp);
-              IF imp = m THEN INC(res, proc(mod, imp, continue)); p := q ELSE INC(p, 4) END
+              IF imp = m THEN INC(res, client(mod, imp, continue)); p := q ELSE INC(p, 4) END
             END
           END ;
           mod := mod.next
@@ -346,27 +346,34 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.8.19 E
     END
   END FindClients;
 
-  PROCEDURE FindDynamicRefs*(type, proc: RefHandler; VAR resType, resProc: INTEGER; all: BOOLEAN);
+  PROCEDURE FindDynamicRefs*(typ, ptr, pvr: RefHandler; VAR resTyp, resPtr, resPvr: INTEGER; all: BOOLEAN);
     VAR mod: Module;
   BEGIN mod := root;
     WHILE mod # NIL DO
       IF (mod.name[0] # 0X) & ~mod.selected THEN Kernel.Mark(mod.ptr);
-        IF ~all THEN Kernel.Scan(type, proc, mod.name, resType, resProc) END
+        IF ~all THEN Kernel.Scan(typ, ptr, pvr, mod.name, resTyp, resPtr, resPvr) END
       END ;
       mod := mod.next
     END ;
-    IF all THEN Kernel.Scan(type, proc, "", resType, resProc) END
+    IF all THEN Kernel.Scan(typ, ptr, pvr, "", resTyp, resPtr, resPvr) END
   END FindDynamicRefs;
 
-  PROCEDURE FindStaticRefs*(proc: RefHandler; VAR res: INTEGER);
+  PROCEDURE FindStaticRefs*(ptr, pvr: RefHandler; VAR resPtr, resPvr: INTEGER);
     VAR mod: Module; pref, pvadr, r: LONGINT; continue: BOOLEAN;
-  BEGIN res := noref; mod := root; continue := proc # NIL;
+  BEGIN resPtr := noref; resPvr := noref; mod := root; continue := (ptr # NIL) OR (pvr # NIL);
     WHILE continue & (mod # NIL) DO
       IF (mod.name[0] # 0X) & ~mod.selected THEN
-        pref := mod.pvr; SYSTEM.GET(pref, pvadr);
-        WHILE continue & (pvadr # 0) DO SYSTEM.GET(pvadr, r);
-          INC(res, proc(pvadr, r, mod.name, continue));
-          INC(pref, 4); SYSTEM.GET(pref, pvadr)
+        IF ptr # NIL THEN pref := mod.ptr; SYSTEM.GET(pref, pvadr);
+          WHILE continue & (pvadr # 0) DO SYSTEM.GET(pvadr, r);
+            INC(resPtr, ptr(pvadr, r, mod.name, continue));
+            INC(pref, 4); SYSTEM.GET(pref, pvadr)
+          END
+        END ;
+        IF pvr # NIL THEN pref := mod.pvr; SYSTEM.GET(pref, pvadr);
+          WHILE continue & (pvadr # 0) DO SYSTEM.GET(pvadr, r);
+            INC(resPvr, pvr(pvadr, r, mod.name, continue));
+            INC(pref, 4); SYSTEM.GET(pref, pvadr)
+          END
         END
       END ;
       mod := mod.next
@@ -380,7 +387,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.8.19 E
   PROCEDURE HandleRef(src, dst: LONGINT; s: ARRAY OF CHAR; VAR continue: BOOLEAN): INTEGER;
     VAR mod: Module; i: INTEGER;
   BEGIN i := 0;
-    IF dst # 0 THEN mod := root;
+    IF (dst > 0) & (dst < AllocPtr) (*don't check references to the heap*) THEN mod := root;
       WHILE (mod # NIL) & ~((mod.name[0] # 0X) & mod.selected & (mod.data <= dst) & (dst < mod.imp)) DO mod := mod.next END ;
       IF mod # NIL THEN (*src references mod*) i := 1; continue := FALSE END
     END ;
@@ -388,20 +395,23 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.8.19 E
   END HandleRef;
 
   PROCEDURE Check*(VAR res: INTEGER);
-    (*check whether external client, type or procedure variable references to selected modules exist.
-      res = noref: no client, type or procedure variables references;
+    (*check whether external client, type, pointer or procedure variable references to selected modules exist.
+      res = noref: no client, type, pointer or procedure variables references;
       res = clients: clients exist;
       res = dyntypes: types in use in dynamically allocated objects;
-      res = dynprocs: procedures in use in dynamically allocated objects;
-      res = statprocs: procedures in use in statically declared objects*)
-    VAR resType, resProc: INTEGER;
+      res = dynptrs: static module data referenced by pointer variables in dynamically allocated objects;
+      res = dynpvrs: procedures in use in dynamically allocated objects;
+      res = statptrs: static module data referenced by global pointer variables;
+      res = statpvrs: procedures in use in global procedure variables*)
+    VAR resTyp, resPtr, resPvr: INTEGER;
   BEGIN FindClients(HandleClient, res);
     IF res > noref THEN res := clients
-    ELSE FindDynamicRefs(HandleRef, HandleRef, resType, resProc, TRUE);
-      IF resType > noref THEN res := dyntypes
-      ELSIF resProc > noref THEN res := dynprocs
-      ELSE FindStaticRefs(HandleRef, res);
-        IF res > noerr THEN res := statprocs END
+    ELSE FindDynamicRefs(HandleRef, HandleRef, HandleRef, resTyp, resPtr, resPvr, TRUE);
+      IF resTyp > noref THEN res := dyntypes
+      ELSIF resPtr > noref THEN res := dynptrs
+      ELSIF resPvr > noref THEN res := dynpvrs
+      ELSE FindStaticRefs(HandleRef, HandleRef, resPtr, resPvr);
+        IF resPtr > noerr THEN res := statptrs ELSIF resPvr > 0 THEN res := statpvrs END
       END
     END
   END Check;
