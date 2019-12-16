@@ -18,7 +18,7 @@ Planned features
 * Multiple file system partitions
 * Plug & Play Oberon images (automatically loaded onto dynamically created partitions)
 
-**REVISION:** 1.11.2019
+**REVISION:** 1.12.2019
 
 **DOCUMENTATION**
 

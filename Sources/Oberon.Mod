@@ -1,8 +1,8 @@
-MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 22.2.19*)
+MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 1.12.19*)
   IMPORT SYSTEM, Kernel, Files, Modules, Input, Display, Viewers, Fonts, Texts;
 
   CONST off = 0; idle = 1; active = 2; (*task states*)
-    BasicCycle = 20; ESC = 1BX; SETSTAR = 1AX;
+    BasicCycle = 20; ESC = 1BX; SETSTAR = 1AX; TAB = 9X; CR = 0DX;
 
   TYPE Painter* = PROCEDURE (x, y: INTEGER);
     Marker* = RECORD Fade*, Draw*: Painter END;
@@ -322,10 +322,13 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 22.2
   END SetPar;
 
   PROCEDURE Call*(F: Viewers.Frame; T: Texts.Text; pos: LONGINT; new: BOOLEAN);  (*command*)
-    VAR S: Texts.Scanner; res: INTEGER;
-  BEGIN Texts.OpenScanner(S, T, pos); Texts.Scan(S);
-    IF ((S.class = Texts.Name) OR (S.class = Texts.String)) & (S.line = 0) THEN
-      SetPar(F, T, pos + S.len); Modules.Call(S.s); res := Modules.res;
+    VAR R: Texts.Reader; i, res: INTEGER; ch: CHAR; s: ARRAY 32 OF CHAR;
+  BEGIN Texts.OpenReader(R, T, pos); Texts.Read(R, ch);
+    WHILE (ch = " ") OR (ch = TAB) DO Texts.Read(R, ch) END ;
+    IF ch # CR THEN i := 0;
+      REPEAT s[i] := ch; INC(i); Texts.Read(R, ch)
+      UNTIL ((ch < "0") & (ch # ".") & (ch # "*") OR ("9" < ch) & (ch < "A") OR ("Z" < ch) & (ch < "a") OR ("z" < ch)) OR (i = 31);
+      s[i] := 0X; SetPar(F, T, pos + i); Modules.Call(s); res := Modules.res;
       IF (res > Modules.noerr) & (res < Modules.clients) & (Log # NIL) THEN Texts.WriteString(W, "Call error: ");
         CASE res OF
            Modules.nofile: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " module not found")
@@ -335,7 +338,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 22.2
          | Modules.badfile: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " corrupted obj file")
          | Modules.nospace: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " insufficient space")
          | Modules.nocmd: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " command not found")
-         | Modules.badcmd: Texts.WriteString(W, S.s); Texts.WriteString(W, " invalid command")
+         | Modules.badcmd: Texts.WriteString(W, s); Texts.WriteString(W, " invalid command")
          | Modules.nomod: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " module not found")
         END ;
         Texts.WriteLn(W); Texts.Append(Log, W.buf)
