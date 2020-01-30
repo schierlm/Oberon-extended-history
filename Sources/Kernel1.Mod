@@ -1,4 +1,4 @@
-MODULE Kernel;  (*module Kernel for a boot file containing the entire Oberon system / AP 1.11.19 Experimental Oberon*)
+MODULE Kernel;  (*module Kernel for a boot file containing the entire Oberon system / AP 12.12.19 Experimental Oberon*)
   IMPORT SYSTEM;
   CONST SectorLength* = 1024;
     timer = -64; spiData = -48; spiCtrl = -44;
@@ -42,8 +42,9 @@ MODULE Kernel;  (*module Kernel for a boot file containing the entire Oberon sys
     VAR q: LONGINT;
   BEGIN
     IF list1 # 0 THEN p := list1; SYSTEM.GET(list1+8, list1)
-    ELSE GetBlock(q, 256); SYSTEM.PUT(q+128, 128); SYSTEM.PUT(q+132, -1); SYSTEM.PUT(q+136, list1);
-      list1 := q + 128; p := q
+    ELSE GetBlock(q, 256);
+      IF q # 0 THEN SYSTEM.PUT(q+128, 128); SYSTEM.PUT(q+132, -1); SYSTEM.PUT(q+136, list1); list1 := q + 128 END ;
+      p := q
     END
   END GetBlock128;
 
@@ -51,8 +52,9 @@ MODULE Kernel;  (*module Kernel for a boot file containing the entire Oberon sys
     VAR q: LONGINT;
   BEGIN
     IF list2 # 0 THEN p := list2; SYSTEM.GET(list2+8, list2)
-    ELSE GetBlock128(q); SYSTEM.PUT(q+64, 64); SYSTEM.PUT(q+68, -1); SYSTEM.PUT(q+72, list2);
-      list2 := q + 64; p := q
+    ELSE GetBlock128(q);
+      IF q # 0 THEN SYSTEM.PUT(q+64, 64); SYSTEM.PUT(q+68, -1); SYSTEM.PUT(q+72, list2); list2 := q + 64 END ;
+      p := q
     END
   END GetBlock64;
 
@@ -60,8 +62,9 @@ MODULE Kernel;  (*module Kernel for a boot file containing the entire Oberon sys
     VAR q: LONGINT;
   BEGIN
     IF list3 # 0 THEN p := list3; SYSTEM.GET(list3+8, list3)
-    ELSE GetBlock64(q); SYSTEM.PUT(q+32, 32); SYSTEM.PUT(q+36, -1); SYSTEM.PUT(q+40, list3);
-      list3 := q + 32; p := q
+    ELSE GetBlock64(q);
+      IF q # 0 THEN SYSTEM.PUT(q+32, 32); SYSTEM.PUT(q+36, -1); SYSTEM.PUT(q+40, list3); list3 := q + 32 END ;
+      p := q
     END
   END GetBlock32;
 
@@ -69,7 +72,7 @@ MODULE Kernel;  (*module Kernel for a boot file containing the entire Oberon sys
     (*called by NEW via MT[0]; ptr is a pointer; tag (or tag-1) is a pointer or blktyp; len and elemsize describe arrays*)
     VAR p, size, lim: LONGINT;
   BEGIN
-    IF tag MOD 4 = 0 THEN (*record*)
+    IF tag MOD 4 = 0 THEN (*record block*)
       SYSTEM.GET(tag, size);  (*size already converted for heap allocation with 8 byte prefix*)
       IF size = 32 THEN GetBlock32(p)
       ELSIF size = 64 THEN GetBlock64(p)
@@ -80,7 +83,7 @@ MODULE Kernel;  (*module Kernel for a boot file containing the entire Oberon sys
       ELSE ptr := p+8; SYSTEM.PUT(p, tag); lim := p + size; INC(p, 4); INC(allocated, size);
         WHILE p < lim DO SYSTEM.PUT(p, 0); INC(p, 4) END
       END
-    ELSE (*array*)
+    ELSE (*array block*)
       size := len*elemsize;  (*convert size for heap allocation with 24 byte prefix*)
       IF size <= 8 THEN size := 32; GetBlock32(p)
       ELSIF size <= 40 THEN size := 64; GetBlock64(p)
@@ -120,7 +123,7 @@ MODULE Kernel;  (*module Kernel for a boot file containing the entire Oberon sys
               IF offset >= len*4 THEN offset := -1 END
             END ;
             SYSTEM.PUT(p+12, offset)
-          ELSE (*array of basic type (blktyp = tag = 3) or array of procedure (blktyp = 3, tag = 7)*)
+          ELSE (*array of basic type (tag = 3) or array of procedure (tag = 7)*)
             offset := -1; SYSTEM.PUT(p+12, -1); SYSTEM.PUT(p-4, p+12) (*offadr*)
           END ;
           IF offset # -1 THEN (*down*)

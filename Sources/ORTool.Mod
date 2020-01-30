@@ -1,4 +1,4 @@
-MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 1.11.19 Experimental Oberon*)
+MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 27.1.20 Experimental Oberon*)
   IMPORT Files, Texts, Oberon, ORB;
   VAR W: Texts.Writer;
     mnemo0, mnemo1: ARRAY 16, 4 OF CHAR;  (*mnemonics*)
@@ -78,7 +78,15 @@ MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 1.11.19 Experimental Oberon*)
           WHILE class # 0 DO
             Texts.WriteInt(W, class, 4); Files.ReadString(R, name); Texts.Write(W, " "); Texts.WriteString(W, name);
             ReadType(R);
-            IF (class = ORB.Const) OR (class = ORB.Var) THEN Files.ReadNum(R, k); Texts.WriteInt(W, k, 5) END ;
+            IF class = ORB.Typ THEN
+              Texts.Write(W, "("); Read(R, class);
+              WHILE class # 0 DO  (*pointer base fixup*)
+                Texts.WriteString(W, " ->"); Texts.WriteInt(W, class, 4); Read(R, class)
+              END ;
+              Texts.Write(W, ")")
+            ELSIF (class = ORB.Const) OR (class = ORB.Var) THEN
+              Files.ReadNum(R, k); Texts.WriteInt(W, k, 5);  (*Reals, Strings!*)
+            END ;
             Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
             Read(R, class)
           END

@@ -1,4 +1,4 @@
-MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.10.19 Experimental Oberon*)
+MODULE ORB;   (*NW 25.6.2014  / 25.1.2020   in Oberon-07 / AP 29.1.20 Experimental Oberon*)
   IMPORT Files, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
@@ -15,7 +15,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.10.19 Experimental
     (* form values*)
       Byte* = 1; Bool* = 2; Char* = 3; Int* = 4; Real* = 5; Set* = 6;
       Pointer* = 7; NilTyp* = 8; NoTyp* = 9; Proc* = 10;
-      String* = 11; Array* = 12; Record* = 13; TProc* = 14; maxForm = TProc;
+      String* = 11; Array* = 12; Record* = 13; TProc* = 14;
       Ptrs* = {Pointer, NilTyp}; Procs* = {Proc, NoTyp};
 
   TYPE Object* = POINTER TO ObjDesc;
@@ -24,8 +24,8 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.10.19 Experimental
 
     ObjDesc*= RECORD
       class*, exno*: BYTE;
-      expo*, rdo*: BOOLEAN;   (*exported / read-only*)
-      lev*: INTEGER;   (*for modules, types and objects; mthno for type-bound procedures*)
+      expo*, rdo*: BOOLEAN;  (*exported / read-only*)
+      lev*: INTEGER;
       next*, dsc*: Object;
       type*: Type;
       name*: ORS.Ident;
@@ -130,8 +130,8 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.10.19 Experimental
     RETURN max + 1
   END NofMethods;
 
-  PROCEDURE NewMethod*(rec: Type; VAR mth, redef: Object; id: ORS.Ident);  (*insert new Method with name id*)
-    VAR fld, fld0, bot, s: Object;
+  PROCEDURE NewMethod*(rec: Type; VAR mth, redef: Object; id: ORS.Ident);  (*insert new method with name id*)
+    VAR fld, fld0, bot: Object;
 
     PROCEDURE UpdateLinks(rec: Type; mth, bot: Object);  (*between field lists of extensions*)
       VAR obj, fld: Object;
@@ -148,18 +148,19 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.10.19 Experimental
       END
     END UpdateLinks;
 
-  BEGIN (*rec.typobj # NIL & rec.mno = -level*)
-    IF rec.base # NIL THEN bot := rec.base.dsc; fld := bot;
-      WHILE (fld # NIL) & (fld.name # id) DO fld := fld.next END ;  (*search id in fields of base types of rec*)
-      IF (fld = NIL) OR (fld.class = Const) THEN redef := fld ELSE ORS.Mark("mult def"); redef := NIL END
-    ELSE bot := NIL; redef := NIL
-    END ;
-    fld := rec.dsc;
-    WHILE (fld # bot) & (fld.name # id) DO fld0 := fld; fld := fld.next END ;  (*search id in fields of rec proper*)
+  BEGIN (*rec.typobj # NIL*) redef := NIL;
+    IF rec.base # NIL THEN bot := rec.base.dsc ELSE bot := NIL END ;
+    fld := rec.dsc;  (*search id in fields of rec proper*)
+    WHILE (fld # bot) & (fld.name # id) DO fld0 := fld; fld := fld.next END ;
     IF fld = bot THEN
-      NEW(fld); fld.name := id; fld.class := Const; fld.rdo := FALSE; fld.dsc := NIL; fld.next := bot; mth := fld;
-      IF redef # NIL THEN fld.lev := redef.lev ELSE fld.lev := NofMethods(rec) END ;  (*assign mthno*)
-      IF rec.dsc = bot THEN rec.dsc := mth; UpdateLinks(rec, mth, bot) ELSE fld0.next := mth END
+      fld := bot;  (*search id in fields of base types of rec*)
+      WHILE (fld # NIL) & (fld.name # id) DO fld := fld.next END ;
+      IF (fld = NIL) OR (fld.class = Const) THEN redef := fld;
+        NEW(fld); fld.name := id; fld.class := Const; fld.rdo := FALSE; fld.dsc := NIL; fld.next := bot; mth := fld;
+        IF redef = NIL THEN fld.lev := NofMethods(rec) ELSE fld.lev := redef.lev END ;  (*assign method number*)
+        IF rec.dsc = bot THEN rec.dsc := mth; UpdateLinks(rec, mth, bot) ELSE fld0.next := mth END
+      ELSE mth := fld; ORS.Mark("mult def")
+      END
     ELSE mth := fld; ORS.Mark("mult def")
     END
   END NewMethod;
@@ -185,16 +186,18 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.10.19 Experimental
 
   PROCEDURE ThisModule(name, orgname: ORS.Ident; non: BOOLEAN; key: LONGINT): Object;
     VAR mod: Module; obj, obj1: Object;
-  BEGIN obj1 := topScope; obj := obj1.next;  (*search for module name*)
+  BEGIN obj1 := topScope; obj := obj1.next;  (*search for module*)
     WHILE (obj # NIL) & (obj.name # name) DO obj1 := obj; obj := obj1.next END ;
-    IF obj = NIL THEN obj1 := topScope; obj := obj1.next;
-      WHILE (obj # NIL) & (obj IS Module) & (obj(Module).orgname # orgname) DO obj1 := obj; obj := obj1.next END
+    IF obj = NIL THEN 
+      obj1 := topScope; obj := obj1.next;
+      WHILE (obj # NIL) & (obj IS Module) & (obj(Module).orgname # orgname) DO
+        obj1 := obj; obj := obj1.next
+      END
     END ;
-    IF obj = NIL THEN  (*insert new module*)
+    IF obj = NIL THEN (*insert new module*)
       NEW(mod); mod.class := Mod; mod.rdo := FALSE;
       mod.name := name; mod.orgname := orgname; mod.val := key;
-      IF nofmod < 64 THEN mod.lev := nofmod; INC(nofmod) ELSE ORS.Mark("too many imports") END ;
-      mod.type := noType; mod.dsc := NIL; mod.next := NIL;
+      mod.lev := nofmod; INC(nofmod); mod.type := noType; mod.dsc := NIL; mod.next := NIL;
       obj1.next := mod; obj := mod
     ELSE (*module already present*)
       IF non THEN ORS.Mark("invalid import order") END
@@ -232,16 +235,14 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.10.19 Experimental
           NEW(fld); fld.class := class; Files.ReadString(R, fld.name);
           IF last = NIL THEN t.dsc := fld ELSE last.next := fld END ;
           last := fld;
-          IF class = Const THEN  (*type-bound procedure*)
-            IF fld.name[0] # 0X THEN
-              fld.expo := TRUE; InType(R, thismod, fld.type); fld.type.typobj := fld;
-              Files.ReadNum(R, fld.lev); (*mthno*) Files.ReadNum(R, fld.val) (*exno*)
-            ELSE (*hidden method*) fld.expo := FALSE; Files.ReadNum(R, fld.lev); (*mthno*) fld.type := byteType (*method*)
+          IF fld.name[0] # 0X THEN fld.expo := TRUE; InType(R, thismod, fld.type); Files.ReadNum(R, fld.val)
+          ELSE (*hidden*) fld.expo := FALSE; Files.ReadNum(R, fld.val);
+            IF class = Const THEN fld.type := byteType  (*method*)
+            ELSIF fld.val < 0 THEN fld.val := -fld.val-1; fld.type := noType  (*procedure*)
+            ELSE fld.type := nilType  (*pointer*)
             END
-          ELSIF fld.name[0] # 0X THEN fld.expo := TRUE; InType(R, thismod, fld.type); Files.ReadNum(R, fld.val) (*offset*)
-          ELSE (*hidden field*) fld.expo := FALSE; Files.ReadNum(R, fld.val); (*offset*)
-            IF fld.val < 0 THEN fld.val := -fld.val-1; fld.type := noType (*proc*) ELSE fld.type := nilType (*pointer*) END
           END ;
+          IF class = Const THEN Files.ReadNum(R, fld.lev) END ;  (*mthno*)
           Read(R, class)
         END ;
         IF last = NIL THEN t.dsc := obj ELSE last.next := obj END
@@ -271,7 +272,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.10.19 Experimental
   END InType;
 
   PROCEDURE Import*(VAR modid, modid1: ORS.Ident);
-    VAR key: LONGINT; class: INTEGER;
+    VAR key: LONGINT; class, k: INTEGER;
       obj, thismod: Object;
       modname, fname: ORS.Ident;
       F: Files.File; R: Files.Rider;
@@ -289,8 +290,9 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.10.19 Experimental
         WHILE class # 0 DO
           NEW(obj); obj.class := class; Files.ReadString(R, obj.name);
           InType(R, thismod, obj.type); obj.lev := -thismod.lev;
-          IF class = Typ THEN obj.type.typobj := obj
-          ELSIF class = Const THEN Files.ReadNum(R, obj.val)
+          IF class = Typ THEN obj.type.typobj := obj; Read(R, k)
+          ELSIF class = Const THEN
+            IF obj.type.form = Real THEN Files.ReadInt(R, obj.val) ELSE Files.ReadNum(R, obj.val) END
           ELSIF class = Var THEN Files.ReadNum(R, obj.val); obj.rdo := TRUE
           END ;
           obj.next := thismod.dsc; thismod.dsc := obj; Read(R, class)
@@ -341,26 +343,27 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.10.19 Experimental
       ELSIF t.form = Array THEN OutType(R, t.base); Files.WriteNum(R, t.len); Files.WriteNum(R, t.size)
       ELSIF t.form = Record THEN
         IF t.base # NIL THEN OutType(R, t.base); bot := t.base.dsc ELSE OutType(R, noType); bot := NIL END ;
-        IF obj # NIL THEN Files.WriteNum(R, obj.exno) ELSE Write(R, 0) END ;
+        IF obj # NIL THEN
+          IF t.mno > 0 THEN Files.WriteNum(R, t.len) ELSE Files.WriteNum(R, obj.exno) END
+        ELSE Write(R, 0)
+        END ;
         Files.WriteNum(R, t.nofpar); Files.WriteNum(R, t.size);
         fld := t.dsc;
         WHILE fld # bot DO  (*fields*)
           IF fld.class = Const THEN (*type-bound procedure*) Write(R, Const);
-            IF fld.expo THEN
-              Files.WriteString(R, fld.name); OutType(R, fld.type); Files.WriteNum(R, fld.lev); (*mthno*)
-              IF t.mno > 0 THEN Files.WriteNum(R, fld.val) (*exno*) ELSE Files.WriteNum(R, fld.exno) END
-            ELSE (*hidden method*) Write(R, 0); Files.WriteNum(R, fld.lev) (*mthno*)
-            END
+            IF fld.expo THEN Files.WriteString(R, fld.name); OutType(R, fld.type) ELSE (*hidden*) Write(R, 0) END ;
+            IF t.mno > 0 THEN Files.WriteNum(R, fld.val) ELSE Files.WriteNum(R, fld.exno) END ;  (*exno*)
+            Files.WriteNum(R, fld.lev)  (*mthno*)
           ELSIF fld.expo THEN
-            Write(R, Fld); Files.WriteString(R, fld.name); OutType(R, fld.type); Files.WriteNum(R, fld.val) (*offset*)
-          ELSE (*hidden field*) FindHiddenFields(R, fld.type, fld.val)
+            Write(R, Fld); Files.WriteString(R, fld.name); OutType(R, fld.type); Files.WriteNum(R, fld.val)  (*offset*)
+          ELSE (*hidden*) FindHiddenFields(R, fld.type, fld.val)
           END ;
           fld := fld.next
         END ;
         Write(R, 0)
       ELSIF t.form IN {Proc, TProc} THEN OutType(R, t.base); OutPar(R, t.dsc, t.nofpar); Write(R, 0)
       END ;
-      IF (t.mno > 0) & (t.form # TProc) & (obj # NIL) THEN  (*re-export, output name*)
+      IF (t.mno > 0) & (obj # NIL) THEN  (*re-export, output name*)
         mod := topScope.next;
         WHILE (mod # NIL) & (mod.lev # t.mno) DO mod := mod.next END ;
         IF mod # NIL THEN Files.WriteString(R, mod(Module).orgname); Files.WriteInt(R, mod.val); Files.WriteString(R, obj.name)
@@ -376,7 +379,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.10.19 Experimental
       obj: Object;
       filename: ORS.Ident;
       F, F1: Files.File; R, R1: Files.Rider;
-  BEGIN Ref := maxForm + 1; MakeFileName(filename, modid, ".smb");
+  BEGIN Ref := TProc + 1; MakeFileName(filename, modid, ".smb");
     F := Files.New(filename); Files.Set(R, F, 0);
     Files.WriteInt(R, 0); (*placeholder*)
     Files.WriteInt(R, 0); (*placeholder for key to be inserted at the end*)
@@ -386,8 +389,10 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.10.19 Experimental
       IF obj.expo THEN
         Write(R, obj.class); Files.WriteString(R, obj.name);
         OutType(R, obj.type);
-        IF obj.class = Const THEN
+        IF obj.class = Typ THEN Write(R, 0)
+        ELSIF obj.class = Const THEN
           IF obj.type.form = Proc THEN Files.WriteNum(R, obj.exno)
+          ELSIF obj.type.form = Real THEN Files.WriteInt(R, obj.val)
           ELSIF obj.type.form = String THEN Files.WriteNum(R, obj.exno + obj.val DIV 100000H (*len*) * 100000H)
           ELSE Files.WriteNum(R, obj.val)
           END
@@ -397,7 +402,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 1.10.19 Experimental
       obj := obj.next
     END ;
     REPEAT Write(R, 0) UNTIL Files.Length(F) MOD 4 = 0;
-    FOR Ref := maxForm+1 TO maxTypTab-1 DO typtab[Ref] := NIL END ;
+    FOR Ref := TProc+1 TO maxTypTab-1 DO typtab[Ref] := NIL END ;
     Files.Set(R, F, 0); sum := 0; Files.ReadInt(R, x);  (* compute key (checksum) *)
     WHILE ~R.eof DO sum := sum + x; Files.ReadInt(R, x) END ;
     F1 := Files.Old(filename); (*sum is new key*)

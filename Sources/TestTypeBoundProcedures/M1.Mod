@@ -1,4 +1,4 @@
-MODULE M1;  (*test type-bound procedures / AP 1.11.19 Experimental Oberon*)
+MODULE M1;  (*test type-bound procedures / AP 28.1.20 Experimental Oberon*)
   IMPORT M0, Out;
 
   TYPE
@@ -11,7 +11,7 @@ MODULE M1;  (*test type-bound procedures / AP 1.11.19 Experimental Oberon*)
     Rec1Ext123* = RECORD (Rec1Ext11) p3, q3*, r3*: CHAR END ;
 
   VAR count: INTEGER;
-    rec1ext1*: Rec1Ext1; rec1ext11*: Rec1Ext11;
+    rec1ext1*: Rec1Ext1; rec1ext11*: Rec1Ext11; rec1ext123*: Rec1Ext123;
     ptrrec1ext1*: PtrRec1Ext1;
 
   PROCEDURE (VAR rec: Rec1Ext1) Method1* (str: ARRAY OF CHAR; p: LONGINT); (*overrides M0.Rec1.Method1*)
@@ -60,7 +60,7 @@ MODULE M1;  (*test type-bound procedures / AP 1.11.19 Experimental Oberon*)
   END Method2c;
 
   PROCEDURE (VAR rec: Rec1Ext11) Method2* (str: ARRAY OF CHAR; p: LONGINT); (*overrides Rec1Ext1.Method2 declared above*)
-  BEGIN Out.Str("  Hello from M1.RecExt11.Method2 (overrides M1.Rec1Ext1.Method2); str = "); Out.Str(str);
+  BEGIN Out.Str("  Hello from M1.Rec1Ext11.Method2 (overrides M1.Rec1Ext1.Method2); str = "); Out.Str(str);
     Out.Str(", cnt = "); Out.Int(p, 4); Out.Ln;
     Out.Str("  Calling super method M1.Rec1Ext11.Method2^ = M1.Rec1Ext1.Method2 with str = Method2, cnt = "); Out.Int(p, 4); Out.Ln;
     rec.Method2^(str, p)
@@ -72,12 +72,12 @@ MODULE M1;  (*test type-bound procedures / AP 1.11.19 Experimental Oberon*)
 
   PROCEDURE Go1*;
   BEGIN Out.Str("Calling M1.Rec1Ext1.Method1 with str = Method1, count = "); Out.Int(count, 4); Out.Ln;
-    rec1ext1.x1 := 13; rec1ext1.Method1("Method1", count); INC(count)
+    rec1ext1.x1 := 11; rec1ext1.Method1("Method1", count); INC(count)
   END Go1;
 
   PROCEDURE Go2*;
   BEGIN Out.Str("Calling M1.Rec1Ext11.Method2 with str = Method2, count = "); Out.Int(count, 4); Out.Ln;
-    rec1ext11.x1 := 12; rec1ext11.Method2("Method2", count); INC(count)
+    rec1ext11.x1 := 22; rec1ext11.Method2("Method2", count); INC(count)
   END Go2;
 
   PROCEDURE Go3*;
@@ -90,14 +90,6 @@ MODULE M1;  (*test type-bound procedures / AP 1.11.19 Experimental Oberon*)
   BEGIN Out.Str("Calling M1.ptrrec1ext1.Method3 with str = Method3, count = "); Out.Int(count, 4); Out.Ln;
     ptrrec1ext1.Method3("Method3", count); INC(count)
   END Go4;
-
-  (*
-  PROCEDURE Go5*;
-  BEGIN Out.Str("Calling M0.rec1.Method1 with str = Method1, count = "); Out.Int(count, 4); Out.Ln; INC(count);
-    M0.rec1.x1 := 44;   (*would lead to a "read-only" error*)
-    M0.rec1.Method1("Method1", count)  (*would lead to a "read-only" error -> external record VAR param as receiver not allowed*)
-  END Go5;
-  *)
 
 BEGIN NEW(ptrrec1ext1)
 END M1.

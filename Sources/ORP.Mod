@@ -1,4 +1,4 @@
-MODULE ORP; (*N. Wirth 1.7.97 / 31.5.2019  Oberon compiler for RISC in Oberon-07 / AP 1.11.19 Experimental Oberon*)
+MODULE ORP; (*N. Wirth 1.7.97 / 31.5.2019  Oberon compiler for RISC in Oberon-07 / AP 29.1.20 Experimental Oberon*)
   IMPORT Texts, Oberon, ORS, ORB, ORG;
   (*Author: Niklaus Wirth, 2014. Revised Oberon-2 extensions by Andreas Pirklbauer, 2019.
     Parser of Oberon-RISC compiler. Uses Scanner ORS to obtain symbols (tokens),
@@ -105,13 +105,6 @@ MODULE ORP; (*N. Wirth 1.7.97 / 31.5.2019  Oberon compiler for RISC in Oberon-07
   BEGIN
     IF ~deref & (proc.type.dsc.class # ORB.Par) THEN ORS.Mark("incompatible receiver") END
   END CheckReceiver;
-
-  PROCEDURE CheckMethod(rec: ORB.Type);
-  BEGIN
-    IF level # 0 THEN ORS.Mark("local type-bound procedures not implemented")
-    ELSIF rec.typobj.val > 0 THEN ORS.Mark("invalid method order")
-    END
-  END CheckMethod;
 
   PROCEDURE DisallowMethods(rec: ORB.Type);  (*disallow binding methods to rec and its base types*)
   BEGIN
@@ -1014,7 +1007,10 @@ MODULE ORP; (*N. Wirth 1.7.97 / 31.5.2019  Oberon compiler for RISC in Oberon-07
 
   BEGIN (* ProcedureDecl *) int := FALSE; rec := NIL; ORS.Get(sym);
     IF sym = ORS.times THEN ORS.Get(sym); int := TRUE END ;
-    IF sym = ORS.lparen THEN ORS.Get(sym); Receiver(class, recid, typ, rec) END ;
+    IF sym = ORS.lparen THEN
+      ORS.Get(sym); Receiver(class, recid, typ, rec);
+      IF level # 0 THEN ORS.Mark("local type-bound procedures not implemented") END
+    END ;
     IF sym = ORS.ident THEN
       ORS.CopyId(procid); ORS.Get(sym); CheckExport(expo);
       IF int THEN parblksize := 12 ELSE parblksize := 4 END ;
@@ -1026,11 +1022,12 @@ MODULE ORP; (*N. Wirth 1.7.97 / 31.5.2019  Oberon compiler for RISC in Oberon-07
         ORB.OpenScope; INC(level); type.base := ORB.noType;
         ProcedureType(type, parblksize); type.dsc := ORB.topScope.next  (*formal parameter list*)
       ELSE  (*type-bound procedure*)
-        ORB.NewMethod(rec, proc, redef, procid); CheckMethod(rec); DisallowMethods(rec.base);
-        type.form := ORB.TProc; proc.type := type; proc.val := -1; proc.expo := expo; type.typobj := proc;
+        ORB.NewMethod(rec, proc, redef, procid);
+        IF rec.typobj.val > 0 THEN ORS.Mark("invalid method order") ELSE DisallowMethods(rec.base) END ;
+        type.form := ORB.TProc; proc.type := type; proc.val := -1; proc.expo := expo;
         IF expo THEN proc.exno := exno; INC(exno);
           IF ~typ.typobj.expo THEN ORS.Mark("receiver must be exported") END ;
-          procid := "@"; ORB.NewObj(obj, procid, ORB.Const); obj.name[0] := 0X;  (*dummy to record linear order of exno*)
+          procid := "@"; ORB.NewObj(obj, procid, ORB.Const); obj.name[0] := 0X; (*dummy to preserve linear order of exno*)
           obj.type := proc.type; obj.dsc := proc; obj.exno := proc.exno; obj.expo := FALSE
         END ;
         ORB.OpenScope; INC(level); type.base := ORB.noType;
@@ -1050,7 +1047,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 31.5.2019  Oberon compiler for RISC in Oberon-07
   END ProcedureDecl;
 
   PROCEDURE Module;
-    VAR key: LONGINT;
+    VAR key: LONGINT; last: INTEGER;
       impid, impid1: ORS.Ident;
   BEGIN Texts.WriteString(W, "  compiling "); ORS.Get(sym);
     IF sym = ORS.module THEN
@@ -1064,21 +1061,22 @@ MODULE ORP; (*N. Wirth 1.7.97 / 31.5.2019  Oberon compiler for RISC in Oberon-07
       END ;
       Check(ORS.semicolon, "no ;"); level := 0; exno := 1; key := 0;
       IF sym = ORS.import THEN
-        ORS.Get(sym);
+        ORS.Get(sym); last := ORS.comma;
         WHILE sym = ORS.ident DO
           ORS.CopyId(impid); ORS.Get(sym);
           IF sym = ORS.becomes THEN
             ORS.Get(sym);
             IF sym = ORS.ident THEN ORS.CopyId(impid1); ORS.Get(sym)
-            ELSE ORS.Mark("id expected")
+            ELSE ORS.Mark("id expected"); impid1 := impid
             END
           ELSE impid1 := impid
           END ;
-          ORB.Import(impid, impid1);
+          ORB.Import(impid, impid1); last := sym;
           IF sym = ORS.comma THEN ORS.Get(sym)
           ELSIF sym = ORS.ident THEN ORS.Mark("comma missing")
           END
         END ;
+        IF last = ORS.comma THEN ORS.Mark("id expected") END ;
         Check(ORS.semicolon, "no ;")
       END ;
       ORG.Open(version); Declarations(dc); ORG.SetDataSize((dc + 3) DIV 4 * 4);
@@ -1147,7 +1145,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 31.5.2019  Oberon compiler for RISC in Oberon-07
     Oberon.Collect(0)
   END Compile;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Compiler  31.5.2019 / AP 1.11.19");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Compiler  31.5.2019 / AP 29.1.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
   NEW(dummy); dummy.class := ORB.Var; dummy.type := ORB.intType;
   expression := expression0; Type := Type0; FormalType := FormalType0

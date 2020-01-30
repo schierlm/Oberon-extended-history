@@ -1,4 +1,4 @@
-MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 1.11.19 Experimental Oberon*)
+MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 20.1.20 Experimental Oberon*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser ORP; result in array "code".
@@ -380,17 +380,21 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   END FindRefFlds;
 
   PROCEDURE BuildTD(T: ORB.Type; VAR tdw: LONGINT);
-    VAR k, s, nofmth: LONGINT; fld: ORB.Object;
+    VAR k, s, nofmth: LONGINT; fld, bot: ORB.Object; t: ORB.Type;
   BEGIN (*type descriptors of base types of T already built*)
     nofmth := ORB.NofMethods(T);
     FOR k := 0 TO nofmth DO td[tdw] := -1; INC(tdw) END ;
-    fld := T.dsc;
-    WHILE fld # NIL DO  (*build method table*)
-      IF (fld.class = ORB.Const) & (fld.type.form = ORB.TProc) & (td[tdw-fld.lev-1] = -1) THEN
-        IF T.mno = 0 THEN k := fld.val DIV 4 (*mthadr*) ELSE k := fld.val (*exno*) END ;
-        td[tdw-fld.lev-1] := (T.mno*4000H + k) * 400H
+    t := T; fld := NIL;  (*build method table*)
+    WHILE t # NIL DO fld := t.dsc;
+      IF t.base # NIL THEN bot := t.base.dsc ELSE bot := NIL END ;
+      WHILE fld # bot DO
+        IF (fld.class = ORB.Const) & (fld.type.form = ORB.TProc) & (td[tdw-fld.lev-1] = -1) THEN
+          IF t.mno = 0 THEN k := fld.val DIV 4 (*mthadr*) ELSE k := fld.val (*exno*) END ;
+          td[tdw-fld.lev-1] := (t.mno*4000H + k) * 400H
+        END ;
+        fld := fld.next
       END ;
-      fld := fld.next
+      t := t.base
     END ;
     FOR k := nofmth TO 1 BY -1 DO  (*insert displacements in ascending order; keep last -1 entry as sentinel*)
       IF td[tdw-k] # -1 THEN td[tdw-k] := td[tdw-k] + tdw - k - fixorgM; fixorgM := tdw - k ELSE td[tdw-k] := 0 END

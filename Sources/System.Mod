@@ -1,4 +1,4 @@
-MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 1.12.19 Experimental Oberon*)
+MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 29.1.20 Experimental Oberon*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules,
     Input, Viewers, Fonts, Texts, Oberon, MenuViewers, TextFrames;
 
@@ -8,7 +8,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 1.12.19 Experiment
 
   TYPE Handler = PROCEDURE(name: ARRAY OF CHAR);
 
-  VAR W: Texts.Writer; M: Modules.Module; ref: INTEGER;
+  VAR W: Texts.Writer; M: Modules.Module; T: Oberon.Task; ref, last: INTEGER; defer: BOOLEAN;
     pat: ARRAY 32 OF CHAR;
 
   PROCEDURE GetArg(VAR S: Texts.Scanner);
@@ -88,7 +88,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 1.12.19 Experiment
     VAR logV, toolV, menu, main: Viewers.Frame; X, Y: INTEGER;
   BEGIN
     IF Viewers.CurDisplay # NIL THEN
-      Texts.WriteString(W, "Experimental Oberon  AP 1.12.19 / Display ");
+      Texts.WriteString(W, "Experimental Oberon  AP 29.1.20 / Display ");
       Texts.WriteInt(W, Viewers.CurDisplay.id, 3); Texts.Write(W, " ");
       Texts.WriteString(W, Viewers.CurDisplay.name); EndLine;
       Oberon.AllocateSystemViewer(0, X, Y);
@@ -787,27 +787,53 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 1.12.19 Experiment
     VAR u, v, w: INTEGER; mod: Modules.Module;
   BEGIN u := SYSTEM.REG(15); SYSTEM.GET(u - 4, v); w := v DIV 10H MOD 10H; (*trap number*)
     IF w = 0 THEN Kernel.New(a, b, c, d)
-    ELSE (*trap*) Texts.WriteLn(W); Texts.WriteString(W, "  pos "); Texts.WriteInt(W, v DIV 100H MOD 10000H, 4);
-      Texts.WriteString(W, "  TRAP"); Texts.WriteInt(W, w, 4); mod := Modules.root;
-      WHILE (mod # NIL) & ((u < mod.code) OR (u >= mod.imp)) DO mod := mod.next END ;
-      IF mod # NIL THEN Texts.WriteString(W, " in "); Texts.WriteString(W, mod.name) END ;
-      Texts.WriteString(W, " at"); Texts.WriteHex(W, u);
-      IF mod # NIL THEN Texts.WriteString(W, "  obj pos "); Texts.WriteInt(W, (u - mod.code - 4) DIV 4, 4) END ;
-      Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); Oberon.Reset
+    ELSE (*trap*)
+      IF defer THEN (*defer trap handling*) last := u; Oberon.Install(T)
+      ELSE defer := TRUE;
+        Texts.WriteLn(W); Texts.WriteString(W, "  pos "); Texts.WriteInt(W, v DIV 100H MOD 10000H, 4);
+        Texts.WriteString(W, "  TRAP"); Texts.WriteInt(W, w, 4); mod := Modules.root;
+        WHILE (mod # NIL) & ((u < mod.code) OR (u >= mod.imp)) DO mod := mod.next END ;
+        IF mod # NIL THEN Texts.WriteString(W, " in "); Texts.WriteString(W, mod.name) END ;
+        Texts.WriteString(W, " at"); Texts.WriteHex(W, u);
+        Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); defer := FALSE
+      END ;
+      Oberon.Collect(0); Oberon.Reset
     END
   END Trap;
 
   PROCEDURE Abort;
-    VAR n: INTEGER; mod: Modules.Module;
-  BEGIN n := SYSTEM.REG(15); Texts.WriteString(W, "  ABORT"); mod := Modules.root;
-    WHILE (mod # NIL) & ((n < mod.code) OR (n >= mod.imp)) DO mod := mod.next END ;
-    IF mod # NIL THEN Texts.WriteString(W, " in "); Texts.WriteString(W, mod.name) END ;
-    Texts.WriteString(W, " at"); Texts.WriteHex(W, n);
-    IF mod # NIL THEN Texts.WriteString(W, "  obj pos "); Texts.WriteInt(W, (n - mod.code - 4) DIV 4, 4) END ;
-    Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); Oberon.Reset
+    VAR u: INTEGER; mod: Modules.Module;
+  BEGIN u := SYSTEM.REG(15);
+    IF defer THEN (*defer abort handling*) last := u; Oberon.Install(T)
+    ELSE defer := TRUE;
+      Texts.WriteLn(W); Texts.WriteString(W, "  ABORT  "); mod := Modules.root;
+      WHILE (mod # NIL) & ((u < mod.code) OR (u >= mod.imp)) DO mod := mod.next END ;
+      IF mod # NIL THEN Texts.WriteString(W, " in "); Texts.WriteString(W, mod.name) END ;
+      Texts.WriteString(W, " at"); Texts.WriteHex(W, u);
+      Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); defer := FALSE
+    END ;
+    Oberon.Collect(0); Oberon.Reset
   END Abort;
 
-BEGIN Texts.OpenWriter(W);
+  PROCEDURE Deferred;  (*handle trap/abort as soon as the GC has freed up enough heap space*)
+    VAR v, w, pos: INTEGER; mod: Modules.Module;
+  BEGIN
+    IF Kernel.allocated < Kernel.heapLim - Kernel.heapOrg - 10000H THEN Oberon.Remove(T);
+      SYSTEM.GET(last - 4, v); pos := v DIV 100H MOD 10000H; Texts.WriteLn(W);
+      IF pos # 0 THEN w := v DIV 10H MOD 10H; (*trap number*)
+        Texts.WriteString(W, "  pos "); Texts.WriteInt(W, pos, 4);
+        Texts.WriteString(W, "  RECURSIVE TRAP"); Texts.WriteInt(W, w, 4)
+      ELSE Texts.WriteString(W, "  RECURSIVE ABORT  ")
+      END ;
+      mod := Modules.root;
+      WHILE (mod # NIL) & ((last < mod.code) OR (last >= mod.imp)) DO mod := mod.next END ;
+      IF mod # NIL THEN Texts.WriteString(W, " in "); Texts.WriteString(W, mod.name) END ;
+      Texts.WriteString(W, " at"); Texts.WriteHex(W, last);
+      Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); defer := FALSE
+    END
+  END Deferred;
+
+BEGIN Texts.OpenWriter(W); defer := FALSE; T := Oberon.NewTask(Deferred, 500);
   Oberon.OpenLog(TextFrames.Text("")); CreateDisplay("Oberon");
   Kernel.Install(SYSTEM.ADR(Trap), 20H); Kernel.Install(SYSTEM.ADR(Abort), 0)
 END System.

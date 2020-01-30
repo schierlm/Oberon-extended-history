@@ -1,4 +1,4 @@
-MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 22.2.19*)
+MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 1.12.19*)
   IMPORT SYSTEM, Display, Viewers, Input, Fonts, Texts, Graphics, Oberon;
 
   CONST (*update message ids*)
@@ -524,7 +524,7 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 22.2.19*)
   END Open;
 
 BEGIN DW := Display.Width - 8; DH := Display.Height - 8; CL := 0;
-  Texts.OpenWriter(W);
+  Texts.OpenWriter(W); NEW(TBuf); Texts.OpenBuf(TBuf);
   tack := SYSTEM.ADR($0707 4122 1408 1422 4100$);
   dotted := SYSTEM.ADR($2004 0000 1111 1111 0000 0000 0000 0000 0000 0000$);
   dotted1 := SYSTEM.ADR($2004 0000 1111 1111 0000 0000 4444 4444 0000 0000$);
