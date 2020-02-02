@@ -1,4 +1,4 @@
-MODULE M0;  (*test type-bound procedures / AP 28.1.20 Experimental Oberon*)
+MODULE M0;  (*test type-bound procedures / AP 2.2.20 Extended Oberon System*)
   IMPORT Out;
 
   TYPE

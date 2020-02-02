@@ -1,4 +1,4 @@
-MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 1.5.19 Experimental Oberon*)
+MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 2.2.20 Extended Oberon System*)
   IMPORT Files, Fonts, Texts, Viewers, Oberon, MenuViewers, TextFrames;
 
   CONST CR = 0DX; maxlen = 32;

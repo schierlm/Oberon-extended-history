@@ -1,4 +1,4 @@
-MODULE M3;  (*test safe module unloading - part 1; AP 1.10.19 Experimental Oberon*)
+MODULE M3;  (*test safe module unloading / AP 2.2.20 Extended Oberon System*)
   IMPORT SYSTEM, M0, M1, M2, Out;
 
   PROCEDURE SetGlobalProc1*;

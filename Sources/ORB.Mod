@@ -1,4 +1,4 @@
-MODULE ORB;   (*NW 25.6.2014  / 25.1.2020   in Oberon-07 / AP 29.1.20 Experimental Oberon*)
+MODULE ORB;   (*NW 25.6.2014  / 25.1.2020   in Oberon-07 / AP 2.2.20 Extended Oberon System*)
   IMPORT Files, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
@@ -131,17 +131,17 @@ MODULE ORB;   (*NW 25.6.2014  / 25.1.2020   in Oberon-07 / AP 29.1.20 Experiment
   END NofMethods;
 
   PROCEDURE NewMethod*(rec: Type; VAR mth, redef: Object; id: ORS.Ident);  (*insert new method with name id*)
-    VAR fld, fld0, bot: Object;
+    VAR fld, fld0, new, bot: Object;
 
-    PROCEDURE UpdateLinks(rec: Type; mth, bot: Object);  (*between field lists of extensions*)
+    PROCEDURE UpdateLinks(rec: Type; new, bot: Object);  (*between field lists of extensions*)
       VAR obj, fld: Object;
     BEGIN obj := rec.typobj.next;
       WHILE obj # NIL DO
         IF (obj.class = Typ) & (obj.type.form = Record) & (obj.type.base = rec) THEN
-          IF obj.type.dsc = bot THEN obj.type.dsc := mth; UpdateLinks(obj.type, mth, bot)
+          IF obj.type.dsc = bot THEN obj.type.dsc := new; UpdateLinks(obj.type, new, bot)
           ELSE fld := obj.type.dsc;
             WHILE fld.next # bot DO fld := fld.next END ;
-            fld.next := mth
+            fld.next := new
           END
         END ;
         obj := obj.next
@@ -152,13 +152,12 @@ MODULE ORB;   (*NW 25.6.2014  / 25.1.2020   in Oberon-07 / AP 29.1.20 Experiment
     IF rec.base # NIL THEN bot := rec.base.dsc ELSE bot := NIL END ;
     fld := rec.dsc;  (*search id in fields of rec proper*)
     WHILE (fld # bot) & (fld.name # id) DO fld0 := fld; fld := fld.next END ;
-    IF fld = bot THEN
-      fld := bot;  (*search id in fields of base types of rec*)
+    IF fld = bot THEN  (*search id in fields of base types of rec*)
       WHILE (fld # NIL) & (fld.name # id) DO fld := fld.next END ;
-      IF (fld = NIL) OR (fld.class = Const) THEN redef := fld;
-        NEW(fld); fld.name := id; fld.class := Const; fld.rdo := FALSE; fld.dsc := NIL; fld.next := bot; mth := fld;
-        IF redef = NIL THEN fld.lev := NofMethods(rec) ELSE fld.lev := redef.lev END ;  (*assign method number*)
-        IF rec.dsc = bot THEN rec.dsc := mth; UpdateLinks(rec, mth, bot) ELSE fld0.next := mth END
+      IF (fld = NIL) OR (fld.class = Const) THEN
+        NEW(new); new.name := id; new.class := Const; new.rdo := FALSE; new.dsc := NIL; new.next := bot; mth := new;
+        IF fld = NIL THEN new.lev := NofMethods(rec) ELSE new.lev := fld.lev; redef := fld END ;  (*mthno*)
+        IF rec.dsc = bot THEN rec.dsc := new; UpdateLinks(rec, new, bot) ELSE fld0.next := new END
       ELSE mth := fld; ORS.Mark("mult def")
       END
     ELSE mth := fld; ORS.Mark("mult def")

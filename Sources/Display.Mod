@@ -1,4 +1,4 @@
-MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 3.3.19 Experimental Oberon*)
+MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 2.2.20 Extended Oberon System*)
   IMPORT SYSTEM;
 
   CONST black* = 0; white* = 1;  (*black = background*)

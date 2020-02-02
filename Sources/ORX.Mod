@@ -1,4 +1,4 @@
-MODULE ORX;  (*Oberon boot converter for RISC / AP 1.11.19 Experimental Oberon*)
+MODULE ORX;  (*Oberon boot converter for RISC / AP 2.2.20 Extended Oberon System*)
   IMPORT Files, Texts, Oberon;
   CONST noerr = 0; hasimp = 1; badfile = 2; CR = 0DX;
   TYPE WriteProc = PROCEDURE(VAR R: Files.Rider; x: LONGINT);

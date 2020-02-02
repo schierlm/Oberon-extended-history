@@ -1,4 +1,4 @@
-MODULE M2; (*identical copy of module M1 / AP 1.10.19 Experimental Oberon*)
+MODULE M2; (*identical copy of module M1 / AP 2.2.20 Extended Oberon System*)
   IMPORT SYSTEM, M0;
 
   TYPE Ptr* = POINTER TO Rec;

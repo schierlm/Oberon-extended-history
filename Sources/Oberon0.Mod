@@ -1,4 +1,4 @@
-MODULE Oberon0; (*Oberon-0 command interpreter for Experimental Oberon; AP 1.11.19*)
+MODULE Oberon0; (*Oberon-0 command interpreter / AP 2.2.20 Extended Oberon System*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules, RS232, PCLink0;
   CONST swi = -60; (*switches*)
     stat = -52; (*RS-232*)

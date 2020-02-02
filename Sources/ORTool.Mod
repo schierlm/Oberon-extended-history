@@ -1,4 +1,4 @@
-MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 27.1.20 Experimental Oberon*)
+MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 2.2.20 Extended Oberon System*)
   IMPORT Files, Texts, Oberon, ORB;
   VAR W: Texts.Writer;
     mnemo0, mnemo1: ARRAY 16, 4 OF CHAR;  (*mnemonics*)

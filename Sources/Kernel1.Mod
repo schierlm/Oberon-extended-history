@@ -1,4 +1,4 @@
-MODULE Kernel;  (*module Kernel for a boot file containing the entire Oberon system / AP 12.12.19 Experimental Oberon*)
+MODULE Kernel;  (*module Kernel for a boot file containing the entire Oberon system / AP 2.2.20 Extended Oberon System*)
   IMPORT SYSTEM;
   CONST SectorLength* = 1024;
     timer = -64; spiData = -48; spiCtrl = -44;

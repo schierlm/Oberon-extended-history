@@ -1,4 +1,4 @@
-MODULE M1; (*AP 1.10.19 Experimental Oberon*)
+MODULE M1;  (*test safe module unloading / AP 2.2.20 Extended Oberon System*)
   IMPORT SYSTEM, M0;
 
   TYPE Ptr* = POINTER TO Rec;

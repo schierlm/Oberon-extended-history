@@ -1,4 +1,4 @@
-MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 12.12.19 Experimental Oberon*)
+MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 2.2.20 Extended Oberon System*)
   IMPORT SYSTEM;
   CONST SectorLength* = 1024;
     timer = -64; spiData = -48; spiCtrl = -44;

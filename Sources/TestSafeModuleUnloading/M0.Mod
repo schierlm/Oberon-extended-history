@@ -1,4 +1,4 @@
-MODULE M0; (*AP 1.10.19 Experimental Oberon*)
+MODULE M0;  (*test safe module unloading / AP 2.2.20 Extended Oberon System*)
   TYPE Proc* = PROCEDURE;
 
     Ptr* = POINTER TO Rec;

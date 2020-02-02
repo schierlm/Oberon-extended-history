@@ -1,4 +1,4 @@
-MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 20.1.19 Experimental Oberon*)
+MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 2.2.20 Extended Oberon System*)
   IMPORT SYSTEM, Files;
 
   CONST FontFileId = 0DBH;

@@ -1,4 +1,4 @@
-MODULE M3;  (*test type-bound procedures / AP 28.1.20 Experimental Oberon*)
+MODULE M3;  (*test type-bound procedures / AP 2.2.20 Extended Oberon System*)
   IMPORT Out;
 
   TYPE
@@ -97,7 +97,8 @@ MODULE M3;  (*test type-bound procedures / AP 28.1.20 Experimental Oberon*)
   END Go2;
 
   PROCEDURE Go2r*;  (*a statically declared global record can also be a receiver*)
-  BEGIN INC(rec.x2); rec.Method2("Method2r", rec.x2, B); Out.Ln
+  BEGIN Out.Str("Calling rec.Method2 with str = Method2r"); Out.Ln;
+    INC(rec.x2); rec.Method2("Method2r", rec.x2, B); Out.Ln
   END Go2r;
 
   PROCEDURE Go2e*;  (*call a method that is bound to a record extension*)
@@ -117,7 +118,7 @@ MODULE M3;  (*test type-bound procedures / AP 28.1.20 Experimental Oberon*)
 
   PROCEDURE Go3*;  (*call of a method that is a function procedure*)
     VAR res: INTEGER;
-  BEGIN Out.Str("Calling ptr.Method3 with str = Method3a"); Out.Ln;
+  BEGIN Out.Str("Calling ptr.Method3 twice, with str = Method3a and with str = Method3b"); Out.Ln;
     INC(ptr.x3); res := ptr.Method3("Method3a", ptr.x3, B) + ptr.Method3("Method3b", ptr.x3+1, B)
   END Go3;
 
@@ -201,8 +202,8 @@ System.Free M3 ~
 
 M3.Go0       # call to a regular handler that is not a method
 
-M3.Go1       # Method1 (caller AUTOMATICALLY passes the de-referenced ptr^ to a method which accepts a POINTER)
-M3.Go1b     # Method1 (caller EXPLICITLY de-references ptr^ BEFORE calling a method which accepts a POINTER)
+M3.Go1       # Method1 (caller AUTOMATICALLY passes the de-referenced ptr^ to a method which accepts a pointer)
+M3.Go1b     # Method1 (caller EXPLICITLY de-references ptr^ BEFORE calling a method which accepts a pointer)
 
 M3.Go2       # Method2 (caller AUTOMATICALLY passes the de-referenced ptr^ to a method which accepts a VAR record)
 M3.Go2r     # Method2 (a statically declared global record can also be a receiver)
@@ -216,7 +217,7 @@ M3.Go4r     # Method2 (a statically declared global record EXTENSION can also be
 M3.Go4e     # Method4 (call a method that is bound to a record extension)
 
 M3.Go5       # Method5 (caller AUTOMATICALLY passes the de-referenced RECORD to a method which accepts a VAR record)
-M3.Go5b     # Method5 (caller EXPLICITLY de-references RECORD BEFORE calling a method which accepts a VAR record)
+M3.Go5b     # Method5 (caller EXPLICITLY de-references record BEFORE calling a method which accepts a VAR record)
 M3.Go5pe     # Method5 (ptr to an EXTENSION is passed to VAR param of a BASE type)
 
 M3.Go6       # Method6 (caller AUTOMATICALLY passes the de-referenced ptr^ to a method which accepts a VAR record)

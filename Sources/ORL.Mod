@@ -1,4 +1,4 @@
-MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 1.11.19 Experimental Oberon*)
+MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 2.2.20 Extended Oberon System*)
   IMPORT SYSTEM, Kernel, Files, Modules, Texts, Oberon;
   CONST versionkey = 1X; versionkey0 = 0X; MT = 12; DescSize = 84; MnLength = 32;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5;

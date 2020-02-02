@@ -1,4 +1,4 @@
-MODULE System1;  (*top module for a boot file containing the entire Oberon system / AP 1.10.19 Experimental Oberon*)
+MODULE System1;  (*top module for a boot file containing the entire Oberon system / AP 2.2.20 Extended Oberon System*)
   IMPORT SYSTEM, Files, Modules, Oberon, System, Oberon0, Oberon0Tool;
 
   PROCEDURE InitDefaultFont;  (*create the default font file Oberon10.Scn.Fnt if necessary*)
