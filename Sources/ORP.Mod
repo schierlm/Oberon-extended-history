@@ -1,4 +1,4 @@
-MODULE ORP; (*N. Wirth 1.7.97 / 31.5.2019  Oberon compiler for RISC in Oberon-07 / AP 2.2.20 Extended Oberon System*)
+MODULE ORP; (*N. Wirth 1.7.97 / 31.5.2019  Oberon compiler for RISC in Oberon-07 / AP 6.2.20 Extended Oberon System*)
   IMPORT Texts, Oberon, ORS, ORB, ORG;
   (*Author: Niklaus Wirth, 2014. Revised Oberon-2 extensions by Andreas Pirklbauer, 2019.
     Parser of Oberon-RISC compiler. Uses Scanner ORS to obtain symbols (tokens),
@@ -1046,9 +1046,25 @@ MODULE ORP; (*N. Wirth 1.7.97 / 31.5.2019  Oberon compiler for RISC in Oberon-07
     END
   END ProcedureDecl;
 
+  PROCEDURE Import;
+    VAR impid, impid1: ORS.Ident;
+  BEGIN
+    IF sym = ORS.ident THEN
+      ORS.CopyId(impid); ORS.Get(sym);
+      IF sym = ORS.becomes THEN
+        ORS.Get(sym);
+        IF sym = ORS.ident THEN ORS.CopyId(impid); ORS.Get(sym)
+        ELSE ORS.Mark("id expected"); impid1 := impid
+        END
+      ELSE impid1 := impid
+      END ;
+      ORB.Import(impid, impid1)
+    ELSE ORS.Mark("id expected")
+    END
+  END Import;
+
   PROCEDURE Module;
-    VAR key: LONGINT; last: INTEGER;
-      impid, impid1: ORS.Ident;
+    VAR key: LONGINT;
   BEGIN Texts.WriteString(W, "  compiling "); ORS.Get(sym);
     IF sym = ORS.module THEN
       ORS.Get(sym);
@@ -1061,23 +1077,9 @@ MODULE ORP; (*N. Wirth 1.7.97 / 31.5.2019  Oberon compiler for RISC in Oberon-07
       END ;
       Check(ORS.semicolon, "no ;"); level := 0; exno := 1; key := 0;
       IF sym = ORS.import THEN
-        ORS.Get(sym); last := ORS.comma;
-        WHILE sym = ORS.ident DO
-          ORS.CopyId(impid); ORS.Get(sym);
-          IF sym = ORS.becomes THEN
-            ORS.Get(sym);
-            IF sym = ORS.ident THEN ORS.CopyId(impid1); ORS.Get(sym)
-            ELSE ORS.Mark("id expected"); impid1 := impid
-            END
-          ELSE impid1 := impid
-          END ;
-          ORB.Import(impid, impid1); last := sym;
-          IF sym = ORS.comma THEN ORS.Get(sym)
-          ELSIF sym = ORS.ident THEN ORS.Mark("comma missing")
-          END
-        END ;
-        IF last = ORS.comma THEN ORS.Mark("id expected") END ;
-        Check(ORS.semicolon, "no ;")
+        ORS.Get(sym); Import;
+        WHILE sym = ORS.comma DO ORS.Get(sym); Import END ;
+        Check(ORS.semicolon, "; missing")
       END ;
       ORG.Open(version); Declarations(dc); ORG.SetDataSize((dc + 3) DIV 4 * 4);
       WHILE sym = ORS.procedure DO ProcedureDecl; Check(ORS.semicolon, "no ;") END ;
@@ -1145,7 +1147,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 31.5.2019  Oberon compiler for RISC in Oberon-07
     Oberon.Collect(0)
   END Compile;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Compiler  31.5.2019 / AP 1.2.20");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Compiler  31.5.2019 / AP 6.2.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
   NEW(dummy); dummy.class := ORB.Var; dummy.type := ORB.intType;
   expression := expression0; Type := Type0; FormalType := FormalType0
