@@ -1,4 +1,4 @@
-MODULE ORP; (*N. Wirth 1.7.97 / 31.5.2019  Oberon compiler for RISC in Oberon-07 / AP 6.2.20 Extended Oberon System*)
+MODULE ORP; (*N. Wirth 1.7.97 / 30.1.2020  Oberon compiler for RISC in Oberon-07 / AP 6.2.20 Extended Oberon System*)
   IMPORT Texts, Oberon, ORS, ORB, ORG;
   (*Author: Niklaus Wirth, 2014. Revised Oberon-2 extensions by Andreas Pirklbauer, 2019.
     Parser of Oberon-RISC compiler. Uses Scanner ORS to obtain symbols (tokens),
