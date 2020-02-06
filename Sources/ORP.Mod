@@ -594,7 +594,8 @@ MODULE ORP; (*N. Wirth 1.7.97 / 30.1.2020  Oberon compiler for RISC in Oberon-07
 
   BEGIN (* StatSequence *)
     REPEAT (*sync*) obj := NIL;
-      IF ~((sym >= ORS.ident) & (sym <= ORS.for) OR (sym >= ORS.semicolon)) THEN ORS.Mark("statement expected");
+      IF ~((sym >= ORS.ident) & (sym <= ORS.for) OR (sym >= ORS.semicolon)) THEN
+        ORS.Mark("statement expected");
         REPEAT ORS.Get(sym) UNTIL sym >= ORS.ident
       END ;
       IF sym = ORS.ident THEN
