@@ -1054,7 +1054,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 30.1.2020  Oberon compiler for RISC in Oberon-07
       ORS.CopyId(impid); ORS.Get(sym);
       IF sym = ORS.becomes THEN
         ORS.Get(sym);
-        IF sym = ORS.ident THEN ORS.CopyId(impid); ORS.Get(sym)
+        IF sym = ORS.ident THEN ORS.CopyId(impid1); ORS.Get(sym)
         ELSE ORS.Mark("id expected"); impid1 := impid
         END
       ELSE impid1 := impid
