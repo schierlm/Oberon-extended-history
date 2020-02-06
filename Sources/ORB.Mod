@@ -1,4 +1,4 @@
-MODULE ORB;   (*NW 25.6.2014  / 25.1.2020   in Oberon-07 / AP 2.2.20 Extended Oberon System*)
+MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 6.2.20 Extended Oberon System*)
   IMPORT Files, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
