@@ -1,4 +1,4 @@
-MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 2.2.20 Extended Oberon System*)
+MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 7.2.20 Extended Oberon*)
   IMPORT Files, Texts, Oberon, ORB;
   VAR W: Texts.Writer;
     mnemo0, mnemo1: ARRAY 16, 4 OF CHAR;  (*mnemonics*)
@@ -260,7 +260,7 @@ MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 2.2.20 Extended Oberon System*)
     END
   END DecObj;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "ORTool 18.2.2013 / AP 1.10.19");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "ORTool 18.2.2013 / AP 7.2.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
   mnemo0[0] := "MOV";
   mnemo0[1] := "LSL";

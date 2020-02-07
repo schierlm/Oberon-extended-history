@@ -1,4 +1,4 @@
-MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 22.2.19*)
+MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 7.2.20*)
   IMPORT SYSTEM, Display, Viewers, Texts, Oberon, MenuViewers, TextFrames;
 
   CONST Menu = "Stars.Close System.Copy System.Grow Stars.Step Stars.Run Stars.Stop | System.Expand System.Spread System.Clone";

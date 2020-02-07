@@ -1,4 +1,4 @@
-MODULE M4;  (*test type-bound procedures - ORP.selector/deref and ORP.CheckReceiver / AP 2.2.20 Extended Oberon System*)
+MODULE M4;  (*test type-bound procedures, ORP.selector/deref and ORP.CheckReceiver / AP 7.2.20 Extended Oberon*)
   IMPORT Out;
 
   TYPE

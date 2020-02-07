@@ -1,4 +1,4 @@
-MODULE Texts; (*JG 21.11.90 / NW 11.7.90 / 24.12.95 / 22.11.10 / 18.11.2014 / 10.1.2019 / AP 2.2.20 Extended Oberon System*)
+MODULE Texts; (*JG 21.11.90 / NW 11.7.90 / 24.12.95 / 22.11.10 / 18.11.2014 / 10.1.2019 / AP 7.2.20 Extended Oberon*)
   IMPORT Files, Fonts;
 
   CONST (*scanner symbol classes*)

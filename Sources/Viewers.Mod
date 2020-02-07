@@ -1,4 +1,4 @@
-MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 15.4.19*)
+MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 7.2.20*)
   CONST restore* = 0; modify* = 1; suspend* = 2; consume* = 3; track* = 4;
     defocus* = 5; neutralize* = 6; mark* = 7; inf = 65535; DnLength* = 32;
 

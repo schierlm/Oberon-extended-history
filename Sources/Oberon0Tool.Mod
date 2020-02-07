@@ -1,4 +1,4 @@
-MODULE Oberon0Tool; (*AP 4.7.18*)
+MODULE Oberon0Tool; (*AP 7.2.20*)
   IMPORT Texts, Oberon, Oberon0;
   VAR T: Oberon.Task;
     W: Texts.Writer;

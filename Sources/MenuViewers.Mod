@@ -1,4 +1,4 @@
-MODULE MenuViewers; (*JG 26.8.90 / 16.9.93 / NW 10.3.13 / AP 12.6.17*)
+MODULE MenuViewers; (*JG 26.8.90 / 16.9.93 / NW 10.3.13 / AP 7.2.20*)
   IMPORT Input, Display, Viewers, Oberon;
 
   TYPE Viewer* = POINTER TO ViewerDesc;

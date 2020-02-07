@@ -1,4 +1,4 @@
-MODULE* BootLoadDisk;  (*NW 20.10.2013 / PR 4.2.2014 / AP 1.11.2017 for use in Oberon0*)
+MODULE* BootLoadDisk;  (*NW 20.10.2013 / PR 4.2.2014 / AP 7.2.20 for use in Oberon0*)
   IMPORT SYSTEM;
   (* sw0: init SD; sw1: line|disk*)
   CONST MT = 12; SP = 14; LNK = 15;

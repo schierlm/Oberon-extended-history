@@ -1,4 +1,4 @@
-MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 1.12.19*)
+MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 7.2.20*)
   IMPORT SYSTEM, Display, Viewers, Input, Fonts, Texts, Graphics, Oberon;
 
   CONST (*update message ids*)

@@ -1,4 +1,4 @@
-MODULE Draw; (*NW 29.6.88 / 12.11.94 / 18.11.2013 / AP 2.2.20 Extended Oberon System*)
+MODULE Draw; (*NW 29.6.88 / 12.11.94 / 18.11.2013 / AP 7.2.20*)
 
   IMPORT Files, Fonts, Viewers, Texts, Oberon,
     TextFrames, MenuViewers, Graphics, GraphicFrames;
