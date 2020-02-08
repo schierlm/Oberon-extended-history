@@ -1,6 +1,6 @@
 MODULE ORX;  (*Oberon boot converter for RISC / AP 7.2.20 Extended Oberon*)
   IMPORT Files, Texts, Oberon;
-  CONST noerr = 0; hasimp = 1; badfile = 2; CR = 0DX;
+  CONST noerr = 0; badfile = 1; CR = 0DX;
   TYPE WriteProc = PROCEDURE(VAR R: Files.Rider; x: LONGINT);
 
   VAR W: Texts.Writer;
@@ -25,26 +25,24 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 7.2.20 Extended Oberon*)
     Files.ReadByte(R, b); (*version*) Files.ReadInt(R, data); (*size*)
     Files.ReadString(R, name); (*imports*) nofimps := 0;
     WHILE name[0] # 0X DO INC(nofimps); Files.ReadInt(R, data); (*key*) Files.ReadString(R, name) END ;
-    IF nofimps = 0 THEN F := Files.Base(R);
-      Files.ReadInt(R, n); (*variable space*)
-      Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n); (*strings*)
-      Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n*4); (*type descriptors*)
-      Files.ReadInt(R, codelen); n := 0;
-      WHILE n < codelen DO Files.ReadInt(R, data); write(R1, data); INC(n) END ; (*write code*)
-      Files.ReadString(R, name);
-      WHILE name[0] # 0X DO Files.ReadInt(R, data); Files.ReadString(R, name) END ; (*commands*)
-      Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n*4); (*entries*)
-      Files.ReadInt(R, data);
-      WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*pointer references*)
-      Files.ReadInt(R, data);
-      WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*procedure variable references*)
-      Files.ReadInt(R, data); (*fixorgP*) Files.ReadInt(R, data); (*fixorgD*)
-      Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, data); (*fixorgM*)
-      Files.ReadInt(R, entry);
-      Files.Read(R, ch);
-      IF ch # "O" THEN res := badfile ELSE res := noerr END
-    ELSE res := hasimp
-    END
+    F := Files.Base(R);
+    Files.ReadInt(R, n); (*variable space*)
+    Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n); (*strings*)
+    Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n*4); (*type descriptors*)
+    Files.ReadInt(R, codelen); n := 0;
+    WHILE n < codelen DO Files.ReadInt(R, data); write(R1, data); INC(n) END ; (*write code*)
+    Files.ReadString(R, name);
+    WHILE name[0] # 0X DO Files.ReadInt(R, data); Files.ReadString(R, name) END ; (*commands*)
+    Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n*4); (*entries*)
+    Files.ReadInt(R, data);
+    WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*pointer references*)
+    Files.ReadInt(R, data);
+    WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*procedure variable references*)
+    Files.ReadInt(R, data); (*fixorgP*) Files.ReadInt(R, data); (*fixorgD*)
+    Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, data); (*fixorgM*)
+    Files.ReadInt(R, entry);
+    Files.Read(R, ch);
+    IF ch # "O" THEN res := badfile ELSE res := noerr END
   END OutCode;
 
   PROCEDURE WriteFile*;  (*write code section of M.rsc in hex format to output file*)
@@ -64,7 +62,6 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 7.2.20 Extended Oberon*)
             WHILE n < filelen DO WriteHex(Rg, 0); INC(n) END ; (*zero-fill*)
             Texts.WriteInt(W, codelen*4, 6); Texts.WriteInt(W, entry, 6);
             Texts.WriteString(W, "  done"); Files.Register(g)
-          ELSIF res = hasimp THEN Texts.WriteString(W, "  imports not allowed")
           ELSIF res = badfile THEN Texts.WriteString(W, "  input file format error")
           END
         ELSE Texts.WriteString(W, "  input file not found")
@@ -92,7 +89,6 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 7.2.20 Extended Oberon*)
             Files.Set(Rg, g, 0); Files.WriteInt(Rg, codelen*4); Files.WriteInt(Rg, entry); (*insert prefix*)
             Texts.WriteInt(W, codelen*4, 6); Texts.WriteInt(W, entry, 6);
             Texts.WriteString(W, "  done"); Files.Register(g)
-          ELSIF res = hasimp THEN Texts.WriteString(W, "  imports not allowed")
           ELSIF res = badfile THEN Texts.WriteString(W, "  input file format error")
           END
         ELSE Texts.WriteString(W, "  input file not found")
