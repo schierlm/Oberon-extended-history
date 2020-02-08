@@ -262,7 +262,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 7.2.20 Extended Oberon*)
       END
     ELSE Texts.WriteString(W, "Usage: ORL.Link [module...] topmodule")
     END ;
-    Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
+    Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); root := NIL
   END Link;
 
   PROCEDURE Load*;  (*load prelinked boot file F.bin onto the boot area of the local disk, starting at sector 2*)
