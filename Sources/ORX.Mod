@@ -1,6 +1,6 @@
 MODULE ORX;  (*Oberon boot converter for RISC / AP 7.2.20 Extended Oberon*)
   IMPORT Files, Texts, Oberon;
-  CONST noerr = 0; badfile = 1; CR = 0DX;
+  CONST noerr = 0; badfile = 4; CR = 0DX;
   TYPE WriteProc = PROCEDURE(VAR R: Files.Rider; x: LONGINT);
 
   VAR W: Texts.Writer;
@@ -18,13 +18,13 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 7.2.20 Extended Oberon*)
   END WriteHex;
 
   PROCEDURE OutCode(VAR R, R1: Files.Rider; write: WriteProc; VAR codelen, entry, res: INTEGER);
-    VAR n, data, nofimps: INTEGER; ch: CHAR; b: BYTE;      (*codelen in words, entry in bytes*)
+    VAR n, data: INTEGER; ch: CHAR; b: BYTE;               (*codelen in words, entry in bytes*)
       F: Files.File;
       name: ARRAY 32 OF CHAR;
   BEGIN Files.ReadString(R, name); Files.ReadInt(R, data); (*key*)
     Files.ReadByte(R, b); (*version*) Files.ReadInt(R, data); (*size*)
-    Files.ReadString(R, name); (*imports*) nofimps := 0;
-    WHILE name[0] # 0X DO INC(nofimps); Files.ReadInt(R, data); (*key*) Files.ReadString(R, name) END ;
+    Files.ReadString(R, name); (*imports*)
+    WHILE name[0] # 0X DO Files.ReadInt(R, data); (*key*) Files.ReadString(R, name) END ;
     F := Files.Base(R);
     Files.ReadInt(R, n); (*variable space*)
     Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n); (*strings*)
