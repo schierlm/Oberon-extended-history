@@ -21,11 +21,10 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 7.2.20 Extended Oberon*)
     VAR n, data: INTEGER; ch: CHAR; b: BYTE;               (*codelen in words, entry in bytes*)
       F: Files.File;
       name: ARRAY 32 OF CHAR;
-  BEGIN Files.ReadString(R, name); Files.ReadInt(R, data); (*key*)
+  BEGIN F := Files.Base(R); Files.ReadString(R, name); Files.ReadInt(R, data); (*key*)
     Files.ReadByte(R, b); (*version*) Files.ReadInt(R, data); (*size*)
     Files.ReadString(R, name); (*imports*)
     WHILE name[0] # 0X DO Files.ReadInt(R, data); (*key*) Files.ReadString(R, name) END ;
-    F := Files.Base(R);
     Files.ReadInt(R, n); (*variable space*)
     Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n); (*strings*)
     Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n*4); (*type descriptors*)
