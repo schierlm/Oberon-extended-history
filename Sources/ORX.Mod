@@ -1,5 +1,5 @@
 MODULE ORX;  (*Oberon boot converter for RISC / AP 7.2.20 Extended Oberon*)
-  IMPORT Modules, Files, Texts, Oberon;
+  IMPORT Files, Modules, Texts, Oberon;
   CONST CR = 0DX;
   TYPE Writer = PROCEDURE(VAR R: Files.Rider; x: LONGINT);
 
