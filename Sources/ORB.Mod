@@ -1,4 +1,4 @@
-MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 7.2.20 Extended Oberon*)
+MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 9.2.20 Extended Oberon*)
   IMPORT Files, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
@@ -186,12 +186,10 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 7.2.20 Extended Ober
   PROCEDURE ThisModule(name, orgname: ORS.Ident; non: BOOLEAN; key: LONGINT): Object;
     VAR mod: Module; obj, obj1: Object;
   BEGIN obj1 := topScope; obj := obj1.next;  (*search for module*)
-    WHILE (obj # NIL) & (obj.name # name) DO obj1 := obj; obj := obj1.next END ;
-    IF obj = NIL THEN 
-      obj1 := topScope; obj := obj1.next;
-      WHILE (obj # NIL) & (obj IS Module) & (obj(Module).orgname # orgname) DO
-        obj1 := obj; obj := obj1.next
-      END
+    WHILE (obj # NIL) & (obj IS Module)
+      & (obj.name # name) & (obj(Module).orgname # orgname)
+      & (obj.name # orgname) & (obj(Module).orgname # name) DO
+      obj1 := obj; obj := obj1.next
     END ;
     IF obj = NIL THEN (*insert new module*)
       NEW(mod); mod.class := Mod; mod.rdo := FALSE;
