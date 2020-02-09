@@ -187,7 +187,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 9.2.20 Extended Ober
     VAR mod: Module; obj, obj1: Object;
   BEGIN obj1 := topScope; obj := obj1.next;  (*search for module*)
     WHILE (obj # NIL) & (obj.name # name) & (obj.name # orgname) &
-      (obj(Module).orgname # orgname) & (obj(Module).orgname # name) DO
+        (obj(Module).orgname # orgname) & (obj(Module).orgname # name) DO
       obj1 := obj; obj := obj1.next
     END ;
     IF obj = NIL THEN  (*insert new module*)
