@@ -31,6 +31,7 @@ Planned features
 | System building tools  | [**The-Oberon-system-building-tools.pdf**](Documentation/The-Oberon-system-building-tools.pdf)  |
 | Safe module unloading  | [**Safe-module-unloading-in-Oberon.pdf**](Documentation/Safe-module-unloading-in-Oberon.pdf) |
 | Heap blocks  | [**Extended-Oberon-Heap-Blocks.pdf**](Documentation/Extended-Oberon-Heap-Blocks.pdf)  |
+| Symbol files  | [**Streamlining-symbol-files-in-Oberon.pdf**](Documentation/Streamlining-symbol-files-in-Oberon.pdf)  |
 | Importing modules  | [**Allow-importing-any-number-of-modules.md**](Documentation/Allow-importing-any-number-of-modules.md)  |
 
 **EMULATORS**
