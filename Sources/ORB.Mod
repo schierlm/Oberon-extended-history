@@ -186,8 +186,8 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 9.2.20 Extended Ober
   PROCEDURE ThisModule(name, orgname: ORS.Ident; non: BOOLEAN; key: LONGINT): Object;
     VAR mod: Module; obj, obj1: Object;
   BEGIN obj1 := topScope; obj := obj1.next;  (*search for module*)
-    WHILE (obj # NIL) & (obj IS Module) & (obj.name # name) & (obj.name # orgname) &
-        (obj(Module).orgname # orgname) & (obj(Module).orgname # name) DO
+    WHILE (obj # NIL) & (obj.name # name) & (obj.name # orgname) &
+      (obj(Module).orgname # orgname) & (obj(Module).orgname # name) DO
       obj1 := obj; obj := obj1.next
     END ;
     IF obj = NIL THEN  (*insert new module*)
@@ -195,7 +195,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 9.2.20 Extended Ober
       mod.name := name; mod.orgname := orgname; mod.val := key;
       mod.lev := nofmod; INC(nofmod); mod.type := noType; mod.dsc := NIL; mod.next := NIL;
       obj1.next := mod; obj := mod
-    ELSIF obj IS Module THEN (*module already present*)
+    ELSE (*module already present*)
       IF non OR (obj(Module).orgname # name) THEN ORS.Mark("invalid import order") END
     END ;
     RETURN obj
