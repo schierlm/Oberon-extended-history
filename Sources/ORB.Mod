@@ -196,7 +196,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 9.2.20 Extended Ober
       mod.lev := nofmod; INC(nofmod); mod.type := noType; mod.dsc := NIL; mod.next := NIL;
       obj1.next := mod; obj := mod
     ELSE (*module already present*)
-      IF non OR (obj(Module).orgname # name) THEN ORS.Mark("invalid import order") END
+      IF non OR (obj(Module).orgname # orgname) THEN ORS.Mark("invalid import order") END
     END ;
     RETURN obj
   END ThisModule;
