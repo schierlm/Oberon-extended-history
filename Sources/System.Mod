@@ -387,8 +387,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 12.2.20 Extended O
 
   PROCEDURE WriteReferences;  (*write references from each unselected module to any of the selected modules*)
     VAR resTyp, resPtr, resPvr: INTEGER;
-  BEGIN Oberon.SetPar(NIL, NIL, 0);  (*exclude viewers that are reachable only via Oberon.Par.vwr*)
-    M := NIL; ref := Modules.dyntypes; Modules.FindDynamicReferences(WriteRef, NIL, NIL, resTyp, resPtr, resPvr, FALSE);
+  BEGIN M := NIL; ref := Modules.dyntypes; Modules.FindDynamicReferences(WriteRef, NIL, NIL, resTyp, resPtr, resPvr, FALSE);
     M := NIL; ref := Modules.dynptrs; Modules.FindDynamicReferences(NIL, WriteRef, NIL, resTyp, resPtr, resPvr, FALSE);
     M := NIL; ref := Modules.dynpvrs; Modules.FindDynamicReferences(NIL, NIL, WriteRef, resTyp, resPtr, resPvr, FALSE);
     M := NIL; ref := Modules.statptrs; Modules.FindStaticReferences(WriteRef, NIL, resPtr, resPvr);

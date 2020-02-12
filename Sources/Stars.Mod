@@ -1,4 +1,4 @@
-MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 12.2.20 Extended Oberon*)
+MODULE Stars;   (*NW 15.1.2013, 15.11.2013 / AP 12.2.20 Extended Oberon*)
   IMPORT SYSTEM, Display, Viewers, Texts, Oberon, MenuViewers, TextFrames;
 
   CONST Menu = "Stars.Close System.Copy System.Grow Stars.Step Stars.Run Stars.Stop | System.Expand System.Spread System.Clone";
@@ -96,7 +96,9 @@ MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 12.2.20 Extended Oberon*)
   PROCEDURE Close*;
     VAR V: Viewers.Viewer;
   BEGIN
-    IF Oberon.Par.frame = Oberon.Par.vwr.dsc THEN V := Oberon.Par.vwr ELSE V := Oberon.MarkedViewer() END;
+    IF Oberon.Par.frame = Oberon.Par.vwr.dsc THEN V := Oberon.Par.vwr
+    ELSE V := Oberon.MarkedViewer()
+    END;
     Stop; Viewers.Close(V)
   END Close;
 
@@ -111,6 +113,6 @@ MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 12.2.20 Extended Oberon*)
     IF S.class = Texts.Int THEN T.period := S.i END
   END SetPeriod;
 
-BEGIN Texts.OpenWriter(W); T := Oberon.NewTask(Step1, interval)
+BEGIN Texts.OpenWriter(W); T := Oberon.NewTask(Step1, interval);
 END Stars.
 

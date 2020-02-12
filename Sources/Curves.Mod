@@ -1,4 +1,4 @@
-MODULE Curves;  (*NW 8.11.90 / 18.4.2013 / AP 12.2.20 Extende Oberon*)
+MODULE Curves;  (*NW 8.11.90 / 18.4.2013*)
   IMPORT Display, Files, Oberon, Graphics, GraphicFrames;
 
   TYPE

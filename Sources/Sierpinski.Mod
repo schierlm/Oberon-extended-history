@@ -1,4 +1,4 @@
-MODULE Sierpinski;  (*NW 15.1.13 / AP 12.2.20 Extended Oberon*)
+MODULE Sierpinski;  (*NW 15.1.2013 / AP 12.2.20 Extended Oberon*)
   IMPORT Display, Viewers, Oberon, MenuViewers, TextFrames;
 
   CONST Menu = "System.Close System.Copy System.Grow | System.Expand System.Spread System.Clone";
@@ -94,7 +94,7 @@ MODULE Sierpinski;  (*NW 15.1.13 / AP 12.2.20 Extended Oberon*)
     ELSIF M IS Oberon.ControlMsg THEN
       IF M(Oberon.ControlMsg).id = Oberon.neutralize THEN Oberon.RemoveMarks(F.X, F.Y, F.W, F.H) END
     ELSIF M IS Oberon.CopyMsg THEN
-      NEW(F1); F1^ := F^; M(Oberon.CopyMsg).F := F1
+       NEW(F1); F1^ := F^; M(Oberon.CopyMsg).F := F1
     END
   END Handler;
 

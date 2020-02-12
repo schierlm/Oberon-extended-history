@@ -1,4 +1,4 @@
-MODULE Hilbert;  (*NW 8.1.13 for RISC / AP 12.2.20 Extended Oberon*)
+MODULE Hilbert;  (*NW 8.1.2013  for RISC / AP 12.2.20 Extended Oberon*)
   IMPORT Display, Viewers, Texts, Oberon, MenuViewers, TextFrames;
 
   CONST Menu = "System.Close System.Copy System.Grow | System.Expand System.Spread System.Clone";

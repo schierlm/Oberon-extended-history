@@ -1,4 +1,4 @@
-MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.2.20 Extended Oberon*)
+MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 12.2.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files, Modules, Input, Display, Viewers, Fonts, Texts;
 
   CONST (*message ids*)
@@ -285,12 +285,6 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.2
     Viewers.SetFocus(Viewers.ThisDisplay(V), V); FocusViewer := V;
   END PassFocus;
 
-  PROCEDURE ThisViewer* (): Viewers.Viewer; (*for use in viewer close commands*)
-    VAR V: Viewers.Viewer;
-  BEGIN IF Par.frame = Par.vwr.dsc THEN V := Par.vwr ELSE V := MarkedViewer() END ;
-    RETURN V
-  END ThisViewer;
-
   (*standard Oberon display with user track and system track, and filler viewer*)
 
   PROCEDURE UserTrack* (X: INTEGER): INTEGER;
@@ -342,6 +336,10 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / 14.4.13 / NW 22.12.15 / AP 12.2
   PROCEDURE SetPar*(F: Display.Frame; T: Texts.Text; pos: LONGINT);
   BEGIN Par.vwr := Viewers.This(F.X, F.Y); Par.frame := F; Par.text := T; Par.pos := pos
   END SetPar;
+
+  PROCEDURE ClearPar*;
+  BEGIN Par.vwr := NIL; Par.frame := NIL; Par.text := NIL; Par.pos := 0
+  END ClearPar;
 
   PROCEDURE Call*(F: Display.Frame; T: Texts.Text; pos: LONGINT; new: BOOLEAN);  (*command*)
     VAR R: Texts.Reader; i, res: INTEGER; ch: CHAR; s: ARRAY 32 OF CHAR;
@@ -456,13 +454,12 @@ BEGIN User[0] := 0X;
   Star.Fade := FlipStar; Star.Draw := FlipStar;
   OpenCursor(Mouse); OpenCursor(Pointer);
 
-
   DW := Display.Width; DH := Display.Height; CL := DW;
-  FocusViewer := Viewers.This(0, 0);
+  FocusViewer := NIL; Log := NIL; ClearPar;
   CurFnt := Fonts.Default; CurCol := Display.white; CurOff := 0;
 
   ActCnt := 0; CurTask := NewTask(GC, 1000); Install(CurTask);
-  Texts.OpenWriter(W); Log := NIL;
+  Texts.OpenWriter(W);
 
   IF Modules.importing = "Oberon" THEN (*loaded by the regular loader*)
     Modules.Load("System", Mod); Mod := NIL; Loop

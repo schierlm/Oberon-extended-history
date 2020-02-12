@@ -44,18 +44,18 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.2.20 Extended Oberon*)
     RETURN V(Viewer)
   END ThisViewer;
 
-  PROCEDURE ThisDisplay* (V: Viewer): DisplayArea;
-  BEGIN
-    WHILE (V # NIL) & (V.parent # NIL) (*~display*) DO V := V.parent END;
-    RETURN V(DisplayArea)
-  END ThisDisplay;
-
   PROCEDURE This* (X, Y: INTEGER): Viewer;  (*for backward compatibility*)
     VAR V: Viewer;
   BEGIN
     IF CurDisplay # NIL THEN V := ThisViewer(CurDisplay, X, Y) ELSE V := NIL END ;
     RETURN V
   END This;
+
+  PROCEDURE ThisDisplay* (V: Viewer): DisplayArea;
+  BEGIN
+    WHILE (V # NIL) & (V.parent # NIL) (*~display*) DO V := V.parent END;
+    RETURN V(DisplayArea)
+  END ThisDisplay;
 
   PROCEDURE Next* (V: Viewer): Viewer;
   BEGIN
@@ -248,7 +248,7 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.2.20 Extended Oberon*)
   BEGIN F.next := NIL;
     IF parent.dsc = NIL THEN parent.dsc := F
     ELSE f := parent.dsc;
-      WHILE f.next # NIL DO f := f.next END ;
+      WHILE f.next # NIL DO f := f.next END;
       f.next := F
     END
   END Install;
@@ -258,12 +258,12 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.2.20 Extended Oberon*)
   BEGIN
     IF parent.dsc = F THEN parent.dsc := F.next
     ELSE f0 := parent.dsc; f := f0.next;
-      WHILE (f # NIL) & (f # F) DO f0 := f; f := f.next END ;
+      WHILE (f # NIL) & (f # F) DO f0 := f; f := f.next END;
       IF f # NIL THEN f0.next := f.next END
     END
   END Remove;
 
-  PROCEDURE InitFiller (X, Y, W, H, minH: INTEGER; Filler: Viewer); (*except handle, parent, dsc*)
+  PROCEDURE InitFiller (X, Y, W, H, minH: INTEGER; Filler: Viewer); (*except fields handle, parent, dsc*)
   BEGIN Filler.X := X; Filler.Y := Y; Filler.W := W; Filler.H := H; Filler.minH := minH;
     Filler.state := 1; Filler.next := Filler; Filler.prev := Filler
   END InitFiller;
