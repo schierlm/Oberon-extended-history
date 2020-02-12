@@ -1,4 +1,4 @@
-MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 7.2.20*)
+MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 12.2.20 Extended Oberon*)
   IMPORT SYSTEM, Display, Viewers, Input, Fonts, Texts, Graphics, Oberon;
 
   CONST (*update message ids*)
@@ -16,7 +16,7 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 7.2.20*)
         next*: Location
       END ;
 
-    FrameDesc* = RECORD (Viewers.FrameDesc)
+    FrameDesc* = RECORD (Display.FrameDesc)
         graph*: Graphics.Graph;
         Xg*, Yg*: INTEGER;  (*pos rel to graph origin*)
         X1*, Y1*: INTEGER;  (*right and upper margins*)
@@ -30,31 +30,31 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 7.2.20*)
         x*, y*, col*, mode*: INTEGER
       END ;
 
-    UpdateMsg = RECORD (Viewers.FrameMsg)
+    UpdateMsg = RECORD (Display.FrameMsg)
         id: INTEGER;
         graph: Graphics.Graph;
         obj: Graphics.Object
       END ;
 
-    ChangedMsg = RECORD (Viewers.FrameMsg)
+    ChangedMsg = RECORD (Display.FrameMsg)
         f: Frame;
         graph: Graphics.Graph;
         mode: INTEGER
       END ;
 
-    SelQuery = RECORD (Viewers.FrameMsg)
+    SelQuery = RECORD (Display.FrameMsg)
         f: Frame; time: LONGINT
       END ;
 
-    FocusQuery = RECORD (Viewers.FrameMsg)
+    FocusQuery = RECORD (Display.FrameMsg)
         f: Frame
       END ;
 
-    PosQuery = RECORD (Viewers.FrameMsg)
+    PosQuery = RECORD (Display.FrameMsg)
         f: Frame; x, y: INTEGER
       END ;
 
-    DispMsg = RECORD (Viewers.FrameMsg)
+    DispMsg = RECORD (Display.FrameMsg)
         x1, y1, w: INTEGER;
         pat: INTEGER;
         graph: Graphics.Graph
@@ -75,7 +75,7 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 7.2.20*)
   BEGIN
     IF F.H > 16 THEN
       IF col = 0 THEN Display.ReplConst(Display.black, F.X+F.W-12, F.Y+F.H-12, 8, 8, Display.replace)
-      ELSE Display.CopyPattern(Display.white, Display.block, F.X+F.W-12, F.Y+F.H-12, 0, 0, 0, 0, Display.paint)
+      ELSE Display.CopyPattern(Display.white, Display.block, F.X+F.W-12, F.Y+F.H-12, Display.paint)
       END
     END
   END SetChangeMark;
@@ -105,7 +105,7 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 7.2.20*)
       IF X < CL + 7 THEN X := CL + 7 ELSIF X > CL + DW - 7 THEN X := CL + DW - 7 END
     END ;
     IF Y < 7 THEN Y := 7 ELSIF Y > DH THEN Y := DH - 7 END ;
-    Display.CopyPattern(Display.white, Display.cross, X-7, Y-7, 0, 0, 0, 0, Display.invert)
+    Display.CopyPattern(Display.white, Display.cross, X-7, Y-7, Display.invert)
   END FlipCross;
 
   PROCEDURE Focus*(): Frame;
@@ -255,7 +255,7 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 7.2.20*)
         IF (w < 7) & (h < 7) THEN (*set mark*)
           IF (x1 - markW >= F.X) & (x1 + markW < F.X1) &
             (y1 - markW >= F.Y) & (y1 + markW < F.Y1) THEN
-            Defocus(F); Viewers.PassFocus(Viewers.ThisViewer(F));
+            Defocus(F); Oberon.PassFocus(Viewers.This(F.X, F.Y));
             F.mark.x := x1; F.mark.y := y1; F.marked := TRUE; FlipMark(x1, y1)
           END
         ELSE (*draw line*) Deselect(F);
@@ -362,28 +362,24 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 7.2.20*)
     END
   END GetSelection;
 
-  PROCEDURE Handle*(G: Viewers.Frame; VAR M: Viewers.FrameMsg);
+  PROCEDURE Handle*(G: Display.Frame; VAR M: Display.FrameMsg);
     VAR x, y, h: INTEGER;
       DM: DispMsg; dM: DrawMsg;
       G1: Frame;
   BEGIN
     CASE G OF Frame:
       CASE M OF
-      Viewers.InputMsg:
-        IF M.id = Viewers.track THEN
+      Oberon.InputMsg:
+        IF M.id = Oberon.track THEN
           x := M.X - (M.X - G.x) MOD 4; y := M.Y - (M.Y - G.y) MOD 4;
           IF M.keys # {} THEN Edit(G, x, y, M.keys) ELSE Oberon.DrawMouse(Crosshair, x, y) END
-        ELSIF M.id = Viewers.consume THEN
+        ELSIF M.id = Oberon.consume THEN
           IF M.ch = 7FX THEN (*DEL*)
             Erase(G); Graphics.Delete(G.graph); Mark(G, 1)
           ELSIF (M.ch >= 20X) & (M.ch < 7FX) THEN
             IF newcap # NIL THEN InsertChar(G, M.ch); Mark(G, 1)
-            ELSIF G.marked THEN Defocus(G); Deselect(G);
-              CASE M OF
-                Oberon.InputMsg: NewCaption(G, M.col, M.fnt) |
-                Viewers.InputMsg: NewCaption(G, Oberon.CurCol, Oberon.CurFnt)
-              END ;
-              InsertChar(G, M.ch)
+            ELSIF G.marked THEN
+              Defocus(G); Deselect(G); NewCaption(G, M.col, M.fnt); InsertChar(G, M.ch)
             END
           ELSIF (M.ch = 8X) & (newcap # NIL) THEN DeleteChar(G); Mark(G, 1)
           END
@@ -409,16 +405,16 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 7.2.20*)
         DM := M;
         x := G.x + newcap.x + newcap.w; y := G.y + newcap.y;
         IF (DM.graph = G.graph) & (x >= G.X) & (x + DM.w < G.X1) & (y >= G.Y) & (y < G.Y1) THEN
-          Display.CopyPattern(Oberon.CurCol, DM.pat, x + DM.x1, y + DM.y1, 0, 0, 0, 0, 2);
+          Display.CopyPattern(Oberon.CurCol, DM.pat, x + DM.x1, y + DM.y1, 2);
           Display.ReplConst(Display.white, x, y, DM.w, newcap.h, 2)
         END
-      | Viewers.ControlMsg:
-          IF M.id = Viewers.neutralize THEN
+      | Oberon.ControlMsg:
+          IF M.id = Oberon.neutralize THEN
             Oberon.RemoveMarks(G.X, G.Y, G.W, G.H); Defocus(G); DrawNorm(G); Graphics.Deselect(G.graph)
-          ELSIF M.id = Viewers.defocus THEN Defocus(G)
+          ELSIF M.id = Oberon.defocus THEN Defocus(G)
           END
       | Oberon.SelectionMsg: GetSelection(G, M.text, M.beg, M.end, M.time)
-      | Viewers.CopyMsg: Oberon.RemoveMarks(G.X, G.Y, G.W, G.H); Defocus(G); NEW(G1); G1^ := G^; M.F := G1
+      | Oberon.CopyMsg: Oberon.RemoveMarks(G.X, G.Y, G.W, G.H); Defocus(G); NEW(G1); G1^ := G^; M.F := G1
       | Viewers.ViewerMsg: G.Y := M.Y; G.H := M.H; Restore(G)
       END
     END
@@ -483,7 +479,7 @@ MODULE GraphicFrames; (*NW 18.4.88 / 18.11.13 / AP 7.2.20*)
           IF ch >= " " THEN
             fnt := R.fnt; x0 := x; y0 := y - fnt.minY;
             REPEAT Fonts.GetPat(fnt, ch, dx, x1, y1, w1, h1, pat);
-              IF x0+x1+w1 <= f.X1 THEN Display.CopyPattern(col, pat, x0+x1, y0+y1, 0, 0, 0, 0, Display.paint);
+              IF x0+x1+w1 <= f.X1 THEN Display.CopyPattern(col, pat, x0+x1, y0+y1, Display.paint);
                 INC(x0, dx); Texts.Read(R, ch)
               ELSE ch := 0X
               END

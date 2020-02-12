@@ -1,14 +1,29 @@
-MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 7.2.20 Extended Oberon*)
+MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 12.2.20 Extended Oberon*)
   IMPORT SYSTEM;
 
   CONST black* = 0; white* = 1;  (*black = background*)
     replace* = 0; paint* = 1; invert* = 2;  (*modes*)
     base = 0E7F00H;  (*adr of 1024 x 768 pixel, monocolor display frame*)
 
+  TYPE Frame* = POINTER TO FrameDesc;
+    FrameMsg* = RECORD END ;
+    Handler* = PROCEDURE (F: Frame; VAR M: FrameMsg);
+    FrameDesc* = RECORD next*, dsc*: Frame;
+        X*, Y*, W*, H*: INTEGER;
+        handle*: Handler
+      END ;
+
   VAR Base*, Width*, Height*: INTEGER;
     arrow*, star*, hook*, updown*, block*, cross*, grey*: INTEGER;
     (*a pattern is an array of bytes; the first is its width (< 32), the second its height, the rest the raster*)
 
+  PROCEDURE Handle*(F: Frame; VAR M: FrameMsg);
+  BEGIN
+    IF (F # NIL) & (F.handle # NIL) THEN F.handle(F, M) END
+  END Handle;
+
+  (* raster ops *)
+    
   PROCEDURE Dot*(col, x, y, mode: INTEGER);
     VAR a: INTEGER; u, s: SET;
   BEGIN a := base + (x DIV 32)*4 + y*128;
@@ -55,14 +70,14 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 7.2.20 Extended Oberon*)
     END
   END ReplConst;
 
-  PROCEDURE CopyPattern*(col, patadr, x, y, left, right, top, bot, mode: INTEGER);  (*only for modes = paint, invert*)
+  PROCEDURE CopyPatternClipped*(col, patadr, x, y, left, right, top, bot, mode: INTEGER);  (*only for modes = paint, invert*)
     VAR a, a0, pwd: INTEGER;
       w, h, pbt: BYTE; pix, mask: SET;
   BEGIN (*0 <= top < h, 0 <= bot < h, top + bot < h, 0 <= right < w, 0 <= left < w, left + right < w*)
     SYSTEM.GET(patadr, w); SYSTEM.GET(patadr+1, h); INC(patadr, 2 + bot*((w + 7) DIV 8)); h := h - top - bot;
     a := base + (x DIV 32)*4 + (y+bot)*128; x := x MOD 32; mask := -LSL({0 .. 31}, x);
     FOR a0 := a TO a + (h-1)*128 BY 128 DO
-      (*build pattern line; w < 32*)
+      (*build pattern line; w <= 32*)
       SYSTEM.GET(patadr, pbt); INC(patadr); pwd := pbt;
       IF w > 8 THEN SYSTEM.GET(patadr, pbt); INC(patadr); pwd := pbt*100H + pwd;
         IF w > 16 THEN SYSTEM.GET(patadr, pbt); INC(patadr); pwd := pbt*10000H + pwd;
@@ -76,11 +91,15 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 7.2.20 Extended Oberon*)
       END ;
       IF x + w > 32 THEN (*spill over*)
         SYSTEM.GET(a0+4, pix);
-        IF mode = invert THEN SYSTEM.PUT(a0+4, SYSTEM.VAL(SET, ASR(pwd, -x)) * mask / pix)
-        ELSE SYSTEM.PUT(a0+4, SYSTEM.VAL(SET, ASR(pwd, -x)) * mask + pix)
+        IF mode = invert THEN SYSTEM.PUT(a0+4, SYSTEM.VAL(SET, ASR(pwd, -x)) * mask/ pix)
+        ELSE SYSTEM.PUT(a0+4, SYSTEM.VAL(SET, ASR(pwd, -x)) * mask+ pix)
         END
       END
     END
+  END CopyPatternClipped;
+
+  PROCEDURE CopyPattern*(col, patadr, x, y, mode: INTEGER);  (*only for modes = paint, invert*)
+  BEGIN CopyPatternClipped(col, patadr, x, y, 0, 0, 0, 0, mode)
   END CopyPattern;
 
   PROCEDURE CopyBlock*(sx, sy, w, h, dx, dy, mode: INTEGER); (*only for mode = replace*)

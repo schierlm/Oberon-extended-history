@@ -1,1 +1,1 @@
-2020-02-12 Display.Mod, Viewers.Mod, .. - restore partial backward compatibility with the original Oberon system
+2020-02-12 Display, Viewers, Oberon, System - restore (partial) backward compatibility with the original Oberon system

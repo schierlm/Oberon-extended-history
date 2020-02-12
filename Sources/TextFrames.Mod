@@ -1,4 +1,4 @@
-MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 7.2.20 Extended Oberon*)
+MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.2.20 Extended Oberon*)
   IMPORT Input, Display, Viewers, Fonts, Texts, Oberon;
 
   CONST replace* = 0; insert* = 1; delete* = 2; unmark* = 3;  (*message id*)
@@ -20,7 +20,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 7.2.20 Extended Oberon*)
     END;
 
     Frame* = POINTER TO FrameDesc;
-    FrameDesc* = RECORD (Viewers.FrameDesc)
+    FrameDesc* = RECORD (Display.FrameDesc)
       text*: Texts.Text;
       org*: LONGINT;
       col*, lsp*: INTEGER;
@@ -35,13 +35,13 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 7.2.20 Extended Oberon*)
       pool: Line  (*line pool to minimize consumption of heap space during continuous line scrolling*)
     END;
 
-    UpdateMsg* = RECORD (Viewers.FrameMsg)
+    UpdateMsg* = RECORD (Display.FrameMsg)
       id*: INTEGER;       (*replace, insert, delete, unmark*)
       text*: Texts.Text;
       beg*, end*: LONGINT
     END;
 
-    CopyOverMsg* = RECORD (Viewers.FrameMsg)
+    CopyOverMsg* = RECORD (Display.FrameMsg)
       text*: Texts.Text;
       beg*, end*: LONGINT
     END;
@@ -104,7 +104,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 7.2.20 Extended Oberon*)
       IF X < CL + 3 THEN X := CL + 4 ELSIF X > CL + DW - 4 THEN X := CL + DW - 4 END
     END ;
     IF Y < 6 THEN Y := 6 ELSIF Y > DH - 6 THEN Y := DH - 6 END;
-    Display.CopyPattern(Display.white, Display.updown, X-4, Y-4, 0, 0, 0, 0, Display.invert)
+    Display.CopyPatternClipped(Display.white, Display.updown, X-4, Y-4, 0, 0, 0, 0, Display.invert)
   END FlipSM;
 
   PROCEDURE UpdateMark (F: Frame);  (*in scroll bar*)
@@ -128,7 +128,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 7.2.20 Extended Oberon*)
   PROCEDURE SetChangeMark (F: Frame; on: BOOLEAN);  (*in corner*)
   BEGIN
     IF F.H > menuH THEN
-      IF on THEN Display.CopyPattern(Display.white, Display.block, F.X+F.W-12, F.Y+F.H-12, 0, 0, 0, 0, Display.paint)
+      IF on THEN Display.CopyPatternClipped(Display.white, Display.block, F.X+F.W-12, F.Y+F.H-12, 0, 0, 0, 0, Display.paint)
       ELSE Display.ReplConst(F.col, F.X+F.W-12, F.Y+F.H-12, 8, 8, Display.replace)
       END
     END
@@ -170,7 +170,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 7.2.20 Extended Oberon*)
         IF y + h <= topY THEN top := 0 ELSIF y >= topY THEN top := h ELSE top := y + h - topY END;
         IF y >= botY THEN bot := 0 ELSIF y + h <= botY THEN bot := h ELSE bot := botY - y END;
         IF x + X + w <= NX THEN right := 0 ELSE right := x + X + w - NX END;
-        IF top + bot < h THEN Display.CopyPattern(R.col, patadr, X + x, y, left, right, top, bot, Display.invert) END
+        IF top + bot < h THEN Display.CopyPatternClipped(R.col, patadr, X + x, y, left, right, top, bot, Display.invert) END
       END;
       X := X + dx; INC(len); Texts.Read(R, nextCh)
     END;
@@ -493,7 +493,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 7.2.20 Extended Oberon*)
   PROCEDURE FlipCaret (F: Frame);
   BEGIN
     IF (F.carloc.x < F.W) & (F.carloc.y >= 10) & (F.carloc.x + 12 < F.W) THEN
-      Display.CopyPattern(Display.white, Display.hook, F.X + F.carloc.x, F.Y + F.carloc.y - 10, 0, 0, 0, 0, Display.invert)
+      Display.CopyPatternClipped(Display.white, Display.hook, F.X + F.carloc.x, F.Y + F.carloc.y - 10, 0, 0, 0, 0, Display.invert)
     END
   END FlipCaret;
 
@@ -888,7 +888,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 7.2.20 Extended Oberon*)
     IF F.H > 0 THEN Mark(F, TRUE); SetChangeMark(F, F.text.changed) END
   END Modify;
 
-  PROCEDURE Open* (F: Frame; H: Viewers.Handler; T: Texts.Text; org: LONGINT;
+  PROCEDURE Open* (F: Frame; H: Display.Handler; T: Texts.Text; org: LONGINT;
       col, left, right, top, bot, lsp: INTEGER);
     VAR L: Line;
   BEGIN NEW(L);
@@ -994,18 +994,18 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 7.2.20 Extended Oberon*)
           IF keysum = {0, 2} THEN  (*MR, ML: delete text*)
             Oberon.GetSelection(text, beg, end, time);
             Texts.Delete(text, beg, end, TBuf);
-            Viewers.PassFocus(Viewers.ThisViewer(F)); SetCaret(F, beg)
+            Oberon.PassFocus(Viewers.This(F.X, F.Y)); SetCaret(F, beg)
           ELSIF keysum = {0, 1} THEN  (*MR, MM: copy to caret*)
             Oberon.GetSelection(text, beg, end, time);
             M.text := text; M.beg := beg; M.end := end;
-            Viewers.FocusViewer.handle(Viewers.FocusViewer, M)
+            Oberon.FocusViewer.handle(Oberon.FocusViewer, M)
           END
         END
       ELSIF 1 IN Keys THEN  (*MM: call*)
         TrackWord(F, X, Y, pos, keysum);
         IF (pos >= 0) & ~(0 IN keysum) THEN Call(F, pos, 2 IN keysum) END
       ELSIF 2 IN Keys THEN  (*ML: set caret*)
-        Viewers.PassFocus(Viewers.ThisViewer(F));
+        Oberon.PassFocus(Viewers.This(F.X, F.Y)); 
         TrackCaret(F, X, Y, keysum);
         IF keysum = {2, 1} THEN  (*ML, MM: copy from selection to caret*)
           Oberon.GetSelection(text, beg, end, time);
@@ -1031,26 +1031,24 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 7.2.20 Extended Oberon*)
     IF keys # {} THEN F.pool := NIL END
   END Edit;
 
-  PROCEDURE Handle* (F: Viewers.Frame; VAR M: Viewers.FrameMsg);
+  PROCEDURE Handle* (F: Display.Frame; VAR M: Display.FrameMsg);
     VAR F1: Frame;
   BEGIN
     CASE F OF Frame:
       CASE M OF
-      Viewers.InputMsg:
-        IF M.id = Viewers.track THEN Edit(F, M.X, M.Y, M.keys)
-        ELSIF F.hasCar & (M.id = Viewers.consume) THEN
-          CASE M OF
-            Oberon.InputMsg: Write(F, M.ch, M.fnt, M.col, M.voff) |
-            Viewers.InputMsg: Write(F, M.ch, Oberon.CurFnt, Oberon.CurCol, Oberon.CurOff)
-          END
+      Oberon.InputMsg:
+        IF M.id = Oberon.track THEN Edit(F, M.X, M.Y, M.keys)
+        ELSIF M.id = Oberon.consume THEN
+          IF F.hasCar THEN Write(F, M.ch, M.fnt, M.col, M.voff) END
         END |
-      Viewers.ControlMsg:
-        IF M.id = Viewers.defocus THEN Defocus(F)
-        ELSIF M.id = Viewers.neutralize THEN Neutralize(F)
+      Oberon.ControlMsg:
+        IF M.id = Oberon.defocus THEN Defocus(F)
+        ELSIF M.id = Oberon.neutralize THEN Neutralize(F)
         END |
-      Viewers.CopyMsg: Copy(F, F1); M.F := F1 |
+      Oberon.SelectionMsg:
+        GetSelection(F, M.text, M.beg, M.end, M.time) |
+      Oberon.CopyMsg: Copy(F, F1); M.F := F1 |
       Viewers.ViewerMsg: Modify(F, M.id, M.Y, M.H) |
-      Oberon.SelectionMsg: GetSelection(F, M.text, M.beg, M.end, M.time) |
       CopyOverMsg: CopyOver(F, M.text, M.beg, M.end) |
       UpdateMsg: IF F.text = M.text THEN Update(F, M) END
       END

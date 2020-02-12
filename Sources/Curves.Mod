@@ -1,4 +1,4 @@
-MODULE Curves;  (*NW 8.11.90 / 18.4.2013 / AP 7.2.20*)
+MODULE Curves;  (*NW 8.11.90 / 18.4.2013 / AP 12.2.20 Extende Oberon*)
   IMPORT Display, Files, Oberon, Graphics, GraphicFrames;
 
   TYPE
@@ -21,7 +21,7 @@ MODULE Curves;  (*NW 8.11.90 / 18.4.2013 / AP 7.2.20*)
   BEGIN DEC(x, 3); DEC(y, 3);
     IF (x >= f.X) & (x+7 < f.X1) & (y >= f.Y) & (y+7 < f.Y1) THEN
       IF col = Display.black THEN Display.ReplConst(Display.black, x, y, 7, 7, Display.replace)
-      ELSE Display.CopyPattern(col, GraphicFrames.tack, x, y, 0, 0, 0, 0, Display.replace)
+      ELSE Display.CopyPattern(col, GraphicFrames.tack, x, y, Display.replace)
       END
     END
   END mark;

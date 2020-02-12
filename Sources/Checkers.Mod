@@ -1,11 +1,11 @@
-MODULE Checkers;  (*NW 4.10.90 / 10.3.13 / AP 7.2.20*)
+MODULE Checkers;  (*NW 4.10.90 / 10.3.13 / AP 12.2.20 Extended Oberon*)
   IMPORT SYSTEM, Display, Viewers, Oberon, MenuViewers, TextFrames;
 
   CONST Menu = "System.Close System.Copy System.Grow | System.Expand System.Spread System.Clone";
 
   TYPE Frame = POINTER TO FrameDesc;
 
-    FrameDesc = RECORD (Viewers.FrameDesc)
+    FrameDesc = RECORD (Display.FrameDesc)
         col: INTEGER
       END ;
 
@@ -19,14 +19,14 @@ MODULE Checkers;  (*NW 4.10.90 / 10.3.13 / AP 7.2.20*)
     Display.ReplPattern(F.col, checks, F.X+1, F.Y, F.W-1, F.H-1, Display.paint)
   END Restore;
 
-  PROCEDURE Handle(G: Viewers.Frame; VAR M: Viewers.FrameMsg);
+  PROCEDURE Handle(G: Display.Frame; VAR M: Display.FrameMsg);
     VAR G1: Frame;
   BEGIN
     CASE G OF Frame:
       CASE M OF
-      Viewers.InputMsg:
-        IF M.id = Viewers.track THEN Oberon.DrawMouseArrow(M.X, M.Y) END |
-      Viewers.CopyMsg:
+      Oberon.InputMsg:
+        IF M.id = Oberon.track THEN Oberon.DrawMouseArrow(M.X, M.Y) END |
+      Oberon.CopyMsg:
         Oberon.RemoveMarks(G.X, G.Y, G.W, G.H); NEW(G1); G1^ := G^; M.F := G1 |
       Viewers.ViewerMsg:
         IF M.id = Viewers.restore THEN G.Y := M.Y; G.H := M.H; Restore(G)

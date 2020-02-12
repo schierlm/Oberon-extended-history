@@ -1,4 +1,4 @@
-MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 7.2.20 Extended Oberon*)
+MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 12.2.20 Extended Oberon*)
   IMPORT SYSTEM, Files;
 
   CONST FontFileId = 0DBH;
@@ -100,6 +100,10 @@ MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 7.2.20 Extended Obero
     END ;
     RETURN F
   END Load;
+
+  PROCEDURE This*(name: ARRAY OF CHAR): Font;  (*for backward compatibility*)
+  BEGIN RETURN Load(name)
+  END This;
 
   PROCEDURE Free*;  (*remove all but first two from font list*)
   BEGIN IF root.next # NIL THEN root.next.next := NIL END
