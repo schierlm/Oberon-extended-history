@@ -43,7 +43,7 @@ my @newlines;
 foreach(@lines) {
     # convert all CRLF (\r\n) to CR (\r) only, so we no longer have any CRLF in the file afterwards
     $_ =~ s/\r\n/\r/g;
-    # convert all LF (\n) to CR (\r) only, so we longer have any LF in the file afterwards
+    # convert all LF (\n) to CR (\r) only, so we no longer have any LF in the file afterwards
     $_ =~ s/\n/\r/g;
     # convert all CR (\r) to CRLF (\r\n), so we ONLY have CRLF in the file afterwards
     $_ =~ s/\r/\r\n/g;

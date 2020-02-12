@@ -49,7 +49,7 @@ my @newlines;
 foreach(@lines) {
     # convert all CRLF (\r\n) to CR (\r) only, so we no longer have any CRLF in the file afterwards
     $_ =~ s/\r\n/\r/g;
-    # convert all LF (\n) to CR (\r) only, so we longer have any LF in the file afterwards
+    # convert all LF (\n) to CR (\r) only, so we no longer have any LF in the file afterwards
     $_ =~ s/\n/\r/g;
     # replace two spaces with one TAB (\t), but only at the beginning of a ($_ =~ s/  /\t/g could cause trouble inside strings!)
     while ($_ =~ s/^($y*)$x/$1$y/) {}
