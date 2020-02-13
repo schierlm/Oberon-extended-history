@@ -49,11 +49,6 @@ ORP.Compile System1.Mod/s ~                # compile the files needed to include
 ORL.Link System1 ~                         # generate a boot file containing the ENTIRE Oberon system (System1.bin)
 ORC.Load System1.bin ~                     # load the ENTIRE Oberon system over the data link to the target system AND start it
 
-#
-# IMPORTANT: Please e-build the entire Oberon system onm the host and the compiler here again (see the commands in
-#            System.Tool), as some object files and binaries have been overwritten by the commands above !!!!!
-#
-
 # ---------------------------------------------------------------------------------------------------------------------
 #  6. Load an ENTIRE Oberon system in a single boot file to a target system AND configure an ENLARGED boot area there
 #     (restart the target system over the data link, then execute the following commands on the host system)
@@ -82,8 +77,8 @@ ORC.SR 100 Modules.bin ~        # OR load the REGULAR boot file onto the boot ar
 ORC.SR 102 BootLoadDisk.rsc ~   # reboot the target system from its local disk (i.e. initiate the "regular" boot process)
 
 #
-# IMPORTANT: Please e-build the entire Oberon system onm the host and the compiler here again (see the commands in
-#            System.Tool), as some object files and binaries have been overwritten by the commands above !!!!!
+# IMPORTANT: Please re-build the entire Oberon system and the Oberon compiler on the host system (see System.Tool),
+#            as object files (Kernel) and binaries (Modules.bin) have been overwritten by the commands above!
 #
 
 # ---------------------------------------------------------------------------------------------------------------------
