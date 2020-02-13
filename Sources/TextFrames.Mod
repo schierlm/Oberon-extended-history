@@ -1,4 +1,4 @@
-MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.2.20 Extended Oberon*)
+MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 13.2.20 Extended Oberon*)
   IMPORT Input, Display, Viewers, Fonts, Texts, Oberon;
 
   CONST replace* = 0; insert* = 1; delete* = 2; unmark* = 3;  (*message id*)
@@ -998,7 +998,7 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 12.2.20 Extended Oberon*)
           ELSIF keysum = {0, 1} THEN  (*MR, MM: copy to caret*)
             Oberon.GetSelection(text, beg, end, time);
             M.text := text; M.beg := beg; M.end := end;
-            Oberon.FocusViewer.handle(Oberon.FocusViewer, M)
+            Viewers.FocusViewer.handle(Viewers.FocusViewer, M)
           END
         END
       ELSIF 1 IN Keys THEN  (*MM: call*)

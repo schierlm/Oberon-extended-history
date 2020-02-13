@@ -1,4 +1,4 @@
-MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 12.2.20 Extended Oberon*)
+MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 13.2.20 Extended Oberon*)
   IMPORT Files, Fonts, Texts, Display, Viewers, Oberon, MenuViewers, TextFrames;
 
   CONST CR = 0DX; maxlen = 32;
@@ -15,6 +15,10 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 12.2.20 Extended Oberon*)
   BEGIN IF i >= j THEN m := i ELSE m := j END ;
     RETURN m
   END Max;
+
+  PROCEDURE FocusViewer(): Viewers.Viewer;  (*for Extended Oberon*)
+  BEGIN RETURN Viewers.FocusViewer
+  END FocusViewer;
 
   PROCEDURE Open*;
     VAR T: Texts.Text;
@@ -77,7 +81,7 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 12.2.20 Extended Oberon*)
       fnt: Fonts.Font; col, voff: INTEGER;
   BEGIN Oberon.GetSelection(T, beg, end, time);
     IF time >= 0 THEN
-      v := Oberon.FocusViewer;
+      v := FocusViewer();
       IF (v # NIL) & (v.dsc # NIL) & (v.dsc.next IS TextFrames.Frame) THEN
         F := v.dsc.next(TextFrames.Frame);
         Texts.Attributes(F.text, F.carloc.pos, fnt, col, voff);
@@ -138,7 +142,7 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 12.2.20 Extended Oberon*)
     END Forward;
 
   BEGIN V := Oberon.Par.vwr;
-    IF Oberon.Par.frame # V.dsc THEN V := Oberon.FocusViewer END;
+    IF Oberon.Par.frame # V.dsc THEN V := FocusViewer() END;
     IF (V.dsc # NIL) & (V.dsc.next IS TextFrames.Frame) THEN
       Text := V.dsc.next(TextFrames.Frame);
       prevTime := time; Oberon.GetSelection(T, beg, end, time);
@@ -177,7 +181,7 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 12.2.20 Extended Oberon*)
       V: Viewers.Viewer;
       beg, end, time: LONGINT;
   BEGIN
-    V := Oberon.FocusViewer;
+    V := FocusViewer();
     IF (V.dsc # NIL) & (V.dsc.next IS TextFrames.Frame) THEN
       Text := V.dsc.next(TextFrames.Frame);
       Oberon.GetSelection(T, beg, end, time);
@@ -202,7 +206,7 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 12.2.20 Extended Oberon*)
       V: Viewers.Viewer;
       pos: LONGINT;
       M: TextFrames.Frame;
-  BEGIN V := Oberon.FocusViewer;
+  BEGIN V := FocusViewer();
     IF (V # NIL) & (V IS MenuViewers.Viewer) THEN
       Menu := V.dsc; Main := V.dsc.next;
       IF Main IS TextFrames.Frame THEN

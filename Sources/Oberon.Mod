@@ -1,4 +1,4 @@
-MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 12.2.20 Extended Oberon*)
+MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 13.2.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files, Modules, Input, Display, Viewers, Fonts, Texts;
 
   CONST (*message ids*)
@@ -50,7 +50,6 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
   VAR User*: ARRAY 8 OF CHAR; Password*: LONGINT;
     Arrow*, Star*: Marker; (*predefined markers representing an arrow pointing to the NW and a star symbol*)
     Mouse, Pointer: Cursor; (*predefined cursors representing a mouse and a global system pointer*)
-    FocusViewer*: Viewers.Viewer;
     Log*: Texts.Text;
 
     Par*: RECORD
@@ -281,9 +280,15 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
   PROCEDURE PassFocus* (V: Viewers.Viewer);
     VAR M: ControlMsg;
   BEGIN
-    IF FocusViewer # NIL  THEN M.id := defocus; FocusViewer.handle(FocusViewer, M) END ;
-    Viewers.SetFocus(Viewers.ThisDisplay(V), V); FocusViewer := V;
+    IF Viewers.FocusViewer # NIL  THEN
+      M.id := defocus; Viewers.FocusViewer.handle(Viewers.FocusViewer, M)
+    END ;
+    Viewers.SetFocus(Viewers.ThisDisplay(V), V)
   END PassFocus;
+
+  PROCEDURE FocusViewer(): Viewers.Viewer;  (*for Extended Oberon*)
+  BEGIN RETURN Viewers.FocusViewer
+  END FocusViewer;
 
   (*standard Oberon display with user track and system track, and filler viewer*)
 
@@ -422,7 +427,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
         ELSIF ch = SETSTAR THEN
           N.id := mark; N.X := X; N.Y := Y; V := Viewers.This(X, Y); V.handle(V, N)
         ELSE M.id := consume; M.ch := ch; M.fnt := CurFnt; M.col := CurCol; M.voff := CurOff;
-          V := FocusViewer; V.handle(V, M); DEC(ActCnt)
+          V := Viewers.FocusViewer; V.handle(V, M); DEC(ActCnt)
         END
       ELSIF keys # {} THEN
         M.id := track; M.X := X; M.Y := Y; M.keys := keys;
@@ -455,11 +460,10 @@ BEGIN User[0] := 0X;
   OpenCursor(Mouse); OpenCursor(Pointer);
 
   DW := Display.Width; DH := Display.Height; CL := DW;
-  FocusViewer := NIL; Log := NIL; ClearPar;
   CurFnt := Fonts.Default; CurCol := Display.white; CurOff := 0;
 
   ActCnt := 0; CurTask := NewTask(GC, 1000); Install(CurTask);
-  Texts.OpenWriter(W);
+  Texts.OpenWriter(W); Log := NIL;
 
   IF Modules.importing = "Oberon" THEN (*loaded by the regular loader*)
     Modules.Load("System", Mod); Mod := NIL; Loop

@@ -1,4 +1,4 @@
-MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.2.20 Extended Oberon*)
+MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 13.2.20 Extended Oberon*)
   IMPORT Display;
 
   CONST restore* = 0; modify* = 1; suspend* = 2; (*message ids*)
@@ -29,6 +29,7 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.2.20 Extended Oberon*)
     END;
 
   VAR CurDisplay*, root*: DisplayArea;
+    FocusViewer*: Viewer;
     nextId: INTEGER;
 
   PROCEDURE ThisViewer* (D: DisplayArea; X, Y: INTEGER): Viewer;
@@ -68,7 +69,8 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.2.20 Extended Oberon*)
   END Prev;
 
   PROCEDURE SetFocus* (D: DisplayArea; V: Viewer);
-  BEGIN D.focus := V
+  BEGIN D.focus := V;
+    IF D = CurDisplay THEN FocusViewer := V END
   END SetFocus;
 
   PROCEDURE GetFocus* (D: DisplayArea): Viewer;
@@ -338,7 +340,7 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.2.20 Extended Oberon*)
     D.X := 0; D.Y := 0; D.W := W; D.H := H; D.minH := 1; D.state := 0; D.parent := NIL;
     NEW(fillerTrack); InitFiller(0, 0, inf, H, 0, fillerTrack); D.dsc := fillerTrack;
     NEW(fillerViewer); InitFiller(0, 0, inf, H, 0, fillerViewer); fillerTrack.dsc := fillerViewer;
-    fillerTrack.parent := D; fillerViewer.parent := fillerTrack; fillerViewer.dsc := NIL;
+    fillerTrack.parent := D; fillerViewer.parent := fillerTrack; fillerViewer.dsc := NIL; D.focus := fillerViewer;
     IF root = NIL THEN root := D ELSE D.prev := root.prev; D.prev.next := D END;
     root.prev := D; D.next := NIL; nextId := nextId + 1
   END InitDisplay;
@@ -370,5 +372,5 @@ MODULE Viewers; (*JG 14.9.90 / NW 15.9.13 / AP 12.2.20 Extended Oberon*)
     END
   END CloseDisplay;
 
-BEGIN root := NIL; CurDisplay := NIL; nextId := 0
+BEGIN root := NIL; CurDisplay := NIL; FocusViewer := NIL; nextId := 0
 END Viewers.
