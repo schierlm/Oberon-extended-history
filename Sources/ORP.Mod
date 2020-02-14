@@ -1078,8 +1078,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 9.2.2020  Oberon compiler for RISC in Oberon-07 
       END ;
       Check(ORS.semicolon, "no ;"); level := 0; exno := 1; key := 0;
       IF sym = ORS.import THEN
-        ORS.Get(sym); Import;
-        WHILE sym = ORS.comma DO ORS.Get(sym); Import END ;
+        REPEAT ORS.Get(sym); Import UNTIL sym # ORS.comma;
         Check(ORS.semicolon, "; missing")
       END ;
       ORG.Open(version); Declarations(dc); ORG.SetDataSize((dc + 3) DIV 4 * 4);
