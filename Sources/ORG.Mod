@@ -102,7 +102,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   BEGIN
     IF RH # 0 THEN ORS.Mark("Reg Stack"); RH := 0 END ;
     IF pc >= maxCode - 40 THEN ORS.Mark("program too long") END ;
-    IF varsize + strx > maxGlobals THEN ORS.Mark("too many globals") END ;
+    IF varx + strx > maxGlobals THEN ORS.Mark("too many globals") END ;
     IF frame # 0 THEN ORS.Mark("frame error"); frame := 0 END
   END CheckRegs;
 
