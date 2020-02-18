@@ -1,4 +1,4 @@
-MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 9.2.20 Extended Oberon*)
+MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 18.2.20 Extended Oberon*)
   IMPORT Files, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
@@ -186,21 +186,24 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 9.2.20 Extended Ober
   PROCEDURE ThisModule(name, orgname: ORS.Ident; non: BOOLEAN; key: LONGINT): Object;
     VAR mod: Module; obj, obj1: Object;
   BEGIN obj1 := topScope; obj := obj1.next;  (*search for module*)
-    WHILE (obj # NIL) & (obj.name # name) & (obj.name # orgname) &
-        (obj(Module).orgname # orgname) & (obj(Module).orgname # name) DO
-      obj1 := obj; obj := obj1.next
+    IF non THEN (*explicit import*)
+      WHILE (obj # NIL) & (obj.name # name) & (obj.name # orgname) &
+          (obj(Module).orgname # orgname) & (obj(Module).orgname # name) DO
+        obj1 := obj; obj := obj1.next
+      END ;
+      IF obj # NIL THEN ORS.Mark("invalid import order") END
+    ELSE (*re-import*)
+      WHILE (obj # NIL) & (obj(Module).orgname # orgname) DO obj1 := obj; obj := obj1.next END
     END ;
     IF obj = NIL THEN  (*insert new module*)
       NEW(mod); mod.class := Mod; mod.rdo := FALSE;
       mod.name := name; mod.orgname := orgname; mod.val := key;
       mod.lev := nofmod; INC(nofmod); mod.type := noType; mod.dsc := NIL; mod.next := NIL;
       obj1.next := mod; obj := mod
-    ELSE (*module already present*)
-      IF non OR (obj(Module).orgname # orgname) THEN ORS.Mark("invalid import order") END
     END ;
     RETURN obj
   END ThisModule;
-  
+
   PROCEDURE Read(VAR R: Files.Rider; VAR x: INTEGER);
     VAR b: BYTE;
   BEGIN Files.ReadByte(R, b);
