@@ -1,5 +1,5 @@
-MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 2.2.20 Extended Oberon System*)
-  IMPORT Files, Fonts, Texts, Viewers, Oberon, MenuViewers, TextFrames;
+MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 13.2.20 Extended Oberon*)
+  IMPORT Files, Fonts, Texts, Display, Viewers, Oberon, MenuViewers, TextFrames;
 
   CONST CR = 0DX; maxlen = 32;
     StandardMenu = "System.Close System.Copy System.Grow Edit.Search Edit.Store | System.Expand System.Spread System.Clone";
@@ -15,6 +15,10 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 2.2.20 Extended Oberon System*)
   BEGIN IF i >= j THEN m := i ELSE m := j END ;
     RETURN m
   END Max;
+
+  PROCEDURE FocusViewer(): Viewers.Viewer;  (*for Extended Oberon*)
+  BEGIN RETURN Viewers.FocusViewer
+  END FocusViewer;
 
   PROCEDURE Open*;
     VAR T: Texts.Text;
@@ -77,7 +81,7 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 2.2.20 Extended Oberon System*)
       fnt: Fonts.Font; col, voff: INTEGER;
   BEGIN Oberon.GetSelection(T, beg, end, time);
     IF time >= 0 THEN
-      v := Viewers.FocusViewer;
+      v := FocusViewer();
       IF (v # NIL) & (v.dsc # NIL) & (v.dsc.next IS TextFrames.Frame) THEN
         F := v.dsc.next(TextFrames.Frame);
         Texts.Attributes(F.text, F.carloc.pos, fnt, col, voff);
@@ -93,7 +97,7 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 2.2.20 Extended Oberon System*)
     IF time >= 0 THEN
       Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
       IF S.class = Texts.Name THEN
-        Texts.ChangeLooks(T, beg, end, {0}, Fonts.Load(S.s), 0, 0)
+        Texts.ChangeLooks(T, beg, end, {0}, Fonts.This(S.s), 0, 0)
       END
     END
   END ChangeFont;
@@ -138,7 +142,7 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 2.2.20 Extended Oberon System*)
     END Forward;
 
   BEGIN V := Oberon.Par.vwr;
-    IF Oberon.Par.frame # V.dsc THEN V := Viewers.FocusViewer END;
+    IF Oberon.Par.frame # V.dsc THEN V := FocusViewer() END;
     IF (V.dsc # NIL) & (V.dsc.next IS TextFrames.Frame) THEN
       Text := V.dsc.next(TextFrames.Frame);
       prevTime := time; Oberon.GetSelection(T, beg, end, time);
@@ -165,7 +169,7 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 2.2.20 Extended Oberon System*)
       IF j < 0 THEN
         TextFrames.RemoveSelection(Text); TextFrames.RemoveCaret(Text);
         Oberon.RemoveMarks(Text.X, Text.Y, Text.W, Text.H);
-        TextFrames.Show(Text, pos - 300); Viewers.PassFocus(V);
+        TextFrames.Show(Text, pos - 300); Oberon.PassFocus(V);
         TextFrames.SetCaret(Text, pos)
       END
     END
@@ -177,7 +181,7 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 2.2.20 Extended Oberon System*)
       V: Viewers.Viewer;
       beg, end, time: LONGINT;
   BEGIN
-    V := Viewers.FocusViewer;
+    V := FocusViewer();
     IF (V.dsc # NIL) & (V.dsc.next IS TextFrames.Frame) THEN
       Text := V.dsc.next(TextFrames.Frame);
       Oberon.GetSelection(T, beg, end, time);
@@ -189,7 +193,7 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 2.2.20 Extended Oberon System*)
           TextFrames.RemoveCaret(Text);
           Oberon.RemoveMarks(Text.X, Text.Y, Text.W, Text.H);
           TextFrames.Show(Text, Max(0, S.i - 200));
-          Viewers.PassFocus(V);
+          Oberon.PassFocus(V);
           TextFrames.SetCaret(Text, S.i)
         END
       END
@@ -197,12 +201,12 @@ MODULE Edit; (*JG 2.11.90 / NW 28.11.15 / AP 2.2.20 Extended Oberon System*)
   END Locate;
 
   PROCEDURE Recall*;
-    VAR Menu, Main: Viewers.Frame;
+    VAR Menu, Main: Display.Frame;
       buf: Texts.Buffer;
       V: Viewers.Viewer;
       pos: LONGINT;
       M: TextFrames.Frame;
-  BEGIN V := Viewers.FocusViewer;
+  BEGIN V := FocusViewer();
     IF (V # NIL) & (V IS MenuViewers.Viewer) THEN
       Menu := V.dsc; Main := V.dsc.next;
       IF Main IS TextFrames.Frame THEN

@@ -1,4 +1,4 @@
-MODULE Graphics;   (*NW 21.12.89 / 18.11.201 / 8.4.2016 / AP 2.2.20 Extended Oberon System*)
+MODULE Graphics;   (*NW 21.12.89 / 18.11.201 / 8.4.2016 / AP 7.2.20*)
   IMPORT SYSTEM, Files, Modules, Fonts, (*Printer,*) Texts, Oberon;
 
   CONST NameLen* = 32; GraphFileId = 0FAX; LibFileId = 0FBX;

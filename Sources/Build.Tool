@@ -76,6 +76,11 @@ ORC.SR 100 Modules.bin ~        # OR load the REGULAR boot file onto the boot ar
 # Reboot the target system
 ORC.SR 102 BootLoadDisk.rsc ~   # reboot the target system from its local disk (i.e. initiate the "regular" boot process)
 
+#
+# IMPORTANT: Please re-build the entire Oberon system and the Oberon compiler on the host system (see System.Tool),
+#            as object files (Kernel) and binaries (Modules.bin) have been overwritten by the commands above!
+#
+
 # ---------------------------------------------------------------------------------------------------------------------
 #  7. Extract the code section of the boot loader and convert it to a PROM file in hex format
 # ---------------------------------------------------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-MODULE ORB;   (*NW 25.6.2014  / 25.1.2020   in Oberon-07 / AP 2.2.20 Extended Oberon System*)
+MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 20.2.20 Extended Oberon*)
   IMPORT Files, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
@@ -186,24 +186,26 @@ MODULE ORB;   (*NW 25.6.2014  / 25.1.2020   in Oberon-07 / AP 2.2.20 Extended Ob
   PROCEDURE ThisModule(name, orgname: ORS.Ident; non: BOOLEAN; key: LONGINT): Object;
     VAR mod: Module; obj, obj1: Object;
   BEGIN obj1 := topScope; obj := obj1.next;  (*search for module*)
-    WHILE (obj # NIL) & (obj.name # name) DO obj1 := obj; obj := obj1.next END ;
-    IF obj = NIL THEN 
-      obj1 := topScope; obj := obj1.next;
-      WHILE (obj # NIL) & (obj IS Module) & (obj(Module).orgname # orgname) DO
-        obj1 := obj; obj := obj1.next
+    WHILE (obj # NIL) & (obj(Module).orgname # orgname) DO obj1 := obj; obj := obj1.next END;
+    IF obj = NIL THEN  (*new module, search for alias*)
+      obj := topScope.next;
+      WHILE (obj # NIL) & (obj.name # name) DO obj := obj.next END ;
+      IF obj = NIL THEN  (*insert new module*)
+        NEW(mod); mod.class := Mod; mod.rdo := FALSE;
+        mod.name := name; mod.orgname := orgname; mod.val := key;
+        mod.lev := nofmod; INC(nofmod); mod.dsc := NIL; mod.next := NIL;
+        IF non THEN mod.type := noType ELSE mod.type := nilType END ;
+        obj1.next := mod; obj := mod
+      ELSIF non THEN
+        IF obj.type.form = NoTyp THEN ORS.Mark("mult def") ELSE ORS.Mark("invalid import order") END
+      ELSE ORS.Mark("re-import impossible")  (*re-import conflicts with alias of explict import*)
       END
-    END ;
-    IF obj = NIL THEN (*insert new module*)
-      NEW(mod); mod.class := Mod; mod.rdo := FALSE;
-      mod.name := name; mod.orgname := orgname; mod.val := key;
-      mod.lev := nofmod; INC(nofmod); mod.type := noType; mod.dsc := NIL; mod.next := NIL;
-      obj1.next := mod; obj := mod
-    ELSE (*module already present*)
-      IF non THEN ORS.Mark("invalid import order") END
+    ELSIF non THEN (*module already present and explicit import*)
+      IF obj.type.form = NoTyp THEN ORS.Mark("mult def") ELSE ORS.Mark("invalid import order") END
     END ;
     RETURN obj
   END ThisModule;
-  
+
   PROCEDURE Read(VAR R: Files.Rider; VAR x: INTEGER);
     VAR b: BYTE;
   BEGIN Files.ReadByte(R, b);

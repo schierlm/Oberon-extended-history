@@ -1,7 +1,11 @@
-MODULE Clipboard; (*AP 1.6.17*)
+MODULE Clipboard; (*AP 13.2.20 Extended Oberon*)
   IMPORT SYSTEM, Texts, Viewers, Oberon, TextFrames;
 
   CONST control = -24; data = -20;
+
+  PROCEDURE FocusViewer(): Viewers.Viewer;  (*for Extended Oberon*)
+  BEGIN RETURN Viewers.FocusViewer
+  END FocusViewer;
 
   PROCEDURE Copy(T: Texts.Text; beg, end: INTEGER);
     VAR R: Texts.Reader;
@@ -42,7 +46,7 @@ MODULE Clipboard; (*AP 1.6.17*)
       len, i: INTEGER;
       ch: CHAR;
   BEGIN
-    V := Viewers.FocusViewer;
+    V := FocusViewer();
     IF (V # NIL) & (V.dsc # NIL) & (V.dsc.next IS TextFrames.Frame) THEN
       SYSTEM.GET(control, len);
       IF len > 0 THEN

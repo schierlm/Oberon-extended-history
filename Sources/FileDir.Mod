@@ -1,5 +1,5 @@
 MODULE FileDir;   (*NW 12.1.86 / 23.8.90 / 15.8.2013*)
-  IMPORT SYSTEM, Kernel;
+  IMPORT Kernel;
 
   (*File Directory is a B-tree with its root page at DirRootAdr.
     Each entry contains a file name and the disk address of the file's head sector*)

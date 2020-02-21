@@ -1,4 +1,4 @@
-MODULE M4;  (*test safe module unloading / AP 2.2.20 Extended Oberon System*)
+MODULE M4;  (*test safe module unloading / AP 7.2.20 Extended Oberon*)
   IMPORT SYSTEM, M0, M1, M2, Out;
 
   (*pointer variable reference from a static (global) pointer variable to static module data*)

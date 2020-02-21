@@ -1,4 +1,4 @@
-MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 22.2.19*)
+MODULE Stars;   (*NW 15.1.2013, 15.11.2013 / AP 12.2.20 Extended Oberon*)
   IMPORT SYSTEM, Display, Viewers, Texts, Oberon, MenuViewers, TextFrames;
 
   CONST Menu = "Stars.Close System.Copy System.Grow Stars.Step Stars.Run Stars.Stop | System.Expand System.Spread System.Clone";
@@ -8,15 +8,15 @@ MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 22.2.19*)
 
   TYPE Frame = POINTER TO FrameDesc;
     Pos = RECORD x, y, dx, dy: INTEGER END ;
-    FrameDesc = RECORD (Viewers.FrameDesc) s: ARRAY N OF Pos END ;
-    RestoreMsg = RECORD (Viewers.FrameMsg) END ;
-    StepMsg = RECORD (Viewers.FrameMsg) END ;
+    FrameDesc = RECORD (Display.FrameDesc) s: ARRAY N OF Pos END ;
+    RestoreMsg = RECORD (Display.FrameMsg) END ;
+    StepMsg = RECORD (Display.FrameMsg) END ;
 
   VAR T: Oberon.Task;
     W: Texts.Writer;
 
   PROCEDURE Draw(x, y: INTEGER);
-  BEGIN Display.CopyPattern(Display.white, Display.star, x, y, 0, 0, 0, 0, Display.invert)
+  BEGIN Display.CopyPattern(Display.white, Display.star, x, y, Display.invert)
   END Draw;
 
   PROCEDURE Restore(F: Frame);
@@ -47,18 +47,18 @@ MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 22.2.19*)
     WHILE i < N DO Move(F, F.s[i]); INC(i) END
   END Steps;
 
-  PROCEDURE Handle(F: Viewers.Frame; VAR M: Viewers.FrameMsg);
+  PROCEDURE Handle(F: Display.Frame; VAR M: Display.FrameMsg);
     VAR F1: Frame;
   BEGIN
     CASE F OF Frame:
       CASE M OF
-        Viewers.InputMsg:
-          IF M(Viewers.InputMsg).id = Viewers.track THEN
-            Oberon.DrawMouseArrow(M(Viewers.InputMsg).X, M(Viewers.InputMsg).Y)
+        Oberon.InputMsg:
+          IF M(Oberon.InputMsg).id = Oberon.track THEN
+            Oberon.DrawMouseArrow(M(Oberon.InputMsg).X, M(Oberon.InputMsg).Y)
           END
       | StepMsg: Steps(F)
       | RestoreMsg: Restore(F)
-      | Viewers.CopyMsg: Oberon.Remove(T); NEW(F1); F1^ := F^; M.F := F1
+      | Oberon.CopyMsg: Oberon.Remove(T); NEW(F1); F1^ := F^; M.F := F1
       | Viewers.ViewerMsg:
           IF M.id = Viewers.restore THEN Restore(F) 
           ELSIF M.id = Viewers.modify THEN
@@ -96,7 +96,9 @@ MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 22.2.19*)
   PROCEDURE Close*;
     VAR V: Viewers.Viewer;
   BEGIN
-    IF Oberon.Par.frame = Oberon.Par.vwr.dsc THEN V := Oberon.Par.vwr ELSE V := Oberon.MarkedViewer() END;
+    IF Oberon.Par.frame = Oberon.Par.vwr.dsc THEN V := Oberon.Par.vwr
+    ELSE V := Oberon.MarkedViewer()
+    END;
     Stop; Viewers.Close(V)
   END Close;
 
@@ -111,6 +113,6 @@ MODULE Stars;   (*NW 15.1.13 / 15.11.13 / AP 22.2.19*)
     IF S.class = Texts.Int THEN T.period := S.i END
   END SetPeriod;
 
-BEGIN Texts.OpenWriter(W); T := Oberon.NewTask(Step1, interval)
+BEGIN Texts.OpenWriter(W); T := Oberon.NewTask(Step1, interval);
 END Stars.
 

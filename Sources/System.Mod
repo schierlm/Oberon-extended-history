@@ -1,8 +1,8 @@
-MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 3.2.20 Extended Oberon System*)
+MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 20.2.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules,
-    Input, Viewers, Fonts, Texts, Oberon, MenuViewers, TextFrames;
+    Input, Display, Viewers, Fonts, Texts, Oberon, MenuViewers, TextFrames;
 
-  CONST Version = "Extended Oberon System  AP 3.2.20";
+  CONST Version* = "Extended Oberon System  AP 20.02.20";
     StandardMenu = "System.Close System.Copy System.Grow Edit.Search Edit.Store | System.Expand System.Spread System.Clone";
     LogMenu = "Edit.Locate Edit.Search System.Copy System.Grow System.Clear | System.Expand System.Spread System.Clone";
     SystemLog = "System.Log";
@@ -101,7 +101,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 3.2.20 Extended Ob
   END OpenLog;
 
   PROCEDURE Clear*;  (*clear Log*)
-    VAR T: Texts.Text; F: Viewers.Frame; buf: Texts.Buffer;
+    VAR T: Texts.Text; F: Display.Frame; buf: Texts.Buffer;
   BEGIN F := Oberon.Par.frame;
     IF (F # NIL) & (F.next IS TextFrames.Frame) & (F = Oberon.Par.vwr.dsc) THEN
       NEW(buf); Texts.OpenBuf(buf); T := F.next(TextFrames.Frame).text; Texts.Delete(T, 0, T.len, buf)
@@ -118,7 +118,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 3.2.20 Extended Ob
   END Close;
 
   PROCEDURE CloseTrack*;
-    VAR D: Viewers.Display; V: Viewers.Viewer;
+    VAR D: Viewers.DisplayArea; V: Viewers.Viewer;
   BEGIN V := Oberon.MarkedViewer(); D := Viewers.ThisDisplay(V); Viewers.CloseTrack(D, V.X)
   END CloseTrack;
 
@@ -127,7 +127,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 3.2.20 Extended Ob
   END Flush;
 
   PROCEDURE Recall*;  (*recover the last closed viewer of the current display*)
-    VAR V: Viewers.Viewer; curDisplay: Viewers.Display; M: Viewers.ViewerMsg;
+    VAR V: Viewers.Viewer; curDisplay: Viewers.DisplayArea; M: Viewers.ViewerMsg;
   BEGIN curDisplay := Viewers.CurDisplay; Viewers.Recall(curDisplay, V);
     IF (V # NIL) & (V.state = 0) THEN
       Viewers.Open(curDisplay, V, V.X, V.Y + V.H); M.id := Viewers.restore; V.handle(V, M)
@@ -143,14 +143,14 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 3.2.20 Extended Ob
   END RecallFocus;
 
   PROCEDURE Copy*;  (*create a copy of the viewer in the current display*)
-    VAR V, V1: Viewers.Viewer; M: Viewers.CopyMsg; N: Viewers.ViewerMsg;
+    VAR V, V1: Viewers.Viewer; M: Oberon.CopyMsg; N: Viewers.ViewerMsg;
   BEGIN V := Oberon.Par.vwr; V.handle(V, M); V1 := M.F(Viewers.Viewer);
     Viewers.Open(Viewers.CurDisplay, V1, V.X, V.Y + V.H DIV 2);
     N.id := Viewers.restore; V1.handle(V1, N)
   END Copy;
 
   PROCEDURE Grow*;  (*create a copy of the viewer in a newly created overlaying track*)
-    VAR D: Viewers.Display; V, V1: Viewers.Viewer; M: Viewers.CopyMsg; N: Viewers.ViewerMsg;
+    VAR D: Viewers.DisplayArea; V, V1: Viewers.Viewer; M: Oberon.CopyMsg; N: Viewers.ViewerMsg;
   BEGIN V := Oberon.Par.vwr; D := Viewers.ThisDisplay(V);
     IF V.H < D.H - D.minH THEN Oberon.OpenTrack(D, V.X, V.W)
     ELSIF V.W < D.W THEN Oberon.OpenTrack(D, Oberon.UserTrack(V.X), D.W)
@@ -169,7 +169,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 3.2.20 Extended Ob
   END Expand;
 
   PROCEDURE Spread*;  (*redistribute viewers vertically*)
-    VAR D: Viewers.Display; V: Viewers.Viewer;
+    VAR D: Viewers.DisplayArea; V: Viewers.Viewer;
   BEGIN V := Oberon.Par.vwr; D := Viewers.ThisDisplay(V); Viewers.Spread(D, V.X, V.W)
   END Spread;
 
@@ -183,7 +183,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 3.2.20 Extended Ob
   END MakeDisplayName;
 
   PROCEDURE OpenViewers;  (*open log and system tool viewer in system track of current display*)
-    VAR logV, toolV, menu, main: Viewers.Frame; X, Y: INTEGER;
+    VAR logV, toolV, menu, main: Display.Frame; X, Y: INTEGER;
   BEGIN
     IF Viewers.CurDisplay # NIL THEN
       Texts.WriteString(W, Version); Texts.WriteString(W, " / Display ");
@@ -201,7 +201,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 3.2.20 Extended Ob
   END OpenViewers;
 
   PROCEDURE CreateDisplay(name: ARRAY OF CHAR);
-    VAR D: Viewers.Display;
+    VAR D: Viewers.DisplayArea;
   BEGIN NEW(D); Oberon.InitDisplay(D, name); Oberon.SetDisplay(D); OpenViewers
   END CreateDisplay;
 
@@ -215,8 +215,8 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 3.2.20 Extended Ob
   END OpenDisplay;
 
   PROCEDURE Clone*;  (*create a copy of the viewer in a newly created display*)
-    VAR D: Viewers.Display; V, V1: Viewers.Viewer;
-      M: Viewers.CopyMsg; N: Viewers.ViewerMsg; prev: INTEGER;
+    VAR D: Viewers.DisplayArea; V, V1: Viewers.Viewer;
+      M: Oberon.CopyMsg; N: Viewers.ViewerMsg; prev: INTEGER;
       name: ARRAY Viewers.DnLength OF CHAR;
   BEGIN V := Oberon.Par.vwr; V.handle(V, M); V1 := M.F(Viewers.Viewer); prev := Viewers.CurDisplay.id;
     MakeDisplayName("cloned from display ", prev, name); CreateDisplay(name);
@@ -231,7 +231,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 3.2.20 Extended Ob
   END Clone;
 
   PROCEDURE ExtendDisplay*;  (*extend the current display to the right*)
-    VAR V: Viewers.Viewer; curDisplay: Viewers.Display;
+    VAR V: Viewers.Viewer; curDisplay: Viewers.DisplayArea;
       X, Y, DX, DW, DH: INTEGER;
       S: Texts.Scanner;
   BEGIN GetArg(S);
@@ -249,7 +249,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 3.2.20 Extended Ob
   END ExtendDisplay;
 
   PROCEDURE CloseDisplay*;  (*display id and (optionally) a hint for the display to switch to are provided as parameters*)
-    VAR D: Viewers.Display; S: Texts.Scanner; prev, id, hint: INTEGER;
+    VAR D: Viewers.DisplayArea; S: Texts.Scanner; prev, id, hint: INTEGER;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
     IF S.class = Texts.Int THEN id := S.i; D := Viewers.GetDisplay(S.i);
       IF D = NIL THEN Texts.WriteString(W, " no such display ")
@@ -269,7 +269,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 3.2.20 Extended Ob
     EndLine
   END CloseDisplay;
 
-  PROCEDURE SwitchDisplay(D: Viewers.Display);  (*switch to the specified display*)
+  PROCEDURE SwitchDisplay(D: Viewers.DisplayArea);  (*switch to the specified display*)
     VAR prev: INTEGER;
   BEGIN prev := Viewers.CurDisplay.id;
     IF (D # NIL) & (D.id # prev) THEN Oberon.SetDisplay(D);
@@ -286,16 +286,16 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 3.2.20 Extended Ob
 
   PROCEDURE NextDisplay*;  (*switch to display on the "right"*)
     VAR D: Viewers.Viewer;
-  BEGIN D := Viewers.Next(Viewers.CurDisplay); SwitchDisplay(D(Viewers.Display))
+  BEGIN D := Viewers.Next(Viewers.CurDisplay); SwitchDisplay(D(Viewers.DisplayArea))
   END NextDisplay;
 
   PROCEDURE PrevDisplay*;  (*switch to display on the "left"*)
     VAR D: Viewers.Viewer;
-  BEGIN D := Viewers.Prev(Viewers.CurDisplay); SwitchDisplay(D(Viewers.Display))
+  BEGIN D := Viewers.Prev(Viewers.CurDisplay); SwitchDisplay(D(Viewers.DisplayArea))
   END PrevDisplay;
 
   PROCEDURE SetDisplayName*;  (*display id and name are provided as parameters*)
-    VAR D: Viewers.Display; S: Texts.Scanner;
+    VAR D: Viewers.DisplayArea; S: Texts.Scanner;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
     IF S.class = Texts.Int THEN Texts.Scan(S);
       IF S.class = Texts.Name THEN D := Viewers.GetDisplay(S.i);
@@ -311,18 +311,18 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 3.2.20 Extended Ob
   END SetDisplayName;
 
   PROCEDURE ThisDisplay*;
-    VAR D: Viewers.Display;
+    VAR D: Viewers.DisplayArea;
   BEGIN D := Viewers.ThisDisplay(Oberon.Par.vwr); Texts.WriteString(W, " current display ");
     Texts.WriteInt(W, D.id, 3); Texts.Write(W, " "); Texts.WriteString(W, D.name); EndLine
   END ThisDisplay;
 
   PROCEDURE ShowDisplays*;
-    VAR D: Viewers.Display;
+    VAR D: Viewers.DisplayArea;
   BEGIN D := Viewers.root; Texts.WriteString(W, "System.ShowDisplays"); EndLine;
     WHILE D # NIL DO Texts.WriteString(W, " display "); Texts.WriteInt(W, D.id, 3);
       Texts.WriteString(W, " "); Texts.WriteString(W, D.name);
       IF D = Viewers.CurDisplay THEN Texts.WriteString(W, "      (current display)") END ;
-      EndLine; D := D.next(Viewers.Display)
+      EndLine; D := D.next(Viewers.DisplayArea)
      END
   END ShowDisplays;
 
@@ -387,7 +387,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 3.2.20 Extended Ob
 
   PROCEDURE WriteReferences;  (*write references from each unselected module to any of the selected modules*)
     VAR resTyp, resPtr, resPvr: INTEGER;
-  BEGIN Oberon.SetPar(NIL, NIL, 0);  (*exclude viewers that are reachable only via Oberon.Par.vwr*)
+  BEGIN Oberon.ClearPar;  (*exclude viewers that are reachable only via Oberon.Par.vwr*)
     M := NIL; ref := Modules.dyntypes; Modules.FindDynamicReferences(WriteRef, NIL, NIL, resTyp, resPtr, resPvr, FALSE);
     M := NIL; ref := Modules.dynptrs; Modules.FindDynamicReferences(NIL, WriteRef, NIL, resTyp, resPtr, resPvr, FALSE);
     M := NIL; ref := Modules.dynpvrs; Modules.FindDynamicReferences(NIL, NIL, WriteRef, resTyp, resPtr, resPvr, FALSE);

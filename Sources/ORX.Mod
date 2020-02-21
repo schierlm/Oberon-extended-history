@@ -1,7 +1,7 @@
-MODULE ORX;  (*Oberon boot converter for RISC / AP 2.2.20 Extended Oberon System*)
-  IMPORT Files, Texts, Oberon;
-  CONST noerr = 0; hasimp = 1; badfile = 2; CR = 0DX;
-  TYPE WriteProc = PROCEDURE(VAR R: Files.Rider; x: LONGINT);
+MODULE ORX;  (*Oberon boot converter for RISC / AP 7.2.20 Extended Oberon*)
+  IMPORT Files, Modules, Texts, Oberon;
+  CONST CR = 0DX;
+  TYPE Writer = PROCEDURE(VAR R: Files.Rider; x: LONGINT);
 
   VAR W: Texts.Writer;
 
@@ -17,34 +17,31 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 2.2.20 Extended Oberon System
     Files.Write(R, CR)
   END WriteHex;
 
-  PROCEDURE OutCode(VAR R, R1: Files.Rider; write: WriteProc; VAR codelen, entry, res: INTEGER);
-    VAR n, data, nofimps: INTEGER; ch: CHAR; b: BYTE;      (*codelen in words, entry in bytes*)
+  PROCEDURE OutCode(VAR R, R1: Files.Rider; write: Writer; VAR codelen, entry, res: INTEGER);
+    VAR n, data: INTEGER; ch: CHAR; b: BYTE;               (*codelen in words, entry in bytes*)
       F: Files.File;
       name: ARRAY 32 OF CHAR;
-  BEGIN Files.ReadString(R, name); Files.ReadInt(R, data); (*key*)
+  BEGIN F := Files.Base(R); Files.ReadString(R, name); Files.ReadInt(R, data); (*key*)
     Files.ReadByte(R, b); (*version*) Files.ReadInt(R, data); (*size*)
-    Files.ReadString(R, name); (*imports*) nofimps := 0;
-    WHILE name[0] # 0X DO INC(nofimps); Files.ReadInt(R, data); (*key*) Files.ReadString(R, name) END ;
-    IF nofimps = 0 THEN F := Files.Base(R);
-      Files.ReadInt(R, n); (*variable space*)
-      Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n); (*strings*)
-      Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n*4); (*type descriptors*)
-      Files.ReadInt(R, codelen); n := 0;
-      WHILE n < codelen DO Files.ReadInt(R, data); write(R1, data); INC(n) END ; (*write code*)
-      Files.ReadString(R, name);
-      WHILE name[0] # 0X DO Files.ReadInt(R, data); Files.ReadString(R, name) END ; (*commands*)
-      Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n*4); (*entries*)
-      Files.ReadInt(R, data);
-      WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*pointer references*)
-      Files.ReadInt(R, data);
-      WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*procedure variable references*)
-      Files.ReadInt(R, data); (*fixorgP*) Files.ReadInt(R, data); (*fixorgD*)
-      Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, data); (*fixorgM*)
-      Files.ReadInt(R, entry);
-      Files.Read(R, ch);
-      IF ch # "O" THEN res := badfile ELSE res := noerr END
-    ELSE res := hasimp
-    END
+    Files.ReadString(R, name); (*imports*)
+    WHILE name[0] # 0X DO Files.ReadInt(R, data); (*key*) Files.ReadString(R, name) END ;
+    Files.ReadInt(R, n); (*variable space*)
+    Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n); (*strings*)
+    Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n*4); (*type descriptors*)
+    Files.ReadInt(R, codelen); n := 0;
+    WHILE n < codelen DO Files.ReadInt(R, data); write(R1, data); INC(n) END ; (*write code*)
+    Files.ReadString(R, name);
+    WHILE name[0] # 0X DO Files.ReadInt(R, data); Files.ReadString(R, name) END ; (*commands*)
+    Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n*4); (*entries*)
+    Files.ReadInt(R, data);
+    WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*pointer references*)
+    Files.ReadInt(R, data);
+    WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*procedure variable references*)
+    Files.ReadInt(R, data); (*fixorgP*) Files.ReadInt(R, data); (*fixorgD*)
+    Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, data); (*fixorgM*)
+    Files.ReadInt(R, entry);
+    Files.Read(R, ch);
+    IF ch # "O" THEN res := Modules.badfile ELSE res := Modules.noerr END
   END OutCode;
 
   PROCEDURE WriteFile*;  (*write code section of M.rsc in hex format to output file*)
@@ -59,13 +56,12 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 2.2.20 Extended Oberon System
         f := Files.Old(name);
         IF f # NIL THEN g := Files.New(S.s); Files.Set(Rf, f, 0); Files.Set(Rg, g, 0);
           OutCode(Rf, Rg, WriteHex, codelen, entry, res);
-          IF res = noerr THEN
+          IF res = Modules.noerr THEN
             filelen := ((codelen DIV 512) + 1) * 512; n := codelen;
             WHILE n < filelen DO WriteHex(Rg, 0); INC(n) END ; (*zero-fill*)
             Texts.WriteInt(W, codelen*4, 6); Texts.WriteInt(W, entry, 6);
             Texts.WriteString(W, "  done"); Files.Register(g)
-          ELSIF res = hasimp THEN Texts.WriteString(W, "  imports not allowed")
-          ELSIF res = badfile THEN Texts.WriteString(W, "  input file format error")
+          ELSIF res = Modules.badfile THEN Texts.WriteString(W, "  input file format error")
           END
         ELSE Texts.WriteString(W, "  input file not found")
         END
@@ -88,12 +84,11 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 2.2.20 Extended Oberon System
         IF f # NIL THEN g := Files.New(S.s); Files.Set(Rf, f, 0); Files.Set(Rg, g, 0);
           Files.WriteInt(Rg, 0); Files.WriteInt(Rg, 0); (*placeholder for prefix to be inserted at the end*)
           OutCode(Rf, Rg, Files.WriteInt, codelen, entry, res);
-          IF res = noerr THEN
+          IF res = Modules.noerr THEN
             Files.Set(Rg, g, 0); Files.WriteInt(Rg, codelen*4); Files.WriteInt(Rg, entry); (*insert prefix*)
             Texts.WriteInt(W, codelen*4, 6); Texts.WriteInt(W, entry, 6);
             Texts.WriteString(W, "  done"); Files.Register(g)
-          ELSIF res = hasimp THEN Texts.WriteString(W, "  imports not allowed")
-          ELSIF res = badfile THEN Texts.WriteString(W, "  input file format error")
+          ELSIF res = Modules.badfile THEN Texts.WriteString(W, "  input file format error")
           END
         ELSE Texts.WriteString(W, "  input file not found")
         END
@@ -149,6 +144,6 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 2.2.20 Extended Oberon System
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END WriteStream;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR boot converter  AP 1.11.19");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR boot converter  AP 7.2.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
 END ORX.

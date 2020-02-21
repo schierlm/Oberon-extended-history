@@ -1,4 +1,4 @@
-MODULE Net; (*NW 3.7.88 / 25.8.91 / PR 7.8.13 / 9.12.13 / AP 1.6.17*)
+MODULE Net; (*NW 3.7.88 / 25.8.91 / PR 7.8.13 / 9.12.13 / AP 7.2.20*)
   IMPORT SYSTEM, SCC, Files, Texts, Oberon;
 
   CONST PakSize = 512;

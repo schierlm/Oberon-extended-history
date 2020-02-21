@@ -1,4 +1,4 @@
-MODULE Out; (*AP 10.10.17*)
+MODULE Out; (*AP 7.2.20*)
   IMPORT Texts, Oberon;
   VAR W: Texts.Writer;
 

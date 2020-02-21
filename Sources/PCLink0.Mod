@@ -1,4 +1,4 @@
-MODULE PCLink0;  (*AP 2.2.20  for FPGA Oberon and Extended Oberon System*)
+MODULE PCLink0;  (*AP 7.2.20*)
   IMPORT Files, RS232;
   CONST BlkLen = 255; (*packet size for Send and Receive*)
     ACK = 10H; NAK = 11H;

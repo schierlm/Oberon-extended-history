@@ -1,4 +1,4 @@
-MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 2.2.20 Extended Oberon System*)
+MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 7.2.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files, Modules, Texts, Oberon;
   CONST versionkey = 1X; versionkey0 = 0X; MT = 12; DescSize = 84; MnLength = 32;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5;
@@ -262,7 +262,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 2.2.20 Extended Oberon Sy
       END
     ELSE Texts.WriteString(W, "Usage: ORL.Link [module...] topmodule")
     END ;
-    Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
+    Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); root := NIL
   END Link;
 
   PROCEDURE Load*;  (*load prelinked boot file F.bin onto the boot area of the local disk, starting at sector 2*)
@@ -290,6 +290,6 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 2.2.20 Extended Oberon Sy
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END Load;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 1.11.19");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 7.2.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); limit := Kernel.stackOrg - Kernel.stackSize
 END ORL.

@@ -1,4 +1,4 @@
-MODULE Sierpinski;  (*NW 15.1.13 / AP 12.12.17*)
+MODULE Sierpinski;  (*NW 15.1.2013 / AP 12.2.20 Extended Oberon*)
   IMPORT Display, Viewers, Oberon, MenuViewers, TextFrames;
 
   CONST Menu = "System.Close System.Copy System.Grow | System.Expand System.Spread System.Clone";
@@ -66,7 +66,7 @@ MODULE Sierpinski;  (*NW 15.1.13 / AP 12.12.17*)
     IF i > 0 THEN D(i-1); NE; A(i-1); N; N; C(i-1); NW; D(i-1) END
   END SD;
 
-  PROCEDURE DrawSierpinski(F: Viewers.Frame);
+  PROCEDURE DrawSierpinski(F: Display.Frame);
     VAR k, n, w, x0, y0: INTEGER;
   BEGIN; k := 0; d := 4;
     IF F.W < F.H THEN w := F.W ELSE w := F.H END ;
@@ -80,26 +80,26 @@ MODULE Sierpinski;  (*NW 15.1.13 / AP 12.12.17*)
     END
   END DrawSierpinski;
 
-  PROCEDURE Handler(F: Viewers.Frame; VAR M: Viewers.FrameMsg);
-    VAR F1: Viewers.Frame;
+  PROCEDURE Handler(F: Display.Frame; VAR M: Display.FrameMsg);
+    VAR F1: Display.Frame;
   BEGIN
-    IF M IS Viewers.InputMsg THEN
-      IF M(Viewers.InputMsg).id = Viewers.track THEN
-        Oberon.DrawMouseArrow(M(Viewers.InputMsg).X, M(Viewers.InputMsg).Y)
+    IF M IS Oberon.InputMsg THEN
+      IF M(Oberon.InputMsg).id = Oberon.track THEN
+        Oberon.DrawMouseArrow(M(Oberon.InputMsg).X, M(Oberon.InputMsg).Y)
       END
     ELSIF M IS Viewers.ViewerMsg THEN
       IF (M(Viewers.ViewerMsg).id = Viewers.restore) OR (M(Viewers.ViewerMsg).id = Viewers.modify) THEN
         F.Y := M(Viewers.ViewerMsg).Y; F.H := M(Viewers.ViewerMsg).H; DrawSierpinski(F)
       END
-    ELSIF M IS Viewers.ControlMsg THEN
-      IF M(Viewers.ControlMsg).id = Viewers.neutralize THEN Oberon.RemoveMarks(F.X, F.Y, F.W, F.H) END
-    ELSIF M IS Viewers.CopyMsg THEN
-      NEW(F1); F1^ := F^; M(Viewers.CopyMsg).F := F1
+    ELSIF M IS Oberon.ControlMsg THEN
+      IF M(Oberon.ControlMsg).id = Oberon.neutralize THEN Oberon.RemoveMarks(F.X, F.Y, F.W, F.H) END
+    ELSIF M IS Oberon.CopyMsg THEN
+       NEW(F1); F1^ := F^; M(Oberon.CopyMsg).F := F1
     END
   END Handler;
 
-  PROCEDURE New(): Viewers.Frame;
-    VAR F: Viewers.Frame;
+  PROCEDURE New(): Display.Frame;
+    VAR F: Display.Frame;
   BEGIN NEW(F); F.handle := Handler; RETURN F
   END New;
 

@@ -1,4 +1,4 @@
-MODULE  ORC; (*Connection to RISC; NW 11.11.2013 / AP 11.11.17*)
+MODULE  ORC; (*Connection to RISC; NW 11.11.2013 / AP 7.2.20*)
   IMPORT SYSTEM, Files, Texts, Oberon, RS232;
   
   CONST stat = -52; BlkLen = 255;
