@@ -200,7 +200,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 20.2.20 Extended Obe
         IF obj.type.form = NoTyp THEN ORS.Mark("mult def") ELSE ORS.Mark("invalid import order") END
       ELSE ORS.Mark("re-import impossible")  (*re-import conflicts with alias of explict import*)
       END
-    ELSIF non THEN (*module already present & explicit import*)
+    ELSIF non THEN (*module already present and explicit import*)
       IF obj.type.form = NoTyp THEN ORS.Mark("mult def") ELSE ORS.Mark("invalid import order") END
     END ;
     RETURN obj
