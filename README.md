@@ -13,14 +13,7 @@ Current features of the Extended Oberon System
 * Improved decoder tools
 * Import any number of modules
 
-Planned features
-
-* Unicode characters and fonts
-* Larger maximum file sizes
-* Multiple file system partitions
-* Plug & Play Oberon images (automatically loaded onto dynamically created partitions)
-
-**REVISION:** 20.2.2020
+**REVISION:** 26.2.2020
 
 **DOCUMENTATION**
 
@@ -30,24 +23,7 @@ Planned features
 | Programming language  | [**The-Revised-Oberon2-Programming-Language.pdf**](Documentation/The-Revised-Oberon2-Programming-Language.pdf)  |
 | System building tools  | [**The-Oberon-system-building-tools.pdf**](Documentation/The-Oberon-system-building-tools.pdf)  |
 | Safe module unloading  | [**Safe-module-unloading-in-Oberon.pdf**](Documentation/Safe-module-unloading-in-Oberon.pdf) |
-| Heap blocks  | [**Extended-Oberon-Heap-Blocks.pdf**](Documentation/Extended-Oberon-Heap-Blocks.pdf)  |
-| Symbol files  | [**Streamlining-symbol-files-in-Oberon.pdf**](Documentation/Streamlining-symbol-files-in-Oberon.pdf)  |
 | Importing modules  | [**Allow-importing-any-number-of-modules.md**](Documentation/Allow-importing-any-number-of-modules.md)  |
-
-**EMULATORS**
-
-| Emulator  | Link |
-| :------------- | :------------- |
-| Oberon emulator on the desktop (Linux, macOS, Windows)  | [**Oberon emulator in C**](http://github.com/pdewacht/oberon-risc-emu) |
-| Oberon emulator on the web (run in the browser)  | [**Oberon emulator in Javascript**](http://schierlm.github.io/OberonEmulator/emu.html?image=ExperimentalOberonDiskImageWithSource) |
-
-**DEMOS**
-
-| Demo  | Link (click on "View raw" or "Download") |
-| :------------- | :------------- |
-| Smooth fractional line scrolling  | [**DemoFractionalLineScrollVariableLineSpace.mov**](Documentation/DemoFractionalLineScrollVariableLineSpace.mov)  |
-| Multiple logical displays (1/2)  | [**DemoMultipleVirtualDisplays.mov**](Documentation/DemoMultipleVirtualDisplays.mov)  |
-| Multiple logical displays (2/2)  | [**DemoCloningViewersIntoNewVirtualDisplays.mov**](Documentation/DemoCloningViewersIntoNewVirtualDisplays.mov)  |
 
 ------------------------------------------------------
 

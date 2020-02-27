@@ -150,10 +150,10 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 20.2.20 Extended Obe
 
   BEGIN (*rec.typobj # NIL*) redef := NIL;
     IF rec.base # NIL THEN bot := rec.base.dsc ELSE bot := NIL END ;
-    fld := rec.dsc;  (*search id in fields of rec proper*)
-    WHILE (fld # bot) & (fld.name # id) DO fld0 := fld; fld := fld.next END ;
-    IF fld = bot THEN  (*search id in fields of base types of rec*)
-      WHILE (fld # NIL) & (fld.name # id) DO fld := fld.next END ;
+    fld := rec.dsc;
+    WHILE (fld # bot) & (fld.name # id) DO fld0 := fld; fld := fld.next END ;  (*search id in fields of rec proper*)
+    IF fld = bot THEN
+      WHILE (fld # NIL) & (fld.name # id) DO fld := fld.next END ;  (*search id in fields of base types of rec*)
       IF (fld = NIL) OR (fld.class = Const) THEN
         NEW(new); new.name := id; new.class := Const; new.rdo := FALSE; new.dsc := NIL; new.next := bot; mth := new;
         IF fld = NIL THEN new.lev := NofMethods(rec) ELSE new.lev := fld.lev; redef := fld END ;  (*mthno*)
@@ -198,7 +198,7 @@ MODULE ORB;   (*NW 25.6.2014  / 1.3.2019  in Oberon-07 / AP 20.2.20 Extended Obe
         obj1.next := mod; obj := mod
       ELSIF non THEN
         IF obj.type.form = NoTyp THEN ORS.Mark("mult def") ELSE ORS.Mark("invalid import order") END
-      ELSE ORS.Mark("re-import impossible")  (*re-import conflicts with alias of explict import*)
+      ELSE ORS.Mark("re-import impossible")  (*conflict with alias*)
       END
     ELSIF non THEN (*module already present and explicit import*)
       IF obj.type.form = NoTyp THEN ORS.Mark("mult def") ELSE ORS.Mark("invalid import order") END

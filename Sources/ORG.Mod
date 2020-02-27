@@ -1,4 +1,4 @@
-MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 18.2.20 Extended Oberon*)
+MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 26.2.20 Extended Oberon*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser ORP; result in array "code".
@@ -7,8 +7,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   CONST WordSize* = 4;
     StkOrg0 = -64; VarOrg0 = 0;  (*for RISC-0 only*)
     MT = 12; SP = 14; LNK = 15;   (*dedicated registers*)
-    maxCode = 8800; maxStrx = 3200; maxTD = 160; maxGlobals = 0FFFFH;
-    C16 = 10000H; C24 = 1000000H; C28 = 10000000H; C30 = 40000000H;
+    maxCode = 8800; maxStrx = 3200; maxTD = 160; C16 = 10000H; C24 = 1000000H; C28 = 10000000H; C30 = 40000000H;
     Reg = 10; RegI = 11; Cond = 12;  (*internal item modes*)
 
   (*frequently used opcodes*)  U = 2000H; V = 1000H;
@@ -53,6 +52,11 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
 
   (*instruction assemblers according to formats*)
 
+  PROCEDURE incR;
+  BEGIN
+    IF RH < MT-1 THEN INC(RH) ELSE ORS.Mark("register stack overflow") END
+  END incR;
+
   PROCEDURE Put0(op, a, b, c: LONGINT);
   BEGIN (*emit format-0 instruction*)
     code[pc] := ((a*10H + b) * 10H + op) * 10000H + c; INC(pc)
@@ -65,11 +69,18 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   END Put1;
 
   PROCEDURE Put1a(op, a, b, im: LONGINT);
+    VAR r: INTEGER;
   BEGIN (*same as Put1, but with range test  -10000H <= im < 10000H*)
     IF (im >= -10000H) & (im <= 0FFFFH) THEN Put1(op, a, b, im)
-    ELSE Put1(Mov+U, RH, 0, im DIV 10000H);
+    ELSIF op = Mov THEN
+      Put1(Mov+U, a, 0, im DIV 10000H);
+      IF im MOD 10000H # 0 THEN Put1(Ior, a, a, im MOD 10000H) END
+    ELSE r := RH;
+      IF b = RH THEN incR END ;
+      Put1(Mov+U, RH, 0, im DIV 10000H);
       IF im MOD 10000H # 0 THEN Put1(Ior, RH, RH, im MOD 10000H) END ;
-      Put0(op, a, b, RH)
+      Put0(op, a, b, RH);
+      IF RH > r THEN DEC(RH) END
     END
   END Put1a;
 
@@ -93,16 +104,10 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     code[pc] := (((op+12) * 40H + mno) * 100H + pno) * 4000H + (disp MOD 4000H); INC(pc)
   END Put3a;
 
-  PROCEDURE incR;
-  BEGIN
-    IF RH < MT-1 THEN INC(RH) ELSE ORS.Mark("register stack overflow") END
-  END incR;
-
   PROCEDURE CheckRegs*;
   BEGIN
     IF RH # 0 THEN ORS.Mark("Reg Stack"); RH := 0 END ;
     IF pc >= maxCode - 40 THEN ORS.Mark("program too long") END ;
-    IF varx + strx > maxGlobals THEN ORS.Mark("too many globals") END ;
     IF frame # 0 THEN ORS.Mark("frame error"); frame := 0 END
   END CheckRegs;
 
