@@ -1,5 +1,5 @@
-MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 7.2.20 Extended Oberon*)
-  IMPORT Files, Texts, Oberon, ORB;
+MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 26.2.20 Extended Oberon*)
+  IMPORT SYSTEM, Files, Modules, Texts, Oberon, ORB;
   VAR W: Texts.Writer;
     mnemo0, mnemo1: ARRAY 16, 4 OF CHAR;  (*mnemonics*)
 
@@ -260,7 +260,29 @@ MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 7.2.20 Extended Oberon*)
     END
   END DecObj;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "ORTool 18.2.2013 / AP 7.2.20");
+  PROCEDURE DecMod*;
+    VAR mod: Modules.Module;
+      adr, data: INTEGER;
+      S: Texts.Scanner;
+   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
+     IF S.class = Texts.Name THEN
+       Texts.WriteString(W, "decode "); Texts.WriteString(W, S.s);
+       mod := Modules.root;
+       WHILE (mod # NIL) & (mod.name # S.s) DO mod := mod.next END ;
+       IF mod # NIL THEN
+         Texts.WriteLn(W); adr := mod.code;
+         Texts.WriteString(W, "code"); Texts.WriteInt(W, (mod.imp - adr) DIV 4, 6); Texts.WriteLn(W);
+         WHILE adr # mod.imp DO
+           SYSTEM.GET(adr, data); Texts.WriteInt(W, adr, 4); Texts.Write(W, 9X); Texts.WriteHex(W, data);
+           Texts.Write(W, 9X); opcode(data, FALSE, FALSE); Texts.WriteLn(W); INC(adr, 4)
+         END ;
+       ELSE Texts.WriteString(W, " not loaded"); Texts.WriteLn(W)
+       END ;
+       Texts.Append(Oberon.Log, W.buf)
+     END
+  END DecMod;
+
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "ORTool 18.2.2013 / AP 26.2.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
   mnemo0[0] := "MOV";
   mnemo0[1] := "LSL";

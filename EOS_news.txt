@@ -3,4 +3,5 @@
 2020-20-13 ORP - fixed typo in ORP.ParamList
 2020-20-20 ORB - re-allow reusing canonical module names and aliases whenever possible (makes compiler less restrictive)
 2020-20-25 FontTool - added
-2020-20-26 ORG - Removed 64KB restriction for global variables, ORG.Put1a corrected
+2020-20-26 ORG - removed 64KB restriction for global variables, ORG.Put1a corrected
+2020-20-27 Modules, ORL - use constants instead of literals in fixup code

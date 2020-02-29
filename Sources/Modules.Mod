@@ -1,8 +1,11 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 7.2.20 Extended Oberon*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 26.2.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files;
   CONST versionkey = 1X; MT = 12; DescSize = 84; MnLength = 32;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5; nocmd* = 6; badcmd* = 7; nomod* = 8;
     noref* = 0; clients* = 9; dyntypes* = 10; dynptrs* = 11; dynpvrs* = 12; statptrs* = 13; statpvrs* = 14;
+    BC = 0E7000000H; BL = 0F7000000H;  (*F3 branch instructions*)
+    C4 = 10H; C6 = 40H; C8 = 100H; C10 = 400H; C12 = 1000H; C14 = 4000H; C16 = 10000H; C18 = 40000H;
+    C20 = 100000H; C22 = 400000H; C24 = 1000000H; C26 = 4000000H; C28 = 10000000H; C30 = 40000000H;
 
   TYPE Module* = POINTER TO ModDesc;
     Command* = PROCEDURE;
@@ -153,30 +156,30 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 7.2.20 E
         adr := mod.code + fixorgP*4;
         WHILE adr # mod.code DO
           SYSTEM.GET(adr, inst);
-          mno := inst DIV 400000H MOD 40H;
-          pno := inst DIV 4000H MOD 100H;
-          disp := inst MOD 4000H;
+          mno := inst DIV C22 MOD C6;
+          pno := inst DIV C14 MOD C8;
+          disp := inst MOD C14;
           SYSTEM.GET(mod.imp + (mno-1)*4, impmod);
           SYSTEM.GET(impmod.ent + pno*4, dest); dest := dest + impmod.code;
           offset := (dest - adr - 4) DIV 4;
-          SYSTEM.PUT(adr, (offset MOD 1000000H) + 0F7000000H);
+          SYSTEM.PUT(adr, (offset MOD C24) + BL);
           adr := adr - disp*4
         END ;
         (*fixup of LDR/STR/ADD*)
         adr := mod.code + fixorgD*4;
         WHILE adr # mod.code DO
           SYSTEM.GET(adr, inst);
-          mno := inst DIV 10000H MOD 100H;
-          disp := inst MOD 10000H;
+          mno := inst DIV C16 MOD C8;
+          disp := inst MOD C16;
           IF mno = 0 THEN (*global*)
-            SYSTEM.PUT(adr, (inst DIV 1000000H * 10H + MT) * 100000H + mod.num * 4)
+            SYSTEM.PUT(adr, (inst DIV C24 * C4 + MT) * C20 + mod.num * 4)
           ELSE (*import*)
             SYSTEM.GET(mod.imp + (mno-1)*4, impmod); v := impmod.num;
-            SYSTEM.PUT(adr, (inst DIV 1000000H * 10H + MT) * 100000H + v*4);
-            SYSTEM.GET(adr+4, inst); vno := inst MOD 100H;
+            SYSTEM.PUT(adr, (inst DIV C24 * C4 + MT) * C20 + v*4);
+            SYSTEM.GET(adr+4, inst); vno := inst MOD C8;
             SYSTEM.GET(impmod.ent + vno*4, offset);
-            IF ODD(inst DIV 100H) THEN offset := offset + impmod.code - impmod.data END ;
-            SYSTEM.PUT(adr+4, inst DIV 10000H * 10000H + offset)
+            IF ODD(inst DIV C8) THEN offset := offset + impmod.code - impmod.data END ;
+            SYSTEM.PUT(adr+4, inst DIV C16 * C16 + offset)
           END ;
           adr := adr - disp*4
         END ;
@@ -184,9 +187,9 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 7.2.20 E
         adr := tdx + fixorgT*4;
         WHILE adr # tdx DO
           SYSTEM.GET(adr, inst);
-          mno := inst DIV 1000000H;
-          vno := inst DIV 1000H MOD 1000H;
-          disp := inst MOD 1000H;
+          mno := inst DIV C24;
+          vno := inst DIV C12 MOD C12;
+          disp := inst MOD C12;
           IF mno = 0 THEN (*global*) inst := tdx + vno
           ELSE (*import*)
             SYSTEM.GET(mod.imp + (mno-1)*4, impmod);
@@ -199,9 +202,9 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 7.2.20 E
         adr := tdx + fixorgM*4;
         WHILE adr # tdx DO
           SYSTEM.GET(adr, inst);
-          mno := inst DIV 1000000H;
-          vno := inst DIV 400H MOD 4000H;
-          disp := inst MOD 400H;
+          mno := inst DIV C24;
+          vno := inst DIV C10 MOD C14;
+          disp := inst MOD C10;
           IF mno = 0 THEN (*global*) inst := mod.code + vno*4
           ELSE (*import*)
             SYSTEM.GET(mod.imp + (mno-1)*4, impmod);
