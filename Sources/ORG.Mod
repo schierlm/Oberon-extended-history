@@ -263,8 +263,8 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   END loadTypTagAdr;
 
   PROCEDURE loadStringAdr(VAR x: Item);
-  BEGIN GetSB(x.r);
-    IF x.r = 0 THEN (*global*) Put1a(Add, RH, RH, varx+x.a) ELSE (*imported*) Put1a(Add, RH, RH, x.a) (*exno*) END ;
+  BEGIN
+    IF x.r >= 0 THEN GetSB(0); Put1a(Add, RH, RH, varx+x.a) ELSE GetSB(x.r); Put1(Add, RH, RH, x.a) (*exno*) END ;
     x.mode := Reg; x.r := RH; incR
   END loadStringAdr;
 
@@ -1190,7 +1190,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
       ELSIF obj.class = ORB.Var THEN INC(nofrefs, NofRefs(ORB.Ptrs + ORB.Procs, obj.type))  (*count ptrs and pvrs*)
       ELSIF (obj.class = ORB.Typ) & (obj.type.form = ORB.Record) & (obj.lev = 0) THEN  (*build type descriptors*)
         base := obj.type.len;  (*len used as heading of fixup chain of instructions generated in loadTypTagAdr*)
-        BuildTD(obj.type, tdw);  (*len used as type descriptor offset in bytes relative to tdx = varx + strx*)
+        BuildTD(obj.type, tdw);  (*len now used as type descriptor offset in bytes relative to tdx = varx + strx*)
         IF base > 0 THEN FixLinkConst(base, tdx + obj.type.len) END  (*fixup instructions with type descriptor adr*)
       END ;
       obj := obj.next
