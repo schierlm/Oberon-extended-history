@@ -2,9 +2,8 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 26.2.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files, Modules, Texts, Oberon;
   CONST versionkey = 1X; versionkey0 = 0X; MT = 12; DescSize = 84; MnLength = 32;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5;
-    BC = 0E7000000H; BL = 0F7000000H;  (*F3 branch instructions*)
-    C4 = 10H; C6 = 40H; C8 = 100H; C10 = 400H; C12 = 1000H; C14 = 4000H; C16 = 10000H; C18 = 40000H;
-    C20 = 100000H; C22 = 400000H; C24 = 1000000H; C26 = 4000000H; C28 = 10000000H; C30 = 40000000H;
+    C4 = 10H; C6 = 40H; C8 = 100H; C10 = 400H; C12 = 1000H; C14 = 4000H; C16 = 10000H;
+    C20 = 100000H; C22 = 400000H; C24 = 1000000H; BC = 0E7000000H; BL = 0F7000000H;
 
   TYPE  (*copied from Modules for use as cross linker/loader*)
     Module* = POINTER TO ModDesc;
