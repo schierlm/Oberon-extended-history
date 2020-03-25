@@ -13,26 +13,7 @@ Features
 * Improved decoder tools
 * Import any number of modules
 
-Behind the scenes
-
-* Elimination of the concept of static base, the MT register, and the module table headed by MTOrg
-* No 64KB limitations for offsets within a module's data area, neither for global nor for imported module data
-* Module loader resolves all references to external procedures and global module data at load/link time - an access to an external object is no different than an access to a non-imported global object
-* Freely relocatable and executable pre-linked binaries M.bin using ORL.Relocate and ORL.Execute
-* Possibility to generate pre-linked boot-loaders consisting of multiple modules using ORL.Link
-* Module Disk is a separate module (independent from Kernel)
-
 **REVISION:** 22.3.2020
-
-**DOCUMENTATION**
-
-| Topic  | Documentation |
-| :------------- | :------------- |
-| Operating system  | [**The-Extended-Oberon-System.pdf**](Documentation/The-Extended-Oberon-System.pdf)  |
-| Programming language  | [**The-Revised-Oberon2-Programming-Language.pdf**](Documentation/The-Revised-Oberon2-Programming-Language.pdf)  |
-| System building tools  | [**The-Oberon-system-building-tools.pdf**](Documentation/The-Oberon-system-building-tools.pdf)  |
-| Safe module unloading  | [**Safe-module-unloading-in-Oberon.pdf**](Documentation/Safe-module-unloading-in-Oberon.pdf) |
-| Importing modules  | [**Allow-importing-any-number-of-modules.md**](Documentation/Allow-importing-any-number-of-modules.md)  |
 
 ------------------------------------------------------
 
