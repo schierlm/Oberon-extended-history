@@ -1,10 +1,10 @@
-MODULE Oberon0; (*Oberon-0 command interpreter / AP 22.3.20 Extended Oberon*)
+MODULE Oberon0; (*Oberon-0 command interpreter / AP 7.4.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, FileDir, Files, Modules, RS232, PCLink0;
   CONST swi = -60; (*switches*)
     stat = -52; (*RS-232*)
     REQ = 20H; REC = 21H; SND = 22H; ACK = 10H;
     screenbase = 0E7F00H; screensize = 1024 * 768 DIV 8; (*1024 x 768 pixel monocolor display*)
-    maxCode = 8000; TR = 13;
+    BootSec = 2; maxCode = 8000; TR = 13;
 
   VAR pat: ARRAY 32 OF CHAR;
 
@@ -218,7 +218,7 @@ MODULE Oberon0; (*Oberon-0 command interpreter / AP 22.3.20 Extended Oberon*)
     Disk.PutSector(secno*29, buf)
   END ClearSector;
 
-  PROCEDURE LoadBoot; (*filename - load boot file onto the boot area of the local disk, starting at sector 2*)
+  PROCEDURE LoadBoot; (*filename - load boot file onto the boot area of the local disk*)
     VAR i, secno: INTEGER; b: BYTE;
       F: Files.File; R: Files.Rider;
       buf: ARRAY Disk.SectorLength OF BYTE;
@@ -226,7 +226,7 @@ MODULE Oberon0; (*Oberon-0 command interpreter / AP 22.3.20 Extended Oberon*)
   BEGIN RS232.RecStr(name); RS232.SendStr("LoadBoot  ");
     F := Files.Old(name);
     IF F # NIL THEN RS232.SendInt(Files.Length(F)); (*success*)
-      secno := 2; i := 0; Files.Set(R, F, 0); Files.ReadByte(R, b);
+      secno := BootSec; i := 0; Files.Set(R, F, 0); Files.ReadByte(R, b);
       WHILE ~R.eof DO buf[i] := b; INC(i);
         IF i = Disk.SectorLength THEN Disk.PutSector(secno*29, buf); INC(secno); i := 0 END ;
         Files.ReadByte(R, b)
@@ -345,8 +345,7 @@ MODULE Oberon0; (*Oberon-0 command interpreter / AP 22.3.20 Extended Oberon*)
 
   PROCEDURE Init*; (*establish a working file system (root page) if necessary*)
     VAR a: FileDir.DirPage;
-  BEGIN SYSTEM.LDREG(TR, Kernel.TrapAdr);
-    Disk.GetSector(FileDir.DirRootAdr, a);
+  BEGIN SYSTEM.LDREG(TR, Kernel.TrapAdr); Disk.GetSector(FileDir.DirRootAdr, a);
     IF a.mark # FileDir.DirMark THEN
       a.mark := FileDir.DirMark; a.m := 0; a.p0 := 0;
       Disk.PutSector(FileDir.DirRootAdr, a)
