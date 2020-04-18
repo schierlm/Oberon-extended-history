@@ -1,4 +1,4 @@
-MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 22.3.20 Extended Oberon*)
+MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 4.4.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, Files, Modules, Texts, Oberon;
   CONST versionkey = 1X; versionkey0 = 0X; DescSize = 92; MnLength = 32;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5;
@@ -316,7 +316,10 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 22.3.20 Extended Oberon*)
       i := M.tdx + start; j := M.code + start;
       WHILE i < j DO  (*type descriptors*)
         SYSTEM.GET(i, x); INC(i, 4); y := -x-1;  (*nofmth*)
-        WHILE y > 0 DO SYSTEM.GET(i, x); SYSTEM.PUT(i, x + dst); INC(i, 4); DEC(y) END ;  (*methods*)
+        WHILE y > 0 DO SYSTEM.GET(i, x);
+          IF x > 0 THEN (*not an imported hidden method*) SYSTEM.PUT(i, x + dst) END ;  (*methods*)
+          INC(i, 4); DEC(y)
+        END ;
         INC(i, 4);  (*size*)
         FOR y := 0 TO 2 DO SYSTEM.GET(i, x);
           IF x # -1 THEN SYSTEM.PUT(i, x + dst) END ;  (*base types*)
@@ -413,6 +416,6 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 22.3.20 Extended Oberon*)
     END
   END Execute;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 22.3.20");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 4.4.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); limit := Kernel.stackOrg - Kernel.stackSize
 END ORL.

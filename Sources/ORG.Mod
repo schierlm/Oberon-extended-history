@@ -1,4 +1,4 @@
-MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 14.3.20 Extended Oberon*)
+MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 4.4.20 Extended Oberon*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser ORP; result in array "code".
@@ -400,7 +400,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     WHILE t # NIL DO fld := t.dsc;
       IF t.base # NIL THEN bot := t.base.dsc ELSE bot := NIL END ;
       WHILE fld # bot DO
-        IF (fld.class = ORB.Const) & (td[tdw-fld.lev-1] = -1) THEN
+        IF (fld.class = ORB.Const) & (td[tdw-fld.lev-1] = -1) & ((t.mno = 0) OR (fld.name[0] # 0X)) (*not imported hidden*) THEN
           td[tdw-fld.lev-1] := (t.mno*10000H + fld.val (*mthadr/exno*)) * 400H
         END ;
         fld := fld.next
@@ -408,13 +408,15 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
       t := t.base
     END ;
     FOR k := nofmth TO 1 BY -1 DO  (*insert displacements in ascending order*)
-      IF td[tdw-k] # -1 THEN td[tdw-k] := td[tdw-k] + tdw - k - fixorgM; fixorgM := tdw - k END
+      IF td[tdw-k] # -1 THEN td[tdw-k] := td[tdw-k] + tdw - k - fixorgM; fixorgM := tdw - k
+      ELSE (*imported hidden*) td[tdw-k] := 0
+      END
     END ;
     s := T.size; (*convert size for heap allocation*)
     IF s <= 24 THEN s := 32 ELSIF s <= 56 THEN s := 64 ELSIF s <= 120 THEN s := 128
     ELSE s := (s+263) DIV 256 * 256
     END ;
-    T.len := tdw*4; td[tdw] := s; INC(tdw);  (*len used as type descriptor offset in bytes relative to varx + strx*)
+    T.len := tdw*4; td[tdw] := s; INC(tdw);  (*len used as type descriptor offset in bytes relative to tdx = varx + strx*)
     k := T.nofpar;  (*extension level!*)
     IF k > 3 THEN ORS.Mark("ext level too large")
     ELSE Q(T, tdw);
