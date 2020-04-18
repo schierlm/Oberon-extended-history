@@ -1,4 +1,4 @@
-MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 6.3.20 Extended Oberon*)
+MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 4.4.20 Extended Oberon*)
   IMPORT Files, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
@@ -236,10 +236,12 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 6.3.20
           IF last = NIL THEN t.dsc := fld ELSE last.next := fld END ;
           last := fld;
           IF fld.name[0] # 0X THEN fld.expo := TRUE; InType(R, thismod, fld.type); Files.ReadNum(R, fld.val)
-          ELSE (*hidden*) fld.expo := FALSE; Files.ReadNum(R, fld.val);
-            IF class = Const THEN fld.type := byteType  (*method*)
-            ELSIF fld.val < 0 THEN fld.val := -fld.val-1; fld.type := noType  (*procedure*)
-            ELSE fld.type := nilType  (*pointer*)
+          ELSE (*hidden*) fld.expo := FALSE;
+            IF class = Const THEN (*type-bound procedure*) fld.type := byteType  (*method*)
+            ELSE Files.ReadNum(R, fld.val);
+              IF fld.val < 0 THEN fld.val := -fld.val-1; fld.type := noType  (*procedure*)
+              ELSE fld.type := nilType  (*pointer*)
+              END
             END
           END ;
           IF class = Const THEN Files.ReadNum(R, fld.lev) END ;  (*mthno*)
@@ -325,8 +327,8 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 6.3.20
     PROCEDURE FindHiddenFields(VAR R: Files.Rider; typ: Type; off: LONGINT);  (*pointers or procedures*)
       VAR fld: Object; i, s: LONGINT;
     BEGIN
-      IF typ.form IN Ptrs THEN Write(R, Fld); Write(R, 0); Files.WriteNum(R, off)
-      ELSIF typ.form IN Procs THEN Write(R, Fld); Write(R, 0); Files.WriteNum(R, -off-1)
+      IF typ.form IN Ptrs THEN Write(R, Fld); Write(R, 0); Files.WriteNum(R, off)  (*pointer*)
+      ELSIF typ.form IN Procs THEN Write(R, Fld); Write(R, 0); Files.WriteNum(R, -off-1)  (*procedure*)
       ELSIF typ.form = Record THEN fld := typ.dsc;
         WHILE fld # NIL DO FindHiddenFields(R, fld.type, fld.val + off); fld := fld.next END
       ELSIF typ.form = Array THEN s := typ.base.size;
@@ -351,8 +353,10 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 6.3.20
         fld := t.dsc;
         WHILE fld # bot DO  (*fields*)
           IF fld.class = Const THEN (*type-bound procedure*) Write(R, Const);
-            IF fld.expo THEN Files.WriteString(R, fld.name); OutType(R, fld.type) ELSE (*hidden*) Write(R, 0) END ;
-            IF t.mno > 0 THEN Files.WriteNum(R, fld.val) ELSE Files.WriteNum(R, fld.exno) END ;  (*exno*)
+            IF fld.expo THEN Files.WriteString(R, fld.name); OutType(R, fld.type);
+              IF t.mno > 0 THEN Files.WriteNum(R, fld.val) ELSE Files.WriteNum(R, fld.exno) END  (*exno*)
+            ELSE (*hidden*) Write(R, 0)
+            END ;
             Files.WriteNum(R, fld.lev)  (*mthno*)
           ELSIF fld.expo THEN
             Write(R, Fld); Files.WriteString(R, fld.name); OutType(R, fld.type); Files.WriteNum(R, fld.val)  (*offset*)
