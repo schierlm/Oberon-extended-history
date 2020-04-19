@@ -1,4 +1,4 @@
-MODULE Run;  (*Run standalone programs M.rsc or pre-linked binaries M.bin / AP 14.3.20 Extended Oberon*)
+MODULE Run;  (*Run standalone programs M.rsc or prelinked binaries M.bin / AP 14.3.20 Extended Oberon*)
   IMPORT SYSTEM, Files, Texts, Oberon, ORL;
   CONST maxCode = 8000;
 
@@ -71,7 +71,7 @@ MODULE Run;  (*Run standalone programs M.rsc or pre-linked binaries M.bin / AP 1
     END
   END RunRsc;
 
-  PROCEDURE RunBin*;  (*load and execute pre-linked binary  M.bin*)
+  PROCEDURE RunBin*;  (*load and execute prelinked binary  M.bin*)
   BEGIN ORL.Execute
   END RunBin;
 
@@ -84,4 +84,4 @@ ORP.Compile M.Mod/s ~   # generate M.rsc
 ORL.Link M ~            # generate M.bin
 
 Run.RunRsc M.rsc ~      # execute code section of M.rsc
-Run.RunBin M.bin ~      # execute pre-linked binary M.bin
+Run.RunBin M.bin ~      # execute prelinked binary M.bin

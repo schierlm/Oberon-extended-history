@@ -23,7 +23,7 @@ END M3.
 
 ORP.Compile Run.Mod/s M0.Mod/s M1.Mod/s M2.Mod/s M3.Mod/s ~
 ORL.Link M3 ~                      # default destadr = 0
-ORL.Relocate M3.bin M4.bin 1024 ~  # relocate the pre-linked binary to destadr = 1024
+ORL.Relocate M3.bin M4.bin 1024 ~  # relocate the prelinked binary to destadr = 1024
 
 Run.RunRsc M1.rsc ~   # see the source file M1.Mod
 Tools.Inspect 0 ~     # yields this output:  .... .... 0000000A .... ....

@@ -257,7 +257,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 4.4.20 Extended Oberon*)
         END ;
         SYSTEM.GET(Start, x);  (*address of initialization body of the top module relative to Start*)
         SYSTEM.PUT(Start, BC + (x DIV 4) - 1);  (*branch instruction to the initialization body of the top module*)
-        SYSTEM.PUT(Start + DestAdr, 0);  (*destination address of the pre-linked, executable binary*)
+        SYSTEM.PUT(Start + DestAdr, 0);  (*destination address of the prelinked, executable binary*)
         SYSTEM.PUT(Start + MemAdr, Kernel.MemLim);  (*limit of available memory, typically overwritten by the boot loader*)
         SYSTEM.PUT(Start + AllocAdr, AllocPtr - Start);  (*address of the end of the module space loaded*)
         SYSTEM.PUT(Start + RootAdr, SYSTEM.VAL(INTEGER, root) - Start);  (*current root of the links of loaded modules*)
@@ -306,7 +306,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 4.4.20 Extended Oberon*)
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END Load;
 
-  PROCEDURE RelocateLoaded*(start, dst: INTEGER);  (*relocate pre-linked binary loaded at Mem[start] for execution at dst*)
+  PROCEDURE RelocateLoaded*(start, dst: INTEGER);  (*relocate prelinked binary loaded at Mem[start] for execution at dst*)
     VAR p, i, j, x, y, im: INTEGER; M: Module;
   BEGIN SYSTEM.GET(start + DestAdr, x); SYSTEM.PUT(start + DestAdr, dst); SYSTEM.GET(start + RootAdr, p);
     p := p + start; dst := dst - x; start := start - x;
@@ -358,7 +358,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 4.4.20 Extended Oberon*)
     END
   END RelocateLoaded;
 
-  PROCEDURE Relocate*;  (*relocate pre-linked binary M.bin for execution at destadr and write result to output file R.bin*)
+  PROCEDURE Relocate*;  (*relocate prelinked binary M.bin for execution at destadr and write result to output file R.bin*)
     VAR start, i, filelen, destadr, res: INTEGER; b: BYTE;
       name, name1: ARRAY 32 OF CHAR;
       F: Files.File; R: Files.Rider;
@@ -391,7 +391,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 4.4.20 Extended Oberon*)
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END Relocate;
 
-  PROCEDURE Execute*;  (*load and execute pre-linked binary M.bin*)
+  PROCEDURE Execute*;  (*load and execute prelinked binary M.bin*)
     VAR start, i: INTEGER; b: BYTE;
       body: Modules.Command;
       F: Files.File; R: Files.Rider;
