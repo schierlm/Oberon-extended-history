@@ -392,11 +392,10 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   END FindRefFlds;
 
   PROCEDURE BuildTD(T: ORB.Type; VAR tdw: LONGINT);
-    VAR k, n, s: LONGINT;
-      fld, bot: ORB.Object; t: ORB.Type;
+    VAR k, s: LONGINT; fld, bot: ORB.Object; t: ORB.Type;
   BEGIN (*type descriptors of base types of T already built*)
-    n := ORB.NofMethods(T); td[tdw] := -n-1; INC(tdw); s := tdw;
-    FOR k := 0 TO n-1 DO td[tdw] := -1; INC(tdw) END ;
+    k := ORB.NofMethods(T); td[tdw] := -k-1; INC(tdw); s := tdw;
+    WHILE k > 0 DO td[tdw] := -1; INC(tdw); DEC(k) END ;
     t := T; fld := NIL;  (*build method table*)
     WHILE t # NIL DO fld := t.dsc;
       IF t.base # NIL THEN bot := t.base.dsc ELSE bot := NIL END ;
@@ -411,7 +410,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     FOR k := s TO tdw-1 DO  (*insert displacements in ascending order*)
       IF td[k] # -1 THEN td[k] := td[k] + k - fixorgM; fixorgM := k ELSE td[k] := 0 END
     END ;
-    s := T.size; (*convert size for heap allocation*)
+    s := T.size;  (*convert size for heap allocation*)
     IF s <= 24 THEN s := 32 ELSIF s <= 56 THEN s := 64 ELSIF s <= 120 THEN s := 128
     ELSE s := (s+263) DIV 256 * 256
     END ;
