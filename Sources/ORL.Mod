@@ -308,8 +308,8 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 4.4.20 Extended Oberon*)
 
   PROCEDURE RelocateLoaded*(start, dst: INTEGER);  (*relocate pre-linked binary loaded at Mem[start] for execution at dst*)
     VAR p, i, j, x, y, im: INTEGER; M: Module;
-  BEGIN SYSTEM.GET(start + DestAdr, i); SYSTEM.PUT(start + DestAdr, dst); SYSTEM.GET(start + RootAdr, p);
-    p := p + start; dst := dst - i; start := start - i;
+  BEGIN SYSTEM.GET(start + DestAdr, x); SYSTEM.PUT(start + DestAdr, dst); SYSTEM.GET(start + RootAdr, p);
+    p := p + start; dst := dst - x; start := start - x;
     WHILE p # 0 DO (*fixup*)
       M := SYSTEM.VAL(Module, p); p := SYSTEM.VAL(INTEGER, M.next);
       IF p # 0 THEN M.next := SYSTEM.VAL(Module, p + dst); p := p + start END ;
