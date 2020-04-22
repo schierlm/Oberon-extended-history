@@ -170,8 +170,8 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   BEGIN (*fixup chain of Ldr/Add instruction pairs with type descriptor adr, which is split among the two instructions*)
     WHILE L # 0 DO
       L1 := code[L] MOD C16;
-      code[L-1] := code[L-1] DIV C20 * C20 + (off DIV C16 MOD C8) * C12 + code[L-1] MOD C12;  (*off[16:23] -> Ldr[12:19]*)
-      code[L] := code[L] DIV C16 * C16 + off MOD C16;  (*off[0:15] -> Add[0:15]*)
+      code[L-1] := code[L-1] DIV C20 * C20 + (off DIV C16 MOD C8) * C12 + code[L-1] MOD C12;  (*LDR*)
+      code[L] := code[L] DIV C16 * C16 + off MOD C16;  (*ADD*)
       L := L1
     END
   END FixTypTagAdr;
