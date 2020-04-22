@@ -71,7 +71,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
 
   PROCEDURE Put1a(op, a, b, im: LONGINT);
     VAR r: INTEGER;
-  BEGIN (*same as Put1, but with range test  -10000H <= im < 10000H*)
+  BEGIN (*same as Put1, but with range test,  -10000H <= im < 10000H*)
     IF (im >= -10000H) & (im <= 0FFFFH) THEN Put1(op, a, b, im)
     ELSIF op = Mov THEN
       Put1(Mov+U, a, 0, im DIV 10000H);
@@ -101,7 +101,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   END Put3;
 
   PROCEDURE Put3a(op, mno, pno, disp: LONGINT);
-  BEGIN (*emit BL instruction to be fixed up by loader; 0 <= mno < 64*)
+  BEGIN (*emit BL instruction to be fixed up by loader, 0 <= mno < 64*)
     code[pc] := (((op+12) * 40H + mno) * 100H + pno) * 4000H + (disp MOD 4000H); INC(pc)
   END Put3a;
 
@@ -165,16 +165,16 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   BEGIN fixlink(L, pc)
   END FixLink;
 
-  PROCEDURE FixTypTagAdr(L, off: LONGINT);
+  PROCEDURE FixLinkAdr(L, adr: LONGINT);
     VAR L1: LONGINT;
-  BEGIN (*fixup chain of Ldr/Add instruction pairs with type descriptor adr*)
+  BEGIN (*fix chain of instruction pairs with an address that is spread among both instructions, 0 <= adr < 1000000H*)
     WHILE L # 0 DO
       L1 := code[L] MOD C16;
-      code[L-1] := code[L-1] DIV C20 * C20 + (off DIV C16 MOD C8) * C12 + code[L-1] MOD C12;  (*Ldr*)
-      code[L] := code[L] DIV C16 * C16 + off MOD C16;  (*Adr*)
+      code[L-1] := code[L-1] DIV C20 * C20 + (adr DIV C16 MOD C8) * C12 + code[L-1] MOD C12;
+      code[L] := code[L] DIV C16 * C16 + adr MOD C16;
       L := L1
     END
-  END FixTypTagAdr;
+  END FixLinkAdr;
 
   PROCEDURE merged(L0, L1: LONGINT): LONGINT;
     VAR L2, L3: LONGINT;
@@ -269,7 +269,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   PROCEDURE loadTypTagAdr(T: ORB.Type);
     VAR x: Item;
   BEGIN
-    IF T.mno = 0 THEN (*global*) GetSB(0, 0); Put1(Add, RH, RH, T.len); incR; T.len := pc-1  (*fixed up in FixTypTagAdr*)
+    IF T.mno = 0 THEN (*global*) GetSB(0, 0); Put1(Add, RH, RH, T.len); incR; T.len := pc-1  (*fixed up in Close*)
     ELSE (*imported*) x.mode := ORB.Var; x.a := T.len; (*exno*) x.r := -T.mno; loadAdr(x)
     END
   END loadTypTagAdr;
@@ -1202,9 +1202,9 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
         i := (i+4) DIV 4 * 4; INC(comsize, i+4)
       ELSIF obj.class = ORB.Var THEN INC(nofrefs, NofRefs(ORB.Ptrs + ORB.Procs, obj.type))  (*count ptrs and pvrs*)
       ELSIF (obj.class = ORB.Typ) & (obj.type.form = ORB.Record) & (obj.lev = 0) THEN  (*build type descriptors*)
-        i := obj.type.len;  (*heading of fixup chain of instructions generated in loadTypTagAdr*)
+        i := obj.type.len;  (*heading of fixup chain of instruction pairs generated in loadTypTagAdr*)
         BuildTD(obj.type, tdw);  (*obj.type.len now used as type descriptor offset in bytes relative to tdx = varx + strx*)
-        IF i > 0 THEN FixTypTagAdr(i, tdx + obj.type.len) END  (*fixup chain of instruction pairs with type descriptor adr*)
+        IF i > 0 THEN FixLinkAdr(i, tdx + obj.type.len) END  (*fix chain of instruction pairs with type descriptor adr*)
       END ;
       obj := obj.next
     END ;
