@@ -269,8 +269,8 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   PROCEDURE loadTypTagAdr(T: ORB.Type);
     VAR x: Item;
   BEGIN
-    IF T.mno = 0 THEN (*global*) GetSB(0, 0); Put1(Add, RH, RH, T.len); incR; T.len := pc-1  (*fixed up in Close*)
-    ELSE (*imported*) x.mode := ORB.Var; x.a := T.len; (*exno*) x.r := -T.mno; loadAdr(x)
+    IF T.mno > 0 THEN (*imported*) x.mode := ORB.Var; x.a := T.len; x.r := -T.mno; loadAdr(x)
+    ELSE GetSB(0, 0); Put1(Add, RH, RH, T.len); incR; T.len := pc-1  (*fixed up in Close*)
     END
   END loadTypTagAdr;
 
