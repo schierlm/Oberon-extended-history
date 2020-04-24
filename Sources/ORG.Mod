@@ -9,7 +9,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     TR = 13; SP = 14; LNK = 15;   (*dedicated registers*)
     maxCode = 8800; maxStrx = 3200; maxTD = 160; maxSet = WordSize*8;
     Reg = 10; RegI = 11; Cond = 12;  (*internal item modes*)
-    Zero = 0; D = 4B00H; (*denormalized zero with an exponent of 127 + 24 = 151, used for FLOOR/FLT conversion*)
+    Zero = 0; D = 4B00H; (*denormalized zero with an exponent of 127 + 24 = 151, used for FLOOR/FLT conversions*)
     F2 = -2;  (*F2 memory instruction*)
     F3 = -3; BCT = 0E7000000H; RTI = 10H; STI = 20H;  (*F3 branch instructions*)
     C4 = 10H; C6 = 40H; C8 = 100H; C10 = 400H; C12 = 1000H; C14 = 4000H; C16 = 10000H; C18 = 40000H;
@@ -68,14 +68,14 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   END Put0;
 
   PROCEDURE Put1(op, a, b, im: LONGINT);
-  BEGIN (*emit format-1 instruction,  -C16 <= im < C16*)
+  BEGIN (*emit format-1 instruction, -C16 <= im < C16*)
     IF im < 0 THEN INC(op, V) END ;
     code[pc] := (((a+C6) * C4 + b) * C4 + op) * C16 + (im MOD C16); INC(pc)
   END Put1;
 
   PROCEDURE Put1a(op, a, b, im: LONGINT);
     VAR r: INTEGER;
-  BEGIN (*same as Put1, but with range test,  -C16 <= im < C16*)
+  BEGIN (*same as Put1, but with range test -C16 <= im < C16*)
     IF (im >= -C16) & (im < C16) THEN Put1(op, a, b, im)
     ELSIF op = Mov THEN
       Put1(Mov+U, a, 0, im DIV C16);
