@@ -217,9 +217,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
           ELSIF x.r = 0 THEN (*global*) Put3(BL, 7, 0); Put1a(Sub, RH, LNK, pc*4 - x.a)
           ELSE (*imported*) GetSB(x.r, 0); Put1(Add, RH, RH, x.a + C8) (*mark as progbase-relative*)
           END
-        ELSIF (x.a >= -C16) & (x.a < C16) THEN Put1(Mov, RH, 0, x.a)
-        ELSE Put1(Mov+U, RH, 0, x.a DIV C16 MOD C16);
-          IF x.a MOD C16 # 0 THEN Put1(Ior, RH, RH, x.a MOD C16) END
+        ELSE Put1a(Mov, RH, 0, x.a)
         END ;
         x.r := RH; incR
       ELSIF x.mode = ORB.Var THEN
