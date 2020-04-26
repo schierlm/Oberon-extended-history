@@ -192,13 +192,13 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
 
   (* loading of operands and addresses into registers *)
 
-  PROCEDURE Access(base, op, a, b, off, format: LONGINT);  (*access to global and imported global objects*)
+  PROCEDURE Access(base, op, a, b, off, format: LONGINT);  (*global and imported global objects*)
     VAR low, high: LONGINT;
   BEGIN (*0 <= off < C24*)
     IF version = 0 THEN Put1(Mov, RH, 0, VarOrg0)
-    ELSIF pc - fixorgD < C12 THEN  (*spread offset among two instructions, fixed up by loader*)
+    ELSIF pc - fixorgD < C12 THEN  (*spread off among two instructions, fixed up by loader*)
       IF base = 0 THEN high := off DIV C16 MOD C8; low := off MOD C16 ELSE high := 0; low := off END ;
-      Put2a(RH, -base, high, pc-fixorgD); fixorgD := pc-1  (*fixed up to MOV' RH (SB + off) DIV C16 by*)
+      Put2a(RH, -base, high, pc-fixorgD); fixorgD := pc-1  (*fixed up to MOV' RH (SB + off) DIV C16*)
     ELSE ORS.Mark("fixup impossible")
     END ;
     IF format = 1 THEN Put1(op, a, b, low) ELSE Put2(op, a, b, low) END  (*fixed up to ADD/LD RH RH (SB + off) MOD C16*)
