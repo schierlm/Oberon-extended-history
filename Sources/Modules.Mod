@@ -1,4 +1,4 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 24.4.20 Extended Oberon*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 26.4.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files;
   CONST versionkey = 1X; TR = 13; DescSize = 92; MnLength = 32;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5; nocmd* = 6; badcmd* = 7; nomod* = 8;
@@ -185,9 +185,9 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 24.4.20 
             IF ODD(inst DIV C8) THEN INC(offset, impmod.code) ELSE INC(offset, impmod.data) END
           END ;
           SYSTEM.PUT(adr, MOV+U+B + pno*C24 + offset DIV C16);  (*mark as fixed up*)
-          pno := inst DIV C24 MOD C4;
-          vno := inst DIV C20 MOD C4;
-          IF inst DIV C30 = F2 THEN inst := (inst DIV C24) * C24 + vno*C20 ELSE inst := IOR + pno*C24 + pno*C20 END ;
+          IF inst DIV C30 = F2 THEN inst := inst DIV C20 * C20
+          ELSE inst := IOR + (inst DIV C24 MOD C4) * C24 + (inst DIV C20 MOD C4) * C20
+          END ;
           SYSTEM.PUT(adr+4, inst + offset MOD C16);
           adr := adr - disp*4
         END ;

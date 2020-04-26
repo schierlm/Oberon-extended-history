@@ -1,4 +1,4 @@
-MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 24.4.20 Extended Oberon*)
+MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 26.4.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, Files, Modules, Texts, Oberon;
   CONST versionkey = 1X; versionkey0 = 0X; DescSize = 92; MnLength = 32;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5;
@@ -184,9 +184,9 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 24.4.20 Extended Oberon*)
             IF ODD(inst DIV C8) THEN INC(offset, impmod.code) ELSE INC(offset, impmod.data) END
           END ;
           SYSTEM.PUT(adr, MOV+U+B + pno*C24 + (offset - Start) DIV C16);  (*mark as fixed up*)
-          pno := inst DIV C24 MOD C4;
-          vno := inst DIV C20 MOD C4;
-          IF inst DIV C30 = F2 THEN inst := (inst DIV C24) * C24 + vno*C20 ELSE inst := IOR + pno*C24 + pno*C20 END ;
+          IF inst DIV C30 = F2 THEN inst := inst DIV C20 * C20
+          ELSE inst := IOR + (inst DIV C24 MOD C4) * C24 + (inst DIV C20 MOD C4) * C20
+          END ;
           SYSTEM.PUT(adr+4, inst + (offset - Start) MOD C16);
           adr := adr - disp*4
         END ;
@@ -416,6 +416,6 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 24.4.20 Extended Oberon*)
     END
   END Execute;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 24.4.20");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 26.4.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); limit := Kernel.stackOrg - Kernel.stackSize
 END ORL.
