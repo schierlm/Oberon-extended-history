@@ -111,7 +111,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
 
   PROCEDURE PutPair(base, op, a, b, off, format: LONGINT);
     VAR high: LONGINT;
-  BEGIN (*emit instruction pair to accsss global and imported objects, 0 <= off < C24*)
+  BEGIN (*emit instruction pair to access global and imported objects, 0 <= off < C24*)
     IF version = 0 THEN Put1(Mov, RH, 0, VarOrg0)
     ELSIF pc - fixorgD < C12 THEN  (*spread offset among both instructions*)
       IF base = 0 THEN high := off DIV C16 MOD C8; off := off MOD C16 ELSE high := 0 END ;
