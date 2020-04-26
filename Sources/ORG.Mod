@@ -1,4 +1,4 @@
-MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 24.4.20 Extended Oberon*)
+MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 26.4.20 Extended Oberon*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser ORP; result in array "code".
@@ -192,14 +192,17 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
 
   (* loading of operands and addresses into registers *)
 
-  PROCEDURE GetSB(base, off: LONGINT);
-  BEGIN
+  PROCEDURE Access(base, op, a, b, off, format: LONGINT);  (*access to global and imported global objects*)
+    VAR low, high: LONGINT;
+  BEGIN (*0 <= off < C24*)
     IF version = 0 THEN Put1(Mov, RH, 0, VarOrg0)
-    ELSIF pc - fixorgD < C12 THEN
-      Put2a(RH, -base, off DIV C16 MOD C8, pc-fixorgD); fixorgD := pc-1
+    ELSIF pc - fixorgD < C12 THEN  (*spread offset among two instructions, fixed up by loader*)
+      IF base = 0 THEN high := off DIV C16 MOD C8; low := off MOD C16 ELSE high := 0; low := off END ;
+      Put2a(RH, -base, high, pc-fixorgD); fixorgD := pc-1  (*fixed up to MOV' RH (SB + off) DIV C16 by*)
     ELSE ORS.Mark("fixup impossible")
-    END
-  END GetSB;
+    END ;
+    IF format = 1 THEN Put1(op, a, b, low) ELSE Put2(op, a, b, low) END  (*fixed up to ADD/LD RH RH (SB + off) MOD C16*)
+  END Access;
 
   PROCEDURE NilCheck;
   BEGIN IF check THEN Trap(EQ, 4) END
@@ -215,16 +218,13 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
           IF x.a < 0 THEN (*forward*) Put3(BL, 7, 0); Put1(Add, RH, LNK, x.type.len); x.type.len := pc-1  (*fixed up in ORP.Body*)
           ELSIF x.r > 0 THEN (*local*) ORS.Mark("not allowed")
           ELSIF x.r = 0 THEN (*global*) Put3(BL, 7, 0); Put1a(Sub, RH, LNK, pc*4 - x.a)
-          ELSE (*imported*) GetSB(x.r, 0); Put1(Add, RH, RH, x.a + C8) (*mark as progbase-relative*)
+          ELSE (*imported*) Access(x.r, Add, RH, RH, x.a + C8, 1) (*mark as progbase-relative*)
           END
         ELSE Put1a(Mov, RH, 0, x.a)
         END ;
         x.r := RH; incR
       ELSIF x.mode = ORB.Var THEN
-        IF x.r > 0 THEN (*local*) Put2(op, RH, SP, x.a + frame)
-        ELSIF x.r = 0 THEN (*global*) GetSB(0, x.a); Put2(op, RH, RH, x.a MOD C16)
-        ELSE (*imported*) GetSB(x.r, 0); Put2(op, RH, RH, x.a)
-        END ;
+        IF x.r > 0 THEN (*local*) Put2(op, RH, SP, x.a + frame) ELSE Access(x.r, op, RH, RH, x.a, 2) END ;
         x.r := RH; incR
       ELSIF x.mode = ORB.Par THEN Put2(Ldr, RH, SP, x.a + frame); Put2(op, RH, RH, x.b); x.r := RH; incR
       ELSIF x.mode = RegI THEN Put2(op, x.r, x.r, x.a)
@@ -240,10 +240,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   PROCEDURE loadAdr(VAR x: Item);
   BEGIN
     IF x.mode = ORB.Var THEN
-      IF x.r > 0 THEN (*local*) Put1a(Add, RH, SP, x.a + frame)
-      ELSIF x.r = 0 THEN (*global*) GetSB(0, x.a); Put1(Add, RH, RH, x.a MOD C16)
-      ELSE (*imported*) GetSB(x.r, 0); Put1(Add, RH, RH, x.a)
-      END ;
+      IF x.r > 0 THEN (*local*) Put1a(Add, RH, SP, x.a + frame) ELSE Access(x.r, Add, RH, RH, x.a, 1) END ;
       x.r := RH; incR
     ELSIF x.mode = ORB.Par THEN Put2(Ldr, RH, SP, x.a + frame);
       IF x.b # 0 THEN Put1a(Add, RH, RH, x.b) END ;
@@ -272,13 +269,13 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     VAR x: Item;
   BEGIN
     IF T.mno > 0 THEN (*imported*) x.mode := ORB.Var; x.a := T.len; x.r := -T.mno; loadAdr(x)
-    ELSE GetSB(0, 0); Put1(Add, RH, RH, T.len); incR; T.len := pc-1  (*fixed up in Close*)
+    ELSE Access(0, Add, RH, RH, T.len, 1); incR; T.len := pc-1  (*fixed up in Close*)
     END
   END loadTypTagAdr;
 
   PROCEDURE loadStringAdr(VAR x: Item);
   BEGIN
-    IF x.r >= 0 THEN GetSB(0, varx+x.a); Put1(Add, RH, RH, (varx+x.a) MOD C16) ELSE GetSB(x.r, 0); Put1(Add, RH, RH, x.a) END ;
+    IF x.r >= 0 THEN Access(0, Add, RH, RH, varx+x.a, 1) ELSE (*imported*) Access(x.r, Add, RH, RH, x.a, 1) END ;
     x.mode := Reg; x.r := RH; incR
   END loadStringAdr;
 
@@ -345,8 +342,8 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
       IF s = 4 THEN Put1(Lsl, y.r, y.r, 2) ELSIF s > 1 THEN Put1a(Mul, y.r, y.r, s) END ;
       IF x.mode = ORB.Var THEN
         IF x.r > 0 THEN (*local*) Put0(Add, y.r, SP, y.r); INC(x.a, frame)
-        ELSIF x.r = 0 THEN (*global*) GetSB(0, 0); Put1(Add, RH, RH, 0); Put0(Add, y.r, RH, y.r)
-        ELSE (*imported*) GetSB(x.r, 0); Put1(Add, RH, RH, x.a); Put0(Add, y.r, RH, y.r); x.a := 0
+        ELSIF x.r = 0 THEN (*global*) Access(0, Add, RH, RH, 0, 1); Put0(Add, y.r, RH, y.r)
+        ELSE (*imported*) Access(x.r, Add, RH, RH, x.a, 1); Put0(Add, y.r, RH, y.r); x.a := 0
         END ;
         x.r := y.r; x.mode := RegI
       ELSIF x.mode = ORB.Par THEN
@@ -360,10 +357,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   PROCEDURE DeRef*(VAR x: Item);
   BEGIN
     IF x.mode = ORB.Var THEN
-      IF x.r > 0 THEN (*local*) Put2(Ldr, RH, SP, x.a + frame)
-      ELSIF x.r = 0 THEN (*global*) GetSB(0, x.a); Put2(Ldr, RH, RH, x.a MOD C16)
-      ELSE (*imported*) GetSB(x.r, 0); Put2(Ldr, RH, RH, x.a)
-      END ;
+      IF x.r > 0 THEN (*local*) Put2(Ldr, RH, SP, x.a + frame) ELSE Access(x.r, Ldr, RH, RH, x.a, 2) END ;
       NilCheck; x.r := RH; incR
     ELSIF x.mode = ORB.Par THEN
       Put2(Ldr, RH, SP, x.a + frame); Put2(Ldr, RH, RH, x.b); NilCheck; x.r := RH; incR
@@ -695,10 +689,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   BEGIN  load(y);
     IF x.type.size = 1 THEN op := Str+1 ELSE op := Str END ;
     IF x.mode = ORB.Var THEN
-      IF x.r > 0 THEN (*local*) Put2(op, y.r, SP, x.a + frame)
-      ELSIF x.r = 0 THEN (*global*) GetSB(0, x.a); Put2(op, y.r, RH, x.a MOD C16)
-      ELSE (*imported*) GetSB(x.r, 0); Put2(op, y.r, RH, x.a)
-      END
+      IF x.r > 0 THEN (*local*) Put2(op, y.r, SP, x.a + frame) ELSE Access(x.r, op, y.r, RH, x.a, 2) END
     ELSIF x.mode = ORB.Par THEN Put2(Ldr, RH, SP, x.a + frame); Put2(op, y.r, RH, x.b);
     ELSIF x.mode = RegI THEN Put2(op, y.r, x.r, x.a); DEC(RH);
     ELSE ORS.Mark("bad mode in Store")

@@ -12,4 +12,4 @@
 2020-03-13 Kernel, Modules, ORL, ORG, ORTool, System - Eliminate module table starting at MTOrg
 2020-03-17 Modules, ORL, ORG, System - Make pre-linked binaries relocatable (ORL.Relocate, ORG.BuildTD)
 2020-03-22 Disk, inner core modules - Modules Disk and Kernel are now separate, FileDir.Atrributes added
-2020-04-24 Constants factored out in compiler modules ORG, ORB, ORP
+2020-04-26 ORG, ORB, ORP constants factored out
