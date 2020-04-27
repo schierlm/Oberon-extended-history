@@ -110,7 +110,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   END Put3a;
 
   PROCEDURE PutPair(base, op, a, b, off, format: LONGINT);
-    VAR high: INTEGER;
+    VAR high: LONGINT;
   BEGIN (*emit instruction pair to be fixed up by loader, 0 <= off < C24*)
     IF version = 0 THEN Put1(Mov, RH, 0, VarOrg0)
     ELSIF pc - fixorgD < C12 THEN  (*spread offset among the two instructions*)
