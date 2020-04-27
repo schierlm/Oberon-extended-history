@@ -1,4 +1,4 @@
-MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 22.3.20 Extended Oberon*)
+MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 27.4.20 Extended Oberon*)
   IMPORT SYSTEM, Files, Modules, Texts, Oberon, ORB;
   CONST TAB = 09X;  (*copied from Input for use as cross development tool*)
   VAR W: Texts.Writer;
@@ -124,25 +124,25 @@ MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 22.3.20 Extended Oberon*)
         IF U THEN Texts.Write(W, "'") END ;
         WriteReg(a); WriteReg(b); WriteReg(w MOD 10H)
       ELSIF k = 1 THEN
-        Texts.WriteString(W, mnemo0[op]);
-        IF U THEN Texts.Write(W, "'") END ;
-        WriteReg(a); WriteReg(b); w := w MOD 10000H;
-        IF w >= 8000H THEN w := w - 10000H END ;
-        Texts.WriteInt(W, w, 7)
-      ELSIF k = 2 THEN  (*LDR/STR*)
         IF fixD THEN (*have only first 2 bits -> assume U = 0, V = 0, i.e. LDW*)
-          Texts.WriteString(W, "LDW");
+          Texts.WriteString(W, "MOV'");
           a := w DIV 4000000H MOD 10H; (*RH*)
           WriteReg(a);
           b := w DIV 100000H MOD 40H; (*mno*)
           Texts.WriteString(W, " mno "); Texts.WriteInt(W, b, 3)
         ELSE
-          IF U THEN Texts.WriteString(W, "ST") ELSE Texts.WriteString(W, "LD") END ;
-          IF V THEN Texts.Write(W, "B") ELSE Texts.Write(W, "W") END ;
-          WriteReg(a); WriteReg(b); w := w MOD 100000H;
-          IF w >= 80000H THEN w := w - 100000H END ;
-          Texts.WriteInt(W, w, 8)
+          Texts.WriteString(W, mnemo0[op]);
+          IF U THEN Texts.Write(W, "'") END ;
+          WriteReg(a); WriteReg(b); w := w MOD 10000H;
+          IF w >= 8000H THEN w := w - 10000H END ;
+          Texts.WriteInt(W, w, 7)
         END
+      ELSIF k = 2 THEN  (*LDR/STR*)
+        IF U THEN Texts.WriteString(W, "ST") ELSE Texts.WriteString(W, "LD") END ;
+        IF V THEN Texts.Write(W, "B") ELSE Texts.Write(W, "W") END ;
+        WriteReg(a); WriteReg(b); w := w MOD 100000H;
+        IF w >= 80000H THEN w := w - 100000H END ;
+        Texts.WriteInt(W, w, 8)
       ELSIF k = 3 THEN  (*Branch instr*)
         Texts.Write(W, "B");
         IF V THEN Texts.Write(W, "L") END ;
@@ -285,7 +285,7 @@ MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 22.3.20 Extended Oberon*)
      END
   END DecMod;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "ORTool 18.2.2013 / AP 22.3.20");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "ORTool 18.2.2013 / AP 27.4.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
   mnemo0[0] := "MOV";
   mnemo0[1] := "LSL";

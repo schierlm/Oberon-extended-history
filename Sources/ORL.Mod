@@ -1,4 +1,4 @@
-MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 26.4.20 Extended Oberon*)
+MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 27.4.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, Files, Modules, Texts, Oberon;
   CONST versionkey = 1X; versionkey0 = 0X; DescSize = 92; MnLength = 32;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5;
@@ -166,7 +166,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 26.4.20 Extended Oberon*)
           SYSTEM.PUT(adr, (offset MOD C24) + BLT);
           adr := adr - disp*4
         END ;
-        (*fixup of LDR/STR/ADD*)
+        (*fixup of MOV/LDR/STR/ADD*)
         adr := mod.code + fixorgD*4;
         WHILE adr # mod.code DO
           SYSTEM.GET(adr, inst);
@@ -416,6 +416,6 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 26.4.20 Extended Oberon*)
     END
   END Execute;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 26.4.20");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 27.4.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); limit := Kernel.stackOrg - Kernel.stackSize
 END ORL.

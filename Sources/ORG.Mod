@@ -1,4 +1,4 @@
-MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 26.4.20 Extended Oberon*)
+MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 27.4.20 Extended Oberon*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser ORP; result in array "code".
@@ -89,15 +89,15 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     END
   END Put1a;
 
+  PROCEDURE Put1b(r, mno, off, disp: LONGINT);
+  BEGIN (*emit modified format-1 instruction to be fixed up by loader*)
+    code[pc] := (((r+16) * C6 + mno) * C8 + off) * C12 + (disp MOD C12); INC(pc)
+  END Put1b;
+
   PROCEDURE Put2(op, a, b, off: LONGINT);
   BEGIN (*emit load/store instruction*)
     code[pc] := ((op * C4 + a) * C4 + b) * C20 + (off MOD C20); INC(pc)
   END Put2;
-
-  PROCEDURE Put2a(r, mno, off, disp: LONGINT);
-  BEGIN (*emit load instruction to be fixed up by loader*)
-    code[pc] := (((r+32) * C6 + mno) * C8 + off) * C12 + (disp MOD C12); INC(pc)
-  END Put2a;
 
   PROCEDURE Put3(op, cond, off: LONGINT);
   BEGIN (*emit branch instruction*)
@@ -105,20 +105,20 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   END Put3;
 
   PROCEDURE Put3a(op, mno, pno, disp: LONGINT);
-  BEGIN (*emit BL instruction to be fixed up by loader, 0 <= mno < 64*)
+  BEGIN (*emit modified branch instruction to be fixed up by loader, 0 <= mno < C6 = 64*)
     code[pc] := (((op+12) * C6 + mno) * C8 + pno) * C14 + (disp MOD C14); INC(pc)
   END Put3a;
 
   PROCEDURE PutPair(base, op, a, b, off, format: LONGINT);
-    VAR high: LONGINT;
-  BEGIN (*emit instruction pair to access global and imported objects, 0 <= off < C24*)
+    VAR high: INTEGER;
+  BEGIN (*emit instruction pair to be fixed up by loader, 0 <= off < C24*)
     IF version = 0 THEN Put1(Mov, RH, 0, VarOrg0)
-    ELSIF pc - fixorgD < C12 THEN  (*spread offset among both instructions*)
+    ELSIF pc - fixorgD < C12 THEN  (*spread offset among the two instructions*)
       IF base = 0 THEN high := off DIV C16 MOD C8; off := off MOD C16 ELSE high := 0 END ;
-      Put2a(RH, -base, high, pc-fixorgD); fixorgD := pc-1  (*fixed up to MOV' RH (SB + offset) DIV C16 by loader*)
+      Put1b(RH, -base, high, pc-fixorgD); fixorgD := pc-1  (*MOV' RH (SB + offset) DIV C16*)
     ELSE ORS.Mark("fixup impossible")
     END ;
-    IF format = 1 THEN Put1(op, a, b, off) ELSE Put2(op, a, b, off) END  (*fixed up to ADD/LD RH RH (SB + offset) MOD C16 by loader*)
+    IF format = 1 THEN Put1(op, a, b, off) ELSE Put2(op, a, b, off) END  (*ADD/LD RH RH (SB + offset) MOD C16*)
   END PutPair;
 
   PROCEDURE CheckRegs*;
@@ -166,7 +166,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
 
   PROCEDURE fixlink(L, x: LONGINT);
     VAR L1, format: LONGINT;
-  BEGIN (*fix format-1 and format-3 instructions in a single fixup chain*)
+  BEGIN (*fix format-1 and format-3 instructions embedded in a single fixup chain*)
     WHILE L # 0 DO
       format := code[L] DIV C30 MOD 4; L1 := code[L] MOD C16;
       IF format = 1 THEN fix1(L, (x-L)*4)

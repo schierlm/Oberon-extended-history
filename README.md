@@ -13,7 +13,7 @@ Features
 * Improved decoder tools
 * Import any number of modules
 
-**REVISION:** 26.4.2020
+**REVISION:** 27.4.2020
 
 ------------------------------------------------------
 
