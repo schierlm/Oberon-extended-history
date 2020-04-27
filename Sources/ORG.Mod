@@ -70,7 +70,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   PROCEDURE Put1(op, a, b, im: LONGINT);
   BEGIN (*emit format-1 instruction, -C16 <= im < C16*)
     IF im < 0 THEN INC(op, V) END ;
-    code[pc] := (((a+C6) * C4 + b) * C4 + op) * C16 + (im MOD C16); INC(pc)
+    code[pc] := (((a+C6) * C4 + b) * C4 + op) * C16 + im MOD C16; INC(pc)
   END Put1;
 
   PROCEDURE Put1a(op, a, b, im: LONGINT);
@@ -91,22 +91,22 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
 
   PROCEDURE Put1b(r, mno, off, disp: LONGINT);
   BEGIN (*emit modified format-1 instruction to be fixed up by loader*)
-    code[pc] := (((r+16) * C6 + mno) * C8 + off) * C12 + (disp MOD C12); INC(pc)
+    code[pc] := (((r+16) * C6 + mno) * C8 + off) * C12 + disp MOD C12; INC(pc)
   END Put1b;
 
   PROCEDURE Put2(op, a, b, off: LONGINT);
   BEGIN (*emit load/store instruction*)
-    code[pc] := ((op * C4 + a) * C4 + b) * C20 + (off MOD C20); INC(pc)
+    code[pc] := ((op * C4 + a) * C4 + b) * C20 + off MOD C20; INC(pc)
   END Put2;
 
   PROCEDURE Put3(op, cond, off: LONGINT);
   BEGIN (*emit branch instruction*)
-    code[pc] := ((op+12) * C4 + cond) * C24 + (off MOD C24); INC(pc)
+    code[pc] := ((op+12) * C4 + cond) * C24 + off MOD C24; INC(pc)
   END Put3;
 
   PROCEDURE Put3a(op, mno, pno, disp: LONGINT);
   BEGIN (*emit modified branch instruction to be fixed up by loader, 0 <= mno < C6 = 64*)
-    code[pc] := (((op+12) * C6 + mno) * C8 + pno) * C14 + (disp MOD C14); INC(pc)
+    code[pc] := (((op+12) * C6 + mno) * C8 + pno) * C14 + disp MOD C14; INC(pc)
   END Put3a;
 
   PROCEDURE PutPair(base, op, a, b, off, format: LONGINT);
@@ -150,23 +150,19 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
 
   PROCEDURE fix(at, with: LONGINT);
   BEGIN (*fix format-3 branch instruction*)
-    code[at] := code[at] DIV C24 * C24 + (with MOD C24)
+    code[at] := code[at] DIV C24 * C24 + with MOD C24
   END fix;
-
-  PROCEDURE FixOne*(at: LONGINT);
-  BEGIN fix(at, pc-at-1)
-  END FixOne;
 
   PROCEDURE fix1(at, with: LONGINT);
     VAR v: LONGINT;
   BEGIN (*fix format-1 register instruction*)
     IF with < 0 THEN v := C28 (*set v bit*) ELSE v := 0 END ;
-    code[at] := code[at] DIV C16 * C16 + (with MOD C16) + v
+    code[at] := code[at] DIV C16 * C16 + with MOD C16 + v
   END fix1;
 
-  PROCEDURE fixlink(L, x: LONGINT);
+  PROCEDURE FixLinkWith(L, x: LONGINT); (*fixup with offset to x*)
     VAR L1, format: LONGINT;
-  BEGIN (*fix format-1 and format-3 instructions embedded in a single fixup chain*)
+  BEGIN (*fix chain of format-1 or format-3 instructions*)
     WHILE L # 0 DO
       format := code[L] DIV C30 MOD 4; L1 := code[L] MOD C16;
       IF format = 1 THEN fix1(L, (x-L)*4)
@@ -175,14 +171,10 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
       END ;
       L := L1
     END
-  END fixlink;
-
-  PROCEDURE FixLinkWith(L, dst: LONGINT); (*fixup with offset to dst*)
-  BEGIN fixlink(L, dst)
   END FixLinkWith;
 
   PROCEDURE FixLink*(L: LONGINT); (*fixup with offset to pc*)
-  BEGIN fixlink(L, pc)
+  BEGIN FixLinkWith(L, pc)
   END FixLink;
 
   PROCEDURE FixLinkPair(L, adr: LONGINT);
