@@ -49,7 +49,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     fixorgP, fixorgD, fixorgT, fixorgM: LONGINT;   (*origins of lists of locations to be fixed up by loader*)
     check: BOOLEAN;  (*emit run-time checks*)
     version: INTEGER;  (* 0 = RISC-0, 1 = RISC-5 *)
-    
+
     relmap: ARRAY 6 OF INTEGER;  (*condition codes for relations*)
     code: ARRAY maxCode OF LONGINT;
     str: ARRAY maxStrx OF CHAR;  (*strings*)
@@ -113,12 +113,12 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     VAR high: LONGINT;
   BEGIN (*emit instruction pair to be fixed up by loader, 0 <= off < C24*)
     IF version = 0 THEN Put1(Mov, RH, 0, VarOrg0)
-    ELSIF pc - fixorgD < C12 THEN  (*spread offset among the two instructions*)
+    ELSIF pc - fixorgD < C12 THEN
       IF base = 0 THEN high := off DIV C16 MOD C8; off := off MOD C16 ELSE high := 0 END ;
-      Put1b(RH, -base, high, pc-fixorgD); fixorgD := pc-1  (*MOV' RH (SB + offset) DIV C16*)
+      Put1b(RH, -base, high, pc-fixorgD); fixorgD := pc-1
     ELSE ORS.Mark("fixup impossible")
     END ;
-    IF format = 1 THEN Put1(op, a, b, off) ELSE Put2(op, a, b, off) END  (*ADD/LD RH RH (SB + offset) MOD C16*)
+    IF format = 1 THEN Put1(op, a, b, off) ELSE Put2(op, a, b, off) END
   END PutPair;
 
   PROCEDURE CheckRegs*;
@@ -527,7 +527,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     WHILE ~ODD(m) DO m := m DIV 2; INC(e) END ;
     RETURN m
   END log2;
-  
+
   PROCEDURE MulOp*(VAR x, y: Item);   (* x := x * y *)
     VAR e: LONGINT;
   BEGIN
@@ -972,7 +972,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     ELSE Put3(BC, x.r, x.b); FixLink(x.a); x.b := pc-1; cond := 7
     END ;
     Trap(cond, 7); FixLink(x.b)
-  END Assert; 
+  END Assert;
 
   PROCEDURE New*(VAR x, y: Item);
     VAR z: Item; xt: ORB.Type; xf: INTEGER;
