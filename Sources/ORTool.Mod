@@ -124,7 +124,7 @@ MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 27.4.20 Extended Oberon*)
         IF U THEN Texts.Write(W, "'") END ;
         WriteReg(a); WriteReg(b); WriteReg(w MOD 10H)
       ELSIF k = 1 THEN
-        IF fixD THEN (*have only first 2 bits -> assume U = 0, V = 0, i.e. LDW*)
+        IF fixD THEN
           Texts.WriteString(W, "MOV'");
           a := w DIV 4000000H MOD 10H; (*RH*)
           WriteReg(a);
