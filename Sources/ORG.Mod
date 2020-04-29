@@ -1,4 +1,4 @@
-MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 27.4.20 Extended Oberon*)
+MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 29.4.20 Extended Oberon*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser ORP; result in array "code".
@@ -202,9 +202,9 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
 
   PROCEDURE load(VAR x: Item);
     VAR op: LONGINT;
-  BEGIN
-    IF x.type.size = 1 THEN op := Ldr+1 ELSE op := Ldr END ;
+  BEGIN    
     IF x.mode # Reg THEN
+      IF x.type.size = 1 THEN op := Ldr+1 ELSE op := Ldr END ;
       IF x.mode = ORB.Const THEN
         IF x.type.form = ORB.Proc THEN
           IF x.a < 0 THEN (*forward*) Put3(BL, 7, 0); Put1(Add, RH, LNK, x.type.len); x.type.len := pc-1  (*fixed up in ORP.Body*)
@@ -246,14 +246,16 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
 
   PROCEDURE loadCond(VAR x: Item);
   BEGIN
-    IF x.type.form = ORB.Bool THEN
-      IF x.mode = ORB.Const THEN x.r := 15 - x.a*8
-      ELSE load(x);
-        IF code[pc-1] DIV C30 # F2 THEN Put1(Cmp, x.r, x.r, 0) END ;
-        x.r := NE; DEC(RH)
-      END ;
-      x.mode := Cond; x.a := 0; x.b := 0
-    ELSE ORS.Mark("not Boolean?")
+    IF x.mode # Cond THEN
+      IF x.type.form = ORB.Bool THEN
+        IF x.mode = ORB.Const THEN x.r := 15 - x.a*8
+        ELSE load(x);
+          IF code[pc-1] DIV C30 # F2 THEN Put1(Cmp, x.r, x.r, 0) END ;
+          x.r := NE; DEC(RH)
+        END ;
+        x.mode := Cond; x.a := 0; x.b := 0
+      ELSE ORS.Mark("not Boolean?")
+      END
     END
   END loadCond;
 
@@ -261,7 +263,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     VAR x: Item;
   BEGIN
     IF T.mno > 0 THEN (*imported*) x.mode := ORB.Var; x.a := T.len; x.r := -T.mno; loadAdr(x)
-    ELSE PutPair(0, Add, RH, RH, T.len, 1); incR; T.len := pc-1  (*fixed up in Close*)
+    ELSE PutPair(0, Add, RH, RH, T.len, 1); incR; T.len := pc-1  (*fixed up in Close and again by the loader*)
     END
   END loadTypTagAdr;
 
@@ -449,33 +451,23 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
 
   PROCEDURE Not*(VAR x: Item);   (* x := ~x *)
     VAR t: LONGINT;
-  BEGIN
-    IF x.mode # Cond THEN loadCond(x) END ;
-    x.r := negated(x.r); t := x.a; x.a := x.b; x.b := t
+  BEGIN loadCond(x); x.r := negated(x.r); t := x.a; x.a := x.b; x.b := t
   END Not;
 
   PROCEDURE And1*(VAR x: Item);   (* x := x & *)
-  BEGIN
-    IF x.mode # Cond THEN loadCond(x) END ;
-    Put3(BC, negated(x.r), x.a); x.a := pc-1; FixLink(x.b); x.b := 0
+  BEGIN loadCond(x); Put3(BC, negated(x.r), x.a); x.a := pc-1; FixLink(x.b); x.b := 0
   END And1;
 
   PROCEDURE And2*(VAR x, y: Item);
-  BEGIN
-    IF y.mode # Cond THEN loadCond(y) END ;
-    x.a := merged(y.a, x.a); x.b := y.b; x.r := y.r
+  BEGIN loadCond(y); x.a := merged(y.a, x.a); x.b := y.b; x.r := y.r
   END And2;
 
   PROCEDURE Or1*(VAR x: Item);   (* x := x OR *)
-  BEGIN
-    IF x.mode # Cond THEN loadCond(x) END ;
-    Put3(BC, x.r, x.b);  x.b := pc-1; FixLink(x.a); x.a := 0
+  BEGIN loadCond(x); Put3(BC, x.r, x.b);  x.b := pc-1; FixLink(x.a); x.a := 0
   END Or1;
 
   PROCEDURE Or2*(VAR x, y: Item);
-  BEGIN
-    IF y.mode # Cond THEN loadCond(y) END ;
-    x.a := y.a; x.b := merged(y.b, x.b); x.r := y.r
+  BEGIN loadCond(y); x.a := y.a; x.b := merged(y.b, x.b); x.r := y.r
   END Or2;
 
   (* Code generation for arithmetic operators *)
@@ -806,9 +798,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   END FJump;
 
   PROCEDURE CFJump*(VAR x: Item);
-  BEGIN
-    IF x.mode # Cond THEN loadCond(x) END ;
-    Put3(BC, negated(x.r), x.a); FixLink(x.b); x.a := pc-1
+  BEGIN loadCond(x); Put3(BC, negated(x.r), x.a); FixLink(x.b); x.a := pc-1
   END CFJump;
 
   PROCEDURE BJump*(L: LONGINT);
@@ -816,9 +806,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   END BJump;
 
   PROCEDURE CBJump*(VAR x: Item; L: LONGINT);
-  BEGIN
-    IF x.mode # Cond THEN loadCond(x) END ;
-    Put3(BC, negated(x.r), L-pc-1); FixLink(x.b); FixLinkWith(x.a, L)
+  BEGIN loadCond(x); Put3(BC, negated(x.r), L-pc-1); FixLink(x.b); FixLinkWith(x.a, L)
   END CBJump;
 
   PROCEDURE Fixup*(VAR x: Item);
@@ -958,8 +946,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
 
   PROCEDURE Assert*(VAR x: Item);
     VAR cond: LONGINT;
-  BEGIN
-    IF x.mode # Cond THEN loadCond(x) END ;
+  BEGIN loadCond(x);
     IF x.a = 0 THEN cond := negated(x.r)
     ELSE Put3(BC, x.r, x.b); FixLink(x.a); x.b := pc-1; cond := 7
     END ;
