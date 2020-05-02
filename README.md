@@ -15,6 +15,8 @@ Features
 
 **REVISION:** 27.4.2020
 
+There is also a version of the Revised Oberon-2 compiler for the RISC-V processor, but it is currently not public.
+
 ------------------------------------------------------
 
 # Instructions for converting an existing FPGA Oberon system to Extended Oberon
