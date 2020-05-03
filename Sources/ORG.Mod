@@ -90,7 +90,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   END Put1a;
 
   PROCEDURE Put1b(r, mno, off, disp: LONGINT);
-  BEGIN (*emit modified format-1 instruction to be fixed up by loader, 0 <= mno < C6 = 64*)
+  BEGIN (*emit modified format-1 instruction to be fixed up by loader, 0 <= mno < 64, 0 <= off < 256*)
     code[pc] := (((r+16) * C6 + mno) * C8 + off) * C12 + disp MOD C12; INC(pc)
   END Put1b;
 
@@ -105,7 +105,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   END Put3;
 
   PROCEDURE Put3a(op, mno, pno, disp: LONGINT);
-  BEGIN (*emit modified branch instruction to be fixed up by loader, 0 <= mno < C6 = 64*)
+  BEGIN (*emit modified branch instruction to be fixed up by loader, 0 <= mno < 64*)
     code[pc] := (((op+12) * C6 + mno) * C8 + pno) * C14 + disp MOD C14; INC(pc)
   END Put3a;
 
