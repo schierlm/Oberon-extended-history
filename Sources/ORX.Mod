@@ -28,7 +28,7 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 1.5.20 Extended Oberon*)
     WHILE name[0] # 0X DO Files.ReadInt(R, data); (*key*) Files.ReadString(R, name) END ;
     Files.ReadInt(R, n); (*variable space*)
     Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n); (*strings*)
-    Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n*4); (*type descriptors*)
+    Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n); (*type descriptors*)
     Files.ReadInt(R, codelen); n := 0;
     WHILE n < codelen DO Files.ReadInt(R, data); write(R1, data); INC(n) END ; (*write code*)
     Files.ReadString(R, name);
