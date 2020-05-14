@@ -1,4 +1,4 @@
-MODULE ORX;  (*Oberon boot converter for RISC / AP 22.3.20 Extended Oberon*)
+MODULE ORX;  (*Oberon boot converter for RISC / AP 1.5.20 Extended Oberon*)
   IMPORT Files, Texts, Oberon;
   CONST CR = 0DX; noerr = 0; badfile = 4;  (*copied from Modules for use as cross development tool*)
 
@@ -72,7 +72,7 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 22.3.20 Extended Oberon*)
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END WriteFile;
 
-  PROCEDURE WriteCode*;  (*write code section of M.rsc in binary format with prefix (size, entry) to output file*)
+  PROCEDURE WriteCode*;  (*write code section of M.rsc in binary format to output file*)
     VAR f, g: Files.File; Rf, Rg: Files.Rider;
       codelen, entry, res: INTEGER;
       name: ARRAY 32 OF CHAR;
@@ -83,10 +83,8 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 22.3.20 Extended Oberon*)
         Texts.WriteString(W, name); Texts.Write(W, " "); Texts.WriteString(W, S.s);
         f := Files.Old(name);
         IF f # NIL THEN g := Files.New(S.s); Files.Set(Rf, f, 0); Files.Set(Rg, g, 0);
-          Files.WriteInt(Rg, 0); Files.WriteInt(Rg, 0); (*placeholder for prefix to be inserted at the end*)
           OutCode(Rf, Rg, Files.WriteInt, codelen, entry, res);
           IF res = noerr THEN
-            Files.Set(Rg, g, 0); Files.WriteInt(Rg, codelen*4); Files.WriteInt(Rg, entry); (*insert prefix*)
             Texts.WriteInt(W, codelen*4, 6); Texts.WriteInt(W, entry, 6);
             Texts.WriteString(W, "  done"); Files.Register(g)
           ELSIF res = badfile THEN Texts.WriteString(W, "  input file format error")
@@ -145,6 +143,6 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 22.3.20 Extended Oberon*)
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END WriteStream;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR boot converter  AP 22.3.20");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR boot converter  AP 1.5.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
 END ORX.
