@@ -1,4 +1,4 @@
-MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 22.3.20 Extended Oberon*)
+MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 15.5.20 Extended Oberon*)
   IMPORT SYSTEM;
   CONST TrapAdr* = 04H;
     timer = -64;
@@ -97,39 +97,42 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 22.3.20 Extended Obe
   PROCEDURE Mark*(pref: LONGINT);
     VAR pvadr, offadr, offset, tag, p, q, r, pos, len, elemsize, blktyp: LONGINT;
   BEGIN SYSTEM.GET(pref, pvadr); (*pointers < heapOrg considered NIL*)
-    WHILE pvadr # 0 DO
-      SYSTEM.GET(pvadr, p); SYSTEM.GET(p-4, offadr);
-      IF (p >= heapOrg) & (offadr = 0) THEN q := p;  (*mark elements in data structure with root p*)
-        REPEAT SYSTEM.GET(p-4, offadr); SYSTEM.GET(p-8, tag); blktyp := tag MOD 4;
-          IF blktyp = 0 THEN (*record*) pos := p;
-            IF offadr = 0 THEN offadr := tag + 16 ELSE INC(offadr, 4) END ;
-            SYSTEM.PUT(p-4, offadr); SYSTEM.GET(offadr, offset)
-          ELSIF blktyp = 1 THEN (*array of record*)
-            IF offadr = 0 THEN offadr := tag + 15; pos := p + 16; SYSTEM.PUT(p+12, pos) ELSE INC(offadr); SYSTEM.GET(p+12, pos) END ;
-            SYSTEM.GET(offadr, offset);
-            IF offset = -1 THEN SYSTEM.GET(p, len); SYSTEM.GET(p+4, elemsize); INC(pos, elemsize);
-              IF pos < p + 16 + len*elemsize THEN offadr := tag + 15; SYSTEM.GET(offadr, offset); SYSTEM.PUT(p+12, pos) END
+    WHILE pvadr # 0 DO SYSTEM.GET(pvadr, p);
+      IF p >= heapOrg THEN SYSTEM.GET(p-4, offadr);
+        IF offadr = 0 THEN q := p;  (*mark elements in data structure with root p*)
+          REPEAT SYSTEM.GET(p-4, offadr); SYSTEM.GET(p-8, tag); blktyp := tag MOD 4;
+            IF blktyp = 0 THEN (*record*) pos := p;
+              IF offadr = 0 THEN offadr := tag + 16 ELSE INC(offadr, 4) END ;
+              SYSTEM.PUT(p-4, offadr); SYSTEM.GET(offadr, offset)
+            ELSIF blktyp = 1 THEN (*array of record*)
+              IF offadr = 0 THEN offadr := tag + 15; pos := p + 16; SYSTEM.PUT(p+12, pos) ELSE INC(offadr); SYSTEM.GET(p+12, pos) END ;
+              SYSTEM.GET(offadr, offset);
+              IF offset = -1 THEN SYSTEM.GET(p, len); SYSTEM.GET(p+4, elemsize); INC(pos, elemsize);
+                IF pos < p + 16 + len*elemsize THEN offadr := tag + 15; SYSTEM.GET(offadr, offset); SYSTEM.PUT(p+12, pos) END
+              END ;
+              SYSTEM.PUT(p-4, offadr)
+            ELSIF blktyp = 2 THEN (*array of pointer*) pos := p + 16;
+              IF offadr = 0 THEN offset := 0; SYSTEM.PUT(p-4, p+12) (*offadr*)
+              ELSE SYSTEM.GET(p, len); SYSTEM.GET(p+12, offset); INC(offset, 4);
+                IF offset >= len*4 THEN offset := -1 END
+              END ;
+              SYSTEM.PUT(p+12, offset)
+            ELSE (*array of basic type (tag = 3) or array of procedure (tag = 7)*)
+              offset := -1; SYSTEM.PUT(p+12, -1); SYSTEM.PUT(p-4, p+12) (*offadr*)
             END ;
-            SYSTEM.PUT(p-4, offadr)
-          ELSIF blktyp = 2 THEN (*array of pointer*) pos := p + 16;
-            IF offadr = 0 THEN offset := 0; SYSTEM.PUT(p-4, p+12) (*offadr*)
-            ELSE SYSTEM.GET(p, len); SYSTEM.GET(p+12, offset); INC(offset, 4);
-              IF offset >= len*4 THEN offset := -1 END
-            END ;
-            SYSTEM.PUT(p+12, offset)
-          ELSE (*array of basic type (tag = 3) or array of procedure (tag = 7)*)
-            offset := -1; SYSTEM.PUT(p+12, -1); SYSTEM.PUT(p-4, p+12) (*offadr*)
-          END ;
-          IF offset # -1 THEN (*down*)
-            SYSTEM.GET(pos+offset, r); SYSTEM.GET(r-4, offadr);
-            IF (r >= heapOrg) & (offadr = 0) THEN SYSTEM.PUT(pos+offset, q); q := p; p := r END
-          ELSE (*up*) SYSTEM.GET(q-4, offadr); SYSTEM.GET(offadr, offset);
-            IF p # q THEN SYSTEM.GET(q-8, tag); blktyp := tag MOD 4;
-              IF blktyp = 0 THEN pos := q ELSIF blktyp = 1 THEN SYSTEM.GET(q+12, pos) ELSE pos := q + 16 END ;
-              SYSTEM.GET(pos+offset, r); SYSTEM.PUT(pos+offset, p); p := q; q := r
+            IF offset # -1 THEN (*down*)
+              SYSTEM.GET(pos+offset, r);
+              IF r >= heapOrg THEN SYSTEM.GET(r-4, offadr);
+                IF offadr = 0 THEN SYSTEM.PUT(pos+offset, q); q := p; p := r END
+              END
+            ELSE (*up*) SYSTEM.GET(q-4, offadr); SYSTEM.GET(offadr, offset);
+              IF p # q THEN SYSTEM.GET(q-8, tag); blktyp := tag MOD 4;
+                IF blktyp = 0 THEN pos := q ELSIF blktyp = 1 THEN SYSTEM.GET(q+12, pos) ELSE pos := q + 16 END ;
+                SYSTEM.GET(pos+offset, r); SYSTEM.PUT(pos+offset, p); p := q; q := r
+              END
             END
-          END
-        UNTIL (p = q) & (offset = -1)
+          UNTIL (p = q) & (offset = -1)
+        END
       END ;
       INC(pref, 4); SYSTEM.GET(pref, pvadr)
     END
