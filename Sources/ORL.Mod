@@ -1,8 +1,8 @@
-MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 27.4.20 Extended Oberon*)
+MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 5.5.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, Files, Modules, Texts, Oberon;
-  CONST versionkey = 1X; versionkey0 = 0X; DescSize = 92; MnLength = 32;
+  CONST versionkey = 1X; versionkey0 = 0X; DescSize = 92; MnLength = 32; BootSec = 2;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5;
-    BootSec = 2; DestAdr = 8; MemAdr = 12; AllocAdr = 16; RootAdr = 20; StackAdr = 24; FPrintAdr = 28; ModOrg = 32;
+    TrapAdr = 4; DestAdr = 8; MemAdr = 12; AllocAdr = 16; RootAdr = 20; StackAdr = 24; FPrintAdr = 28; ModOrg = 32;
     U = 20000000H; V = 10000000H; B = 100000H;  (*modifier bits*)
     MOV = 40000000H; IOR = 40060000H;  (*F1 register instructions*)
     F2 = -2;  (*F2 memory instruction*)
@@ -257,6 +257,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 27.4.20 Extended Oberon*)
         END ;
         SYSTEM.GET(Start, x);  (*address of initialization body of the top module relative to Start*)
         SYSTEM.PUT(Start, BCT + (x DIV 4) - 1);  (*branch instruction to the initialization body of the top module*)
+        SYSTEM.PUT(Start + TrapAdr, 0);  (*trap handler, typically overwritten by the inner core*)
         SYSTEM.PUT(Start + DestAdr, 0);  (*destination address of the prelinked, executable binary*)
         SYSTEM.PUT(Start + MemAdr, Kernel.MemLim);  (*limit of available memory, typically overwritten by the boot loader*)
         SYSTEM.PUT(Start + AllocAdr, AllocPtr - Start);  (*address of the end of the module space loaded*)
@@ -416,6 +417,6 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 27.4.20 Extended Oberon*)
     END
   END Execute;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 27.4.20");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 5.5.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); limit := Kernel.stackOrg - Kernel.stackSize
 END ORL.
