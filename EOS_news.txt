@@ -14,4 +14,4 @@
 2020-03-22 Disk, inner core modules - Modules Disk and Kernel are now separate, FileDir.Atrributes added
 2020-04-27 ORG, ORB, ORP constants factored out, PutPair added
 2020-05-15 Kernel - fix issue with illegal memory access to p-4 when p is 0, see Kernel.Mark
-2020-05-15 Disk, Oberon0 - ClearDirectory clears entire root page of file directory except for DirMark
+2020-05-15 Oberon0 - ClearDirectory clears entire root page of file directory except for DirMark
