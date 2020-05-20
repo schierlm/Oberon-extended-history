@@ -212,7 +212,8 @@ MODULE Oberon0; (*Oberon-0 command interpreter / AP 15.5.20 Extended Oberon*)
   PROCEDURE ClearSector; (*secno, n - clear sector (n words)*)
     VAR k, n, secno: INTEGER;
       buf: ARRAY 256 OF INTEGER;
-  BEGIN RS232.RecInt(secno); RS232.RecInt(n); RS232.SendStr("ClearSector"); k := 0;
+  BEGIN RS232.RecInt(secno); RS232.RecInt(n); RS232.SendStr("ClearSector");
+    Disk.GetSector(secno*29, buf); k := 0;
     WHILE k < n DO buf[k] := 0; INC(k) END ;
     Disk.PutSector(secno*29, buf)
   END ClearSector;
