@@ -1,4 +1,4 @@
-MODULE Oberon0; (*Oberon-0 command interpreter / AP 7.4.20 Extended Oberon*)
+MODULE Oberon0; (*Oberon-0 command interpreter / AP 15.5.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, FileDir, Files, Modules, RS232, PCLink0;
   CONST swi = -60; (*switches*)
     stat = -52; (*RS-232*)
@@ -240,12 +240,9 @@ MODULE Oberon0; (*Oberon-0 command interpreter / AP 7.4.20 Extended Oberon*)
   END LoadBoot;
 
   PROCEDURE ClearDirectory; (*clear file directory (root page)*)
-    VAR i: INTEGER;
-      u: FileDir.DirEntry; a: FileDir.DirPage;
+    VAR a: FileDir.DirPage;
   BEGIN RS232.SendStr("ClearDirectory");
-    a.mark := FileDir.DirMark; a.m := 0; a.p0 := 0; u.adr := 0; u.p := 0;
-    FOR i := 0 TO FileDir.FnLength-1 DO u.name[i] := 0X END ;
-    FOR i := 0 TO FileDir.DirPgSize-1 DO a.e[i] := u END ;
+    Disk.InitSector(a); a.mark := FileDir.DirMark; a.m := 0; a.p0 := 0;
     Disk.PutSector(FileDir.DirRootAdr, a)
   END ClearDirectory;
 
@@ -347,7 +344,7 @@ MODULE Oberon0; (*Oberon-0 command interpreter / AP 7.4.20 Extended Oberon*)
     VAR a: FileDir.DirPage;
   BEGIN SYSTEM.LDREG(TR, Kernel.TrapAdr); Disk.GetSector(FileDir.DirRootAdr, a);
     IF a.mark # FileDir.DirMark THEN
-      a.mark := FileDir.DirMark; a.m := 0; a.p0 := 0;
+      Disk.InitSector(a); a.mark := FileDir.DirMark; a.m := 0; a.p0 := 0;
       Disk.PutSector(FileDir.DirRootAdr, a)
     END
   END Init;

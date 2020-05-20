@@ -1,4 +1,4 @@
-MODULE Disk;  (*module Disk for a boot file containing the entire Oberon system / AP 22.3.20 Extended Oberon*)
+MODULE Disk;  (*module Disk for a boot file containing the entire Oberon system / AP 15.5.20 Extended Oberon*)
   IMPORT SYSTEM;
   CONST SectorLength* = 1024;
     spiData = -48; spiCtrl = -44;
@@ -112,6 +112,12 @@ MODULE Disk;  (*module Disk for a boot file containing the entire Oberon system 
     dst := dst * 2 + FSoffset;
     WriteSD(dst, SYSTEM.ADR(src)); WriteSD(dst+1, SYSTEM.ADR(src)+512)
   END PutSector;
+
+  PROCEDURE InitSector*(VAR dst: Sector);
+    VAR i: INTEGER;
+  BEGIN
+    FOR i := 0 TO SectorLength-1 DO dst[i] := 0 END
+  END InitSector;
 
   PROCEDURE Init*;
   BEGIN InitSecMap
