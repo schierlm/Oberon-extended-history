@@ -212,8 +212,7 @@ MODULE Oberon0; (*Oberon-0 command interpreter / AP 15.5.20 Extended Oberon*)
   PROCEDURE ClearSector; (*secno, n - clear sector (n words)*)
     VAR k, n, secno: INTEGER;
       buf: ARRAY 256 OF INTEGER;
-  BEGIN RS232.RecInt(secno); RS232.RecInt(n); RS232.SendStr("ClearSector");
-    Disk.GetSector(secno*29, buf); k := 0;
+  BEGIN RS232.RecInt(secno); RS232.RecInt(n); RS232.SendStr("ClearSector"); k := 0;
     WHILE k < n DO buf[k] := 0; INC(k) END ;
     Disk.PutSector(secno*29, buf)
   END ClearSector;
@@ -239,11 +238,16 @@ MODULE Oberon0; (*Oberon-0 command interpreter / AP 15.5.20 Extended Oberon*)
     END
   END LoadBoot;
 
+  PROCEDURE InitSec(VAR sec: Disk.Sector);
+    VAR i: INTEGER;
+  BEGIN
+    FOR i := 0 TO Disk.SectorLength-1 DO sec[i] := 0 END
+  END InitSec;
+
   PROCEDURE ClearDirectory; (*clear file directory (root page)*)
     VAR a: FileDir.DirPage;
   BEGIN RS232.SendStr("ClearDirectory");
-    Disk.InitSector(a); a.mark := FileDir.DirMark; a.m := 0; a.p0 := 0;
-    Disk.PutSector(FileDir.DirRootAdr, a)
+    InitSec(a); a.mark := FileDir.DirMark; a.m := 0; a.p0 := 0; Disk.PutSector(FileDir.DirRootAdr, a)
   END ClearDirectory;
 
   PROCEDURE ExtractCode(F: Files.File; VAR code: ARRAY OF LONGINT; VAR codelen, entry, res: INTEGER);
@@ -344,8 +348,7 @@ MODULE Oberon0; (*Oberon-0 command interpreter / AP 15.5.20 Extended Oberon*)
     VAR a: FileDir.DirPage;
   BEGIN SYSTEM.LDREG(TR, Kernel.TrapAdr); Disk.GetSector(FileDir.DirRootAdr, a);
     IF a.mark # FileDir.DirMark THEN
-      Disk.InitSector(a); a.mark := FileDir.DirMark; a.m := 0; a.p0 := 0;
-      Disk.PutSector(FileDir.DirRootAdr, a)
+      InitSec(a); a.mark := FileDir.DirMark; a.m := 0; a.p0 := 0; Disk.PutSector(FileDir.DirRootAdr, a)
     END
   END Init;
 
