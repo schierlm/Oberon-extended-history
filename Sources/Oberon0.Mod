@@ -204,6 +204,7 @@ MODULE Oberon0; (*Oberon-0 command interpreter / AP 15.5.20 Extended Oberon*)
     VAR k, m, n, secno: INTEGER;
       buf: ARRAY 256 OF INTEGER;
   BEGIN RS232.RecInt(secno); RS232.RecInt(n);
+    IF n > 256 THEN n := 256 END ;
     Disk.GetSector(secno*29, buf); k := 0;
     WHILE k < n DO RS232.RecInt(m); buf[k] := m; INC(k) END ;
     RS232.SendStr("WriteSector"); Disk.PutSector(secno*29, buf)
@@ -213,6 +214,7 @@ MODULE Oberon0; (*Oberon-0 command interpreter / AP 15.5.20 Extended Oberon*)
     VAR k, n, secno: INTEGER;
       buf: ARRAY 256 OF INTEGER;
   BEGIN RS232.RecInt(secno); RS232.RecInt(n); RS232.SendStr("ClearSector");
+    IF n > 256 THEN n := 256 END ;
     Disk.GetSector(secno*29, buf); k := 0;
     WHILE k < n DO buf[k] := 0; INC(k) END ;
     Disk.PutSector(secno*29, buf)
