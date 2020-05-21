@@ -2,7 +2,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 5.5.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, Files, Modules, Texts, Oberon;
   CONST versionkey = 1X; versionkey0 = 0X; DescSize = 92; MnLength = 32; BootSec = 2;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5;
-    TrapAdr = 4; DestAdr = 8; MemAdr = 12; AllocAdr = 16; RootAdr = 20; StackAdr = 24; FPrintAdr = 28; ModOrg = 32;
+    TrapAdr = 4; DestAdr = 8; MemAdr = 12; AllocAdr = 16; RootAdr = 20; StackAdr = 24; FPrintAdr = 28; ModAdr = 32;
     U = 20000000H; V = 10000000H; B = 100000H;  (*modifier bits*)
     MOV = 40000000H; IOR = 40060000H;  (*F1 register instructions*)
     F2 = -2;  (*F2 memory instruction*)
@@ -236,7 +236,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 5.5.20 Extended Oberon*)
       name: ModuleName;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
     IF S.class = Texts.Name THEN
-      root := NIL; Start := Modules.AllocPtr; AllocPtr :=  Start + ModOrg; i := Start;
+      root := NIL; Start := Modules.AllocPtr; AllocPtr :=  Start + ModAdr; i := Start;
       WHILE i < AllocPtr DO SYSTEM.PUT(i, 0); INC(i, 4) END ;
       REPEAT LinkOne(S.s, M); Texts.Scan(S) UNTIL (S.class # Texts.Name) OR (res # noerr);
       IF res = noerr THEN p := root; Texts.WriteString(W, "  linking");
