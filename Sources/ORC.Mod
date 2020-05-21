@@ -1,4 +1,4 @@
-MODULE  ORC; (*Connection to RISC; NW 11.11.2013 / AP 7.2.20*)
+MODULE  ORC; (*Connection to RISC; NW 11.11.2013 / AP 5.5.20*)
   IMPORT SYSTEM, Files, Texts, Oberon, RS232;
   
   CONST stat = -52; BlkLen = 255;
@@ -9,9 +9,9 @@ MODULE  ORC; (*Connection to RISC; NW 11.11.2013 / AP 7.2.20*)
 
   PROCEDURE Rec(VAR x: INTEGER); (*receive 1 byte with timeout*)
     VAR T: LONGINT;
-  BEGIN T := Oberon.Time() + Tout;
-    REPEAT UNTIL SYSTEM.BIT(stat, 0) OR (Oberon.Time() >= T);
-    IF Oberon.Time() < T THEN RS232.Rec(x) ELSE x := 0 END
+  BEGIN T := Oberon.Time();
+    REPEAT UNTIL SYSTEM.BIT(stat, 0) OR (Oberon.Time()-T >= Tout);
+    IF Oberon.Time()-T < Tout THEN RS232.Rec(x) ELSE x := 0 END
   END Rec;
 
   PROCEDURE RecInt(VAR x: INTEGER); (*receive 4 bytes with timeout*)
@@ -35,8 +35,8 @@ MODULE  ORC; (*Connection to RISC; NW 11.11.2013 / AP 7.2.20*)
 
   PROCEDURE Flush*; (*flush with timeout*)
     VAR x: INTEGER; T: LONGINT;
-  BEGIN T := Oberon.Time() + Tout;
-    WHILE SYSTEM.BIT(stat, 0) & (Oberon.Time() < T) DO RS232.Rec(x) END
+  BEGIN T := Oberon.Time();
+    WHILE SYSTEM.BIT(stat, 0) & (Oberon.Time()-T < Tout) DO RS232.Rec(x) END
   END Flush;
 
   PROCEDURE TestReq*;
