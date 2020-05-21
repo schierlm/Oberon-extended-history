@@ -1,6 +1,6 @@
-MODULE  ORC; (*Connection to RISC; NW 11.11.2013 / AP 5.5.20*)
+MODULE ORC; (*Connection to RISC; NW 11.11.2013 / AP 5.5.20*)
   IMPORT SYSTEM, Files, Texts, Oberon, RS232;
-  
+
   CONST stat = -52; BlkLen = 255;
     REQ = 20H; REC = 21H; SND = 22H; ACK = 10H;
     Tout = 1000;
@@ -141,9 +141,9 @@ MODULE  ORC; (*Connection to RISC; NW 11.11.2013 / AP 5.5.20*)
       Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
     END
   END Receive;
- 
+
   (*------------ Oberon-0 commands ------------*)
- 
+
   PROCEDURE SR*;  (*send, then receive sequence of items*)
     VAR S: Texts.Scanner; i, k: LONGINT; ch: CHAR; x, y: INTEGER;
   BEGIN Texts.WriteString(W, "ORC.SR ");
