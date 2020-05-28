@@ -1,4 +1,4 @@
-MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 9.3.20 Extended Oberon*)
+MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 25.5.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files, Modules, Input, Display, Viewers, Fonts, Texts;
 
   CONST (*message ids*)
@@ -56,7 +56,8 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
       vwr*: Viewers.Viewer;
       frame*: Display.Frame;
       text*: Texts.Text;
-      pos*: LONGINT
+      pos*: LONGINT;
+      res*: INTEGER
     END;
 
     CurFnt*: Fonts.Font;
@@ -338,13 +339,17 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
 
   (*command interpretation*)
 
-  PROCEDURE SetPar*(F: Display.Frame; T: Texts.Text; pos: LONGINT);
-  BEGIN Par.vwr := Viewers.This(F.X, F.Y); Par.frame := F; Par.text := T; Par.pos := pos
+  PROCEDURE SetPar*(F: Display.Frame; T: Texts.Text; pos: LONGINT; res: INTEGER);
+  BEGIN Par.vwr := Viewers.This(F.X, F.Y); Par.frame := F; Par.text := T; Par.pos := pos; Par.res := res
   END SetPar;
 
   PROCEDURE ClearPar*;
-  BEGIN Par.vwr := NIL; Par.frame := NIL; Par.text := NIL; Par.pos := 0
+  BEGIN Par.vwr := NIL; Par.frame := NIL; Par.text := NIL; Par.pos := 0; Par.res := 0
   END ClearPar;
+
+  PROCEDURE Error*(n: INTEGER);
+  BEGIN Par.res := n
+  END Error;
 
   PROCEDURE Call*(F: Display.Frame; T: Texts.Text; pos: LONGINT; new: BOOLEAN);  (*command*)
     VAR R: Texts.Reader; i, res: INTEGER; ch: CHAR; s: ARRAY 32 OF CHAR;
@@ -353,7 +358,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
     IF ch # CR THEN i := 0;
       REPEAT s[i] := ch; INC(i); Texts.Read(R, ch)
       UNTIL ((ch < "0") & (ch # ".") & (ch # "*") OR ("9" < ch) & (ch < "A") OR ("Z" < ch) & (ch < "a") OR ("z" < ch)) OR (i = 31);
-      s[i] := 0X; SetPar(F, T, pos + i); Modules.Call(s); res := Modules.res;
+      s[i] := 0X; SetPar(F, T, pos + i, 0); Modules.Call(s); res := Modules.res;
       IF (res > Modules.noerr) & (res < Modules.clients) & (Log # NIL) THEN Texts.WriteString(W, "Call error: ");
         CASE res OF
            Modules.nofile: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " module not found")
@@ -366,7 +371,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
          | Modules.badcmd: Texts.WriteString(W, s); Texts.WriteString(W, " invalid command")
          | Modules.nomod: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " module not found")
         END ;
-        Texts.WriteLn(W); Texts.Append(Log, W.buf)
+        Par.res := res; Texts.WriteLn(W); Texts.Append(Log, W.buf)
       END
     END
   END Call;

@@ -13,7 +13,7 @@ Features
 * Improved decoder tools
 * Import any number of modules
 
-**REVISION:** 15.5.2020
+**REVISION:** 25.5.2020
 
 There is also a version of the Revised Oberon-2 compiler for the RISC-V processor, but it is currently not public.
 
