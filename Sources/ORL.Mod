@@ -360,14 +360,14 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 25.5.20 Extended Oberon*)
   END RelocateLoaded;
 
   PROCEDURE Relocate*;  (*relocate prelinked binary M.bin for execution at destadr and write result to output file R.bin*)
-    VAR start, i, filelen, destadr, res: INTEGER; b: BYTE;
+    VAR start, i, filelen, destadr: INTEGER; b: BYTE;
       name, name1: ARRAY 32 OF CHAR;
       F: Files.File; R: Files.Rider;
       S: Texts.Scanner;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S); res := -1;
     IF S.class = Texts.Name THEN name := S.s; Texts.Scan(S);
       IF S.class = Texts.Name THEN name1 := S.s; Texts.Scan(S);
-        IF S.class = Texts.Int THEN destadr := S.i;
+        IF S.class = Texts.Int THEN destadr := S.i; res := -2;
           Texts.WriteString(W, "  relocating "); Texts.WriteString(W, name); Texts.WriteString(W, " => ");
           Texts.WriteString(W, name1); Texts.WriteString(W, " at address "); Texts.WriteInt(W, destadr, 7);
           IF destadr >= 0 THEN F := Files.Old(name);
@@ -385,10 +385,10 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 25.5.20 Extended Oberon*)
             END
           ELSE Texts.WriteString(W, "  destadr must be >= 0")
           END
-        ELSE Texts.WriteString(W, "Usage: ORL.Relocate M.bin R.bin destadr")
         END
       END
     END ;
+    IF res = -1 THEN Texts.WriteString(W, "Usage: ORL.Relocate M.bin R.bin destadr") END ;
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END Relocate;
 
