@@ -16,4 +16,4 @@
 2020-05-15 Kernel - fix issue in Kernel.Mark with illegal memory access to p-4 when pointer p happens to be 0
 2020-05-15 Oberon0 - clear entire root page of file directory in Oberon0.ClearDirectory, except for DirMark
 2020-05-15 ORC - change timeout code in ORC.Rec and ORC.Flush to avoid issues with signed arithmetic
-2020-05-25 Oberon - add field Oberon.Par.res and procedure Oberon.Error(n)
+2020-05-25 Oberon - Oberon.Par.res and Oberon.Return added
