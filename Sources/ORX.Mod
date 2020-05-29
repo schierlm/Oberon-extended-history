@@ -1,10 +1,11 @@
-MODULE ORX;  (*Oberon boot converter for RISC / AP 1.5.20 Extended Oberon*)
+MODULE ORX;  (*Oberon boot converter for RISC / AP 25.5.20 Extended Oberon*)
   IMPORT Files, Texts, Oberon;
   CONST CR = 0DX; noerr = 0; badfile = 4;  (*copied from Modules for use as cross development tool*)
 
   TYPE Writer = PROCEDURE(VAR R: Files.Rider; x: LONGINT);
 
-  VAR W: Texts.Writer;
+  VAR res*: INTEGER;
+    W: Texts.Writer;
 
   PROCEDURE WriteHex(VAR R: Files.Rider; x: LONGINT);  (*write a 4 byte LONGINT in 8 digit hex format*)
     VAR i: INTEGER; y: LONGINT;
@@ -25,19 +26,19 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 1.5.20 Extended Oberon*)
   BEGIN F := Files.Base(R); Files.ReadString(R, name); Files.ReadInt(R, data); (*key*)
     Files.ReadByte(R, b); (*version*) Files.ReadInt(R, data); (*size*)
     Files.ReadString(R, name); (*imports*)
-    WHILE name[0] # 0X DO Files.ReadInt(R, data); (*key*) Files.ReadString(R, name) END ;
+    WHILE ~R.eof & (name[0] # 0X) DO Files.ReadInt(R, data); (*key*) Files.ReadString(R, name) END ;
     Files.ReadInt(R, n); (*variable space*)
     Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n); (*strings*)
     Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n); (*type descriptors*)
     Files.ReadInt(R, codelen); n := 0;
-    WHILE n < codelen DO Files.ReadInt(R, data); write(R1, data); INC(n) END ; (*write code*)
+    WHILE ~R.eof & (n < codelen) DO Files.ReadInt(R, data); write(R1, data); INC(n) END ; (*write code*)
     Files.ReadString(R, name);
-    WHILE name[0] # 0X DO Files.ReadInt(R, data); Files.ReadString(R, name) END ; (*commands*)
+    WHILE ~R.eof & (name[0] # 0X) DO Files.ReadInt(R, data); Files.ReadString(R, name) END ; (*commands*)
     Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n*4); (*entries*)
     Files.ReadInt(R, data);
-    WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*pointer references*)
+    WHILE ~R.eof & (data >= 0) DO Files.ReadInt(R, data) END ; (*pointer references*)
     Files.ReadInt(R, data);
-    WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*procedure variable references*)
+    WHILE ~R.eof & (data >= 0) DO Files.ReadInt(R, data) END ; (*procedure variable references*)
     Files.ReadInt(R, data); (*fixorgP*) Files.ReadInt(R, data); (*fixorgD*)
     Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, data); (*fixorgM*)
     Files.ReadInt(R, entry);
@@ -47,12 +48,12 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 1.5.20 Extended Oberon*)
 
   PROCEDURE WriteFile*;  (*write code section of M.rsc in hex format to output file*)
     VAR f, g: Files.File; Rf, Rg: Files.Rider;
-      n, codelen, filelen, entry, res: INTEGER;
+      n, codelen, filelen, entry: INTEGER;
       name: ARRAY 32 OF CHAR;
       S: Texts.Scanner;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S); res := -1;
     IF S.class = Texts.Name THEN name := S.s; Texts.Scan(S);
-      IF S.class = Texts.Name THEN res := 0; Texts.WriteString(W, "  WriteFile ");
+      IF S.class = Texts.Name THEN Texts.WriteString(W, "  WriteFile "); res := -2;
         Texts.WriteString(W, name); Texts.Write(W, " "); Texts.WriteString(W, S.s);
         f := Files.Old(name);
         IF f # NIL THEN g := Files.New(S.s); Files.Set(Rf, f, 0); Files.Set(Rg, g, 0);
@@ -74,12 +75,12 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 1.5.20 Extended Oberon*)
 
   PROCEDURE WriteCode*;  (*write code section of M.rsc in binary format to output file*)
     VAR f, g: Files.File; Rf, Rg: Files.Rider;
-      codelen, entry, res: INTEGER;
+      codelen, entry: INTEGER;
       name: ARRAY 32 OF CHAR;
       S: Texts.Scanner;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S); res := -1;
     IF S.class = Texts.Name THEN name := S.s; Texts.Scan(S);
-      IF S.class = Texts.Name THEN res := 0; Texts.WriteString(W, "  WriteCode ");
+      IF S.class = Texts.Name THEN Texts.WriteString(W, "  WriteCode "); res := -2;
         Texts.WriteString(W, name); Texts.Write(W, " "); Texts.WriteString(W, S.s);
         f := Files.Old(name);
         IF f # NIL THEN g := Files.New(S.s); Files.Set(Rf, f, 0); Files.Set(Rg, g, 0);
@@ -110,20 +111,20 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 1.5.20 Extended Oberon*)
 
   PROCEDURE WriteStream*;  (*convert boot file to stream format with specified block size and dest adr*)
     VAR f, g: Files.File; Rf, Rg: Files.Rider;
-      filelen, blksize, res: INTEGER;
+      filelen, blksize: INTEGER;
       name, name1: ARRAY 32 OF CHAR;
       S: Texts.Scanner;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S); res := -1;
     IF S.class = Texts.Name THEN name := S.s; Texts.Scan(S);
       IF S.class = Texts.Name THEN name1 := S.s; Texts.Scan(S);
         IF S.class = Texts.Int THEN blksize := S.i; Texts.Scan(S);
-          IF S.class = Texts.Int THEN res := 0; Texts.WriteString(W, "  WriteStream ");
+          IF S.class = Texts.Int THEN Texts.WriteString(W, "  WriteStream "); res := -2;
             Texts.WriteString(W, name); Texts.Write(W, " "); Texts.WriteString(W, name1);
             Texts.WriteInt(W, blksize, 5); Texts.WriteInt(W, S.i, 5);
             IF blksize >= 0 THEN
               IF S.i >= 0 THEN f := Files.Old(name);
                 IF f # NIL THEN filelen := Files.Length(f);
-                  IF filelen > 0 THEN g := Files.New(name1);
+                  IF filelen > 0 THEN g := Files.New(name1); res := noerr;
                     IF blksize = 0 THEN blksize := filelen END ;
                     Files.Set(Rf, f, 0); Files.Set(Rg, g, 0); MakeStream(Rf, Rg, blksize, S.i);
                     Files.Register(g); Texts.WriteString(W, "  done")
@@ -143,6 +144,6 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 1.5.20 Extended Oberon*)
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END WriteStream;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR boot converter  AP 1.5.20");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR boot converter  AP 25.5.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
 END ORX.
