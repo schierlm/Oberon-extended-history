@@ -347,10 +347,9 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
   BEGIN Par.vwr := NIL; Par.frame := NIL; Par.text := NIL; Par.pos := 0; Par.res := 0
   END ClearPar;
 
-  PROCEDURE Error*(n: INTEGER; msg: ARRAY OF CHAR);
-  BEGIN Par.res := n;
-    IF msg[0] # 0X THEN Texts.WriteString(W, msg); Texts.Append(Log, W.buf) END
-  END Error;
+  PROCEDURE Return*(n: INTEGER);
+  BEGIN Par.res := n
+  END Return;
 
   PROCEDURE Call*(F: Display.Frame; T: Texts.Text; pos: LONGINT; new: BOOLEAN);  (*command*)
     VAR R: Texts.Reader; i, res: INTEGER; ch: CHAR; s: ARRAY 32 OF CHAR;
