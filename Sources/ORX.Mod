@@ -70,7 +70,7 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 25.5.20 Extended Oberon*)
       END
     END ;
     IF res = -1 THEN Texts.WriteString(W, "Usage: ORX.WriteFile M.rsc M.mem") END ;
-    Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
+    Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); Oberon.Return(res)
   END WriteFile;
 
   PROCEDURE WriteCode*;  (*write code section of M.rsc in binary format to output file*)
@@ -95,7 +95,7 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 25.5.20 Extended Oberon*)
       END
     END ;
     IF res = -1 THEN Texts.WriteString(W, "Usage: ORX.WriteCode M.rsc M.code") END ;
-    Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
+    Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); Oberon.Return(res)
   END WriteCode;
 
   PROCEDURE MakeStream(VAR Rf, Rg: Files.Rider; blksize, destadr: INTEGER);
@@ -141,7 +141,7 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 25.5.20 Extended Oberon*)
       END
     END ;
     IF res = -1 THEN Texts.WriteString(W, "Usage: ORX.WriteStream M.bin M.stream blocksize destadr") END ;
-    Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
+    Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); Oberon.Return(res)
   END WriteStream;
 
 BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR boot converter  AP 25.5.20");
