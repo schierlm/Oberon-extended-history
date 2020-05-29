@@ -1,4 +1,4 @@
-MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 5.5.20 Extended Oberon*)
+MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 25.5.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, Files, Modules, Texts, Oberon;
   CONST versionkey = 1X; versionkey0 = 0X; DescSize = 92; MnLength = 32; BootSec = 2;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5;
@@ -234,7 +234,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 5.5.20 Extended Oberon*)
       S: Texts.Scanner;
       M, p: Module;
       name: ModuleName;
-  BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
+  BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S); res := -1;
     IF S.class = Texts.Name THEN
       root := NIL; Start := Modules.AllocPtr; AllocPtr :=  Start + ModAdr; i := Start;
       WHILE i < AllocPtr DO SYSTEM.PUT(i, 0); INC(i, 4) END ;
@@ -287,11 +287,11 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 5.5.20 Extended Oberon*)
       F: Files.File; R: Files.Rider;
       S: Texts.Scanner;
       buf: ARRAY Disk.SectorLength OF BYTE;
-  BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
+  BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S); res := -1;
     IF S.class = Texts.Name THEN
       Texts.WriteString(W, "  loading "); Texts.WriteString(W, S.s); F := Files.Old(S.s);
       IF F # NIL THEN Texts.WriteString(W, " onto boot area"); Texts.WriteInt(W, Files.Length(F), 7);
-        secno := BootSec; i := 0; Files.Set(R, F, 0); Files.ReadByte(R, b);
+        secno := BootSec; i := 0; Files.Set(R, F, 0); Files.ReadByte(R, b); res := noerr;
         WHILE ~R.eof DO buf[i] := b; INC(i);
           IF i = Disk.SectorLength THEN Disk.PutSector(secno*29, buf); INC(secno); i := 0 END ;
           Files.ReadByte(R, b)
@@ -367,12 +367,12 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 5.5.20 Extended Oberon*)
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S); res := -1;
     IF S.class = Texts.Name THEN name := S.s; Texts.Scan(S);
       IF S.class = Texts.Name THEN name1 := S.s; Texts.Scan(S);
-        IF S.class = Texts.Int THEN res := 0; destadr := S.i;
+        IF S.class = Texts.Int THEN destadr := S.i;
           Texts.WriteString(W, "  relocating "); Texts.WriteString(W, name); Texts.WriteString(W, " => ");
           Texts.WriteString(W, name1); Texts.WriteString(W, " at address "); Texts.WriteInt(W, destadr, 7);
           IF destadr >= 0 THEN F := Files.Old(name);
             IF F # NIL THEN filelen := Files.Length(F);
-              IF filelen > 0 THEN
+              IF filelen > 0 THEN res := noerr;
                 Files.Set(R, F, 0); Files.ReadByte(R, b); start := Modules.AllocPtr; i := start;
                 WHILE ~R.eof DO SYSTEM.PUT(i, b); INC(i); Files.ReadByte(R, b) END ;
                 RelocateLoaded(start, destadr);
@@ -385,10 +385,10 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 5.5.20 Extended Oberon*)
             END
           ELSE Texts.WriteString(W, "  destadr must be >= 0")
           END
+        ELSE Texts.WriteString(W, "Usage: ORL.Relocate M.bin R.bin destadr")
         END
       END
     END ;
-    IF res = -1 THEN Texts.WriteString(W, "Usage: ORL.Relocate M.bin R.bin destadr") END ;
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END Relocate;
 
@@ -397,12 +397,12 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 5.5.20 Extended Oberon*)
       body: Modules.Command;
       F: Files.File; R: Files.Rider;
       S: Texts.Scanner;
-  BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
+  BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S); res := -1;
     IF S.class = Texts.Name THEN
       Texts.WriteString(W, "  executing "); Texts.WriteString(W, S.s);
       F := Files.Old(S.s);
       IF F # NIL THEN
-        IF Modules.AllocPtr + Files.Length(F) < limit THEN
+        IF Modules.AllocPtr + Files.Length(F) < limit THEN res := noerr;
           Files.Set(R, F, 0); Files.ReadByte(R, b); start := Modules.AllocPtr; i := start;
           WHILE ~R.eof DO SYSTEM.PUT(i, b); INC(i); Files.ReadByte(R, b) END ;
           RelocateLoaded(start, start); Texts.WriteString(W, " at address ");
@@ -411,12 +411,12 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 5.5.20 Extended Oberon*)
         ELSE Texts.WriteString(W, " insufficient space")
         END
       ELSE Texts.WriteString(W, " failed")
-      END ;
-      Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
+      END
     ELSE Texts.WriteString(W, "Usage: ORL.Execute M.bin")
-    END
+    END ;
+    Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END Execute;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 5.5.20");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 25.5.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); limit := Kernel.stackOrg - Kernel.stackSize
 END ORL.
