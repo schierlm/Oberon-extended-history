@@ -379,7 +379,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
     END
   END Call;
 
-  PROCEDURE Batch*;  (*run several commands separated by ~*)
+  PROCEDURE Batch*;  (*execute multiple commands separated by ~*)
     VAR S: Texts.Scanner; F: Display.Frame; T: Texts.Text; pos: LONGINT;
   BEGIN F := Par.frame; T := Par.text; pos := Par.pos;
     WHILE pos >= 0 DO
