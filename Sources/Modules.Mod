@@ -1,4 +1,4 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 27.4.20 Extended Oberon*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.6.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files;
   CONST versionkey = 1X; TR = 13; DescSize = 92; MnLength = 32;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5; nocmd* = 6; badcmd* = 7; nomod* = 8;
@@ -249,7 +249,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 27.4.20 
     RETURN SYSTEM.VAL(Command, w)
   END ThisCommand;
 
-  PROCEDURE Call*(name: ARRAY OF CHAR);
+  PROCEDURE Call*(name: ARRAY OF CHAR; VAR err: INTEGER);
     (*call the command named 'name' of the form M.P, where M is either a module name or
       a module number; if M is not loaded, load module hierarchy M* before calling P.
       res = noerr: module loaded, command found and executed;
@@ -260,7 +260,8 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 27.4.20 
       res = nospace: insufficient space;
       res = nocmd: command not found;
       res = badcmd: invalid command;
-      res = nomod: module not found in module list*)
+      res = nomod: module not found in module list;
+      err = the value of res before the command is called (for recursion)*)
     VAR mod: Module; P: Command;
       i, j: INTEGER; ch: CHAR;
       Mname, Cname: ModuleName;
@@ -284,8 +285,9 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 27.4.20 
       j := 0; ch := name[i]; INC(i);
       WHILE ch # 0X DO Cname[j] := ch; INC(j); ch := name[i]; INC(i) END ;
       Cname[j] := 0X;
-      P := ThisCommand(mod, Cname);
+      P := ThisCommand(mod, Cname); err := res;
       IF res = noerr THEN P END
+    ELSE err := res
     END
   END Call;
 

@@ -352,25 +352,26 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
   END Return;
 
   PROCEDURE Call*(F: Display.Frame; T: Texts.Text; pos: LONGINT; new: BOOLEAN);  (*command*)
-    VAR R: Texts.Reader; i, j, res: INTEGER; ch: CHAR; s: ARRAY 32 OF CHAR;
-  BEGIN Texts.OpenReader(R, T, pos); Texts.Read(R, ch); i := 0; j := 0;
-    WHILE (ch = " ") OR (ch = TAB) OR (ch = CR) DO Texts.Read(R, ch); INC(i) END ;
-    REPEAT s[j] := ch; INC(j); Texts.Read(R, ch)
-    UNTIL ((ch < "0") & (ch # ".") & (ch # "*") OR ("9" < ch) & (ch < "A") OR ("Z" < ch) & (ch < "a") OR ("z" < ch)) OR (j = 31);
-    s[j] := 0X; SetPar(F, T, pos + i + j, 0); Modules.Call(s); res := Modules.res;
-    IF (res > Modules.noerr) & (res < Modules.clients) & (Log # NIL) THEN Texts.WriteString(W, "Call error: ");
-      CASE res OF
-         Modules.nofile: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " module not found")
-       | Modules.badversion: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " bad version")
-       | Modules.badkey: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " imports ");
-           Texts.WriteString(W, Modules.imported); Texts.WriteString(W, " with bad key")
-       | Modules.badfile: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " corrupted obj file")
-       | Modules.nospace: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " insufficient space")
-       | Modules.nocmd: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " command not found")
-       | Modules.badcmd: Texts.WriteString(W, s); Texts.WriteString(W, " invalid command")
-       | Modules.nomod: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " module not found")
-      END ;
-      Par.res := res; Texts.WriteLn(W); Texts.Append(Log, W.buf)
+    VAR R: Texts.Reader; S: Texts.Scanner; ch: CHAR; res: INTEGER;
+  BEGIN Texts.OpenReader(R, T, pos); Texts.Read(R, ch);
+    WHILE (ch = " ") OR (ch = TAB) OR (ch = CR) DO Texts.Read(R, ch); INC(pos) END ;  (*white spaces*)
+    Texts.OpenScanner(S, T, pos); Texts.Scan(S);
+    IF (S.class = Texts.Name) & (S.line = 0) THEN
+      SetPar(F, T, pos + S.len, 0); Modules.Call(S.s, res);
+      IF (res > Modules.noerr) & (res < Modules.clients) & (Log # NIL) THEN Texts.WriteString(W, "Call error: ");
+        CASE res OF
+           Modules.nofile: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " module not found")
+         | Modules.badversion: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " bad version")
+         | Modules.badkey: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " imports ");
+             Texts.WriteString(W, Modules.imported); Texts.WriteString(W, " with bad key")
+         | Modules.badfile: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " corrupted obj file")
+         | Modules.nospace: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " insufficient space")
+         | Modules.nocmd: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " command not found")
+         | Modules.badcmd: Texts.WriteString(W, S.s); Texts.WriteString(W, " invalid command")
+         | Modules.nomod: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " module not found")
+        END ;
+        Par.res := res; Texts.WriteLn(W); Texts.Append(Log, W.buf)
+      END
     END
   END Call;
 
@@ -381,10 +382,11 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
     WHILE pos >= 0 DO
       Texts.OpenScanner(S, Par.text, pos); Texts.Scan(S);
       IF S.class = Texts.Name THEN
-        Call(Par.frame,Par.text, pos, FALSE);
+        Call(Par.frame, Par.text, pos, FALSE);
         IF Par.res = 0 THEN
           REPEAT Texts.Scan(S) UNTIL S.eot OR (S.class = Texts.Char) & (S.c = "~");
           IF S.eot THEN pos := -1 ELSE pos := Texts.Pos(S) END
+        ELSE pos := -1
         END
       ELSE pos := -1
       END

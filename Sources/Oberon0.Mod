@@ -1,4 +1,4 @@
-MODULE Oberon0; (*Oberon-0 command interpreter / AP 15.5.20 Extended Oberon*)
+MODULE Oberon0; (*Oberon-0 command interpreter / AP 1.6.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, FileDir, Files, Modules, RS232, PCLink0;
   CONST swi = -60; (*switches*)
     stat = -52; (*RS-232*)
@@ -169,7 +169,7 @@ MODULE Oberon0; (*Oberon-0 command interpreter / AP 15.5.20 Extended Oberon*)
   PROCEDURE Call; (*name - call command*)
     VAR name: ARRAY 64 OF CHAR; res: INTEGER;
   BEGIN RS232.RecStr(name); RS232.SendStr("Call");
-    Modules.Call(name); res := Modules.res;
+    Modules.Call(name, res);
     IF (res > Modules.noerr) & (res < Modules.clients) THEN
       RS232.SendStr(" error: "); RS232.SendStr(Modules.importing);
       IF res = Modules.nofile THEN RS232.SendStr(" module not found")
