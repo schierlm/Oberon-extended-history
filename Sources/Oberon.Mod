@@ -1,4 +1,4 @@
-MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 25.5.20 Extended Oberon*)
+MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 1.6.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files, Modules, Input, Display, Viewers, Fonts, Texts;
 
   CONST (*message ids*)
@@ -352,29 +352,44 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
   END Return;
 
   PROCEDURE Call*(F: Display.Frame; T: Texts.Text; pos: LONGINT; new: BOOLEAN);  (*command*)
-    VAR R: Texts.Reader; i, res: INTEGER; ch: CHAR; s: ARRAY 32 OF CHAR;
-  BEGIN Texts.OpenReader(R, T, pos); Texts.Read(R, ch);
-    WHILE (ch = " ") OR (ch = TAB) DO Texts.Read(R, ch) END ;
-    IF ch # CR THEN i := 0;
-      REPEAT s[i] := ch; INC(i); Texts.Read(R, ch)
-      UNTIL ((ch < "0") & (ch # ".") & (ch # "*") OR ("9" < ch) & (ch < "A") OR ("Z" < ch) & (ch < "a") OR ("z" < ch)) OR (i = 31);
-      s[i] := 0X; SetPar(F, T, pos + i, 0); Modules.Call(s); res := Modules.res;
-      IF (res > Modules.noerr) & (res < Modules.clients) & (Log # NIL) THEN Texts.WriteString(W, "Call error: ");
-        CASE res OF
-           Modules.nofile: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " module not found")
-         | Modules.badversion: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " bad version")
-         | Modules.badkey: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " imports ");
-             Texts.WriteString(W, Modules.imported); Texts.WriteString(W, " with bad key")
-         | Modules.badfile: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " corrupted obj file")
-         | Modules.nospace: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " insufficient space")
-         | Modules.nocmd: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " command not found")
-         | Modules.badcmd: Texts.WriteString(W, s); Texts.WriteString(W, " invalid command")
-         | Modules.nomod: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " module not found")
-        END ;
-        Par.res := res; Texts.WriteLn(W); Texts.Append(Log, W.buf)
-      END
+    VAR R: Texts.Reader; i, j, res: INTEGER; ch: CHAR; s: ARRAY 32 OF CHAR;
+  BEGIN Texts.OpenReader(R, T, pos); Texts.Read(R, ch); i := 0; j := 0;
+    WHILE (ch = " ") OR (ch = TAB) OR (ch = CR) DO Texts.Read(R, ch); INC(i) END ;
+    REPEAT s[j] := ch; INC(j); Texts.Read(R, ch)
+    UNTIL ((ch < "0") & (ch # ".") & (ch # "*") OR ("9" < ch) & (ch < "A") OR ("Z" < ch) & (ch < "a") OR ("z" < ch)) OR (j = 31);
+    s[j] := 0X; SetPar(F, T, pos + i + j, 0); Modules.Call(s); res := Modules.res;
+    IF (res > Modules.noerr) & (res < Modules.clients) & (Log # NIL) THEN Texts.WriteString(W, "Call error: ");
+      CASE res OF
+         Modules.nofile: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " module not found")
+       | Modules.badversion: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " bad version")
+       | Modules.badkey: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " imports ");
+           Texts.WriteString(W, Modules.imported); Texts.WriteString(W, " with bad key")
+       | Modules.badfile: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " corrupted obj file")
+       | Modules.nospace: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " insufficient space")
+       | Modules.nocmd: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " command not found")
+       | Modules.badcmd: Texts.WriteString(W, s); Texts.WriteString(W, " invalid command")
+       | Modules.nomod: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " module not found")
+      END ;
+      Par.res := res; Texts.WriteLn(W); Texts.Append(Log, W.buf)
     END
   END Call;
+
+  PROCEDURE Batch*;  (*run several commands separated by ~*)
+    VAR S: Texts.Scanner;
+      pos: LONGINT;
+  BEGIN pos := Par.pos;
+    WHILE pos >= 0 DO
+      Texts.OpenScanner(S, Par.text, pos); Texts.Scan(S);
+      IF S.class = Texts.Name THEN
+        Call(Par.frame,Par.text, pos, FALSE);
+        IF Par.res = 0 THEN
+          REPEAT Texts.Scan(S) UNTIL S.eot OR (S.class = Texts.Char) & (S.c = "~");
+          IF S.eot THEN pos := -1 ELSE pos := Texts.Pos(S) END
+        END
+      ELSE pos := -1
+      END
+    END
+  END Batch;
 
   (*task management*)
 

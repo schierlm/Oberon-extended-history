@@ -1,4 +1,4 @@
-MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 9.3.20 Extended Oberon*)
+MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.6.20 Extended Oberon*)
   IMPORT Input, Display, Viewers, Fonts, Texts, Oberon;
 
   CONST replace* = Texts.replace; insert* = Texts.insert; delete* = Texts.delete; unmark* = Texts.unmark;  (*message ids*)
@@ -823,7 +823,9 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 9.3.20 Extended Oberon*)
   END NotifyDisplay;
 
   PROCEDURE Call* (F: Frame; pos: LONGINT; new: BOOLEAN);
-  BEGIN Oberon.Call(F, F.text, pos, new)
+    VAR S: Texts.Scanner;
+  BEGIN Texts.OpenScanner(S, F.text, pos); Texts.Scan(S);
+    IF (S.class = Texts.Name) & (S.line = 0) THEN Oberon.Call(F, F.text, pos, new) END
   END Call;
 
   PROCEDURE Write* (F: Frame; ch: CHAR; fnt: Fonts.Font; col, voff: INTEGER);
