@@ -351,13 +351,13 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
   BEGIN Par.res := n
   END Return;
 
-  PROCEDURE Skip(VAR S: Texts.Scanner; T: Texts.Text; VAR pos: INTEGER; cr: BOOLEAN);  (*skip white spaces*)
+  PROCEDURE Skip(VAR S: Texts.Scanner; T: Texts.Text; VAR pos: INTEGER; cr: BOOLEAN);
     VAR ch: CHAR;
   BEGIN Texts.OpenScanner(S, T, pos); Texts.Read(S, ch);
-    WHILE (ch = " ") OR (ch = TAB) OR (cr & (ch = CR)) DO Texts.Read(S, ch); INC(pos) END
+    WHILE (ch = " ") OR (ch = TAB) OR (cr & (ch = CR)) DO Texts.Read(S, ch); INC(pos) END  (*white spaces*)
   END Skip;
 
-  PROCEDURE Call*(F: Display.Frame; T: Texts.Text; pos: LONGINT; new: BOOLEAN);  (*activate command*)
+  PROCEDURE Call*(F: Display.Frame; T: Texts.Text; pos: LONGINT; new: BOOLEAN);
     VAR S: Texts.Scanner; res: INTEGER;
   BEGIN Skip(S, T, pos, FALSE); Texts.OpenScanner(S, T, pos); Texts.Scan(S);
     IF (S.class = Texts.Name) & (S.line = 0) THEN
@@ -379,7 +379,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
     END
   END Call;
 
-  PROCEDURE Batch*;  (*activate several commands separated by ~*)
+  PROCEDURE Batch*;  (*run several commands separated by ~*)
     VAR S: Texts.Scanner; F: Display.Frame; T: Texts.Text; pos: LONGINT;
   BEGIN F := Par.frame; T := Par.text; pos := Par.pos;
     WHILE pos >= 0 DO
