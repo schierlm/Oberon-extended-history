@@ -355,7 +355,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
     VAR R: Texts.Reader; S: Texts.Scanner;
       res: INTEGER; ch: CHAR;
   BEGIN Texts.OpenReader(R, T, pos); Texts.Read(R, ch);
-    WHILE (ch = " ") OR (ch = TAB) DO Texts.Read(R, ch); INC(pos) END ;  (*white spaces without CR*)
+    WHILE (ch = " ") OR (ch = TAB) DO Texts.Read(R, ch); INC(pos) END ;  (*white spaces excluding CR*)
     Texts.OpenScanner(S, T, pos); Texts.Scan(S);
     IF (S.class = Texts.Name) & (S.line = 0) THEN
       SetPar(F, T, pos + S.len, 0); Modules.Call(S.s, res);
@@ -382,7 +382,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
   BEGIN pos := Par.pos;
     WHILE pos >= 0 DO
       Texts.OpenReader(R, Par.text, pos); Texts.Read(R, ch);
-      WHILE (ch = " ") OR (ch = TAB) OR (ch = CR) DO Texts.Read(R, ch); INC(pos) END ;  (*white spaces with CR*)
+      WHILE (ch = " ") OR (ch = TAB) OR (ch = CR) DO Texts.Read(R, ch); INC(pos) END ;  (*white spaces including CR*)
       Texts.OpenScanner(S, Par.text, pos); Texts.Scan(S);
       IF S.class = Texts.Name THEN
         Call(Par.frame, Par.text, pos, FALSE);
