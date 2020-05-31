@@ -287,7 +287,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
     Viewers.SetFocus(Viewers.ThisDisplay(V), V)
   END PassFocus;
 
-  PROCEDURE FocusViewer(): Viewers.Viewer;  (*for Extended Oberon*)
+  PROCEDURE FocusViewer(): Viewers.Viewer;
   BEGIN RETURN Viewers.FocusViewer
   END FocusViewer;
 
@@ -351,12 +351,15 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
   BEGIN Par.res := n
   END Return;
 
-  PROCEDURE Call*(F: Display.Frame; T: Texts.Text; pos: LONGINT; new: BOOLEAN);  (*command*)
-    VAR R: Texts.Reader; S: Texts.Scanner;
-      res: INTEGER; ch: CHAR;
-  BEGIN Texts.OpenReader(R, T, pos); Texts.Read(R, ch);
-    WHILE (ch = " ") OR (ch = TAB) DO Texts.Read(R, ch); INC(pos) END ;  (*white spaces excluding CR*)
-    Texts.OpenScanner(S, T, pos); Texts.Scan(S);
+  PROCEDURE Skip(VAR S: Texts.Scanner; T: Texts.Text; VAR pos: INTEGER; cr: BOOLEAN);  (*skip white spaces*)
+    VAR ch: CHAR;
+  BEGIN Texts.OpenScanner(S, T, pos); Texts.Read(S, ch);
+    WHILE (ch = " ") OR (ch = TAB) OR (cr & (ch = CR)) DO Texts.Read(S, ch); INC(pos) END
+  END Skip;
+
+  PROCEDURE Call*(F: Display.Frame; T: Texts.Text; pos: LONGINT; new: BOOLEAN);  (*activate command*)
+    VAR S: Texts.Scanner; res: INTEGER;
+  BEGIN Skip(S, T, pos, FALSE); Texts.OpenScanner(S, T, pos); Texts.Scan(S);
     IF (S.class = Texts.Name) & (S.line = 0) THEN
       SetPar(F, T, pos + S.len, 0); Modules.Call(S.s, res);
       IF (res > Modules.noerr) & (res < Modules.clients) & (Log # NIL) THEN Texts.WriteString(W, "Call error: ");
@@ -376,16 +379,12 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
     END
   END Call;
 
-  PROCEDURE Batch*;  (*run several commands separated by ~*)
-    VAR R: Texts.Reader; S: Texts.Scanner;
-      pos: LONGINT; ch: CHAR;
-  BEGIN pos := Par.pos;
+  PROCEDURE Batch*;  (*activate several commands separated by ~*)
+    VAR S: Texts.Scanner; F: Display.Frame; T: Texts.Text; pos: LONGINT;
+  BEGIN F := Par.frame; T := Par.text; pos := Par.pos;
     WHILE pos >= 0 DO
-      Texts.OpenReader(R, Par.text, pos); Texts.Read(R, ch);
-      WHILE (ch = " ") OR (ch = TAB) OR (ch = CR) DO Texts.Read(R, ch); INC(pos) END ;  (*white spaces including CR*)
-      Texts.OpenScanner(S, Par.text, pos); Texts.Scan(S);
-      IF S.class = Texts.Name THEN
-        Call(Par.frame, Par.text, pos, FALSE);
+      Skip(S, T, pos, TRUE); Texts.OpenScanner(S, T, pos); Texts.Scan(S);
+      IF S.class = Texts.Name THEN Call(F, T, pos, FALSE);
         IF Par.res = 0 THEN
           REPEAT Texts.Scan(S) UNTIL S.eot OR (S.class = Texts.Char) & (S.c = "~");
           IF S.eot THEN pos := -1 ELSE pos := Texts.Pos(S) END
