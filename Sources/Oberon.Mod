@@ -351,7 +351,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
   BEGIN Par.res := n
   END Return;
 
-  PROCEDURE Skip(VAR S: Texts.Scanner; VAR len: INTEGER); (*skip white spaces*)
+  PROCEDURE Skip(VAR S: Texts.Scanner; VAR len: INTEGER);  (*count and skip white spaces*)
     VAR ch: CHAR; i: INTEGER;
   BEGIN Texts.Read(S, ch); i := 0;
     WHILE (ch = " ") OR (ch = TAB) OR (ch = CR) DO
@@ -383,7 +383,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
     END
   END Call;
 
-  PROCEDURE Batch*; (*execute multiple commands separated by ~*)
+  PROCEDURE Batch*;  (*execute multiple commands separated by ~*)
     VAR S: Texts.Scanner; F: Display.Frame; T: Texts.Text;
       pos, len: LONGINT; continue: BOOLEAN; 
   BEGIN F := Par.frame; T := Par.text; pos := Par.pos; continue := pos >= 0;
