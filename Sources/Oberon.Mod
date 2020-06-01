@@ -384,18 +384,17 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
   END Call;
 
   PROCEDURE Batch*; (*execute multiple commands separated by ~*)
-    VAR S: Texts.Scanner; F: Display.Frame; T: Texts.Text; pos, len: LONGINT; 
-  BEGIN F := Par.frame; T := Par.text; pos := Par.pos;
-    WHILE pos >= 0 DO
-      Texts.OpenScanner(S, T, pos); Skip(S, len); Texts.Scan(S);
+    VAR S: Texts.Scanner; F: Display.Frame; T: Texts.Text;
+      pos, len: LONGINT; continue: BOOLEAN; 
+  BEGIN F := Par.frame; T := Par.text; pos := Par.pos; continue := pos >= 0;
+    WHILE continue DO
+      Texts.OpenScanner(S, T, pos); Skip(S, len); Texts.Scan(S); continue := FALSE;
       IF S.class = Texts.Name THEN
         Call(F, T, pos + len, FALSE);
         IF Par.res = 0 THEN
           REPEAT Texts.Scan(S) UNTIL S.eot OR (S.class = Texts.Char) & (S.c = "~");
-          IF S.eot THEN pos := -1 ELSE pos := Texts.Pos(S) END
-        ELSE pos := -1
+          IF ~S.eot THEN pos := Texts.Pos(S); continue := TRUE END
         END
-      ELSE pos := -1
       END
     END
   END Batch;
