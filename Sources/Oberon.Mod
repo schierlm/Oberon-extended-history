@@ -351,17 +351,21 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
   BEGIN Par.res := n
   END Return;
 
-  PROCEDURE Skip(VAR S: Texts.Scanner; T: Texts.Text; VAR pos: INTEGER; cr: BOOLEAN);
-    VAR ch: CHAR;
-  BEGIN Texts.OpenScanner(S, T, pos); Texts.Read(S, ch);
-    WHILE (ch = " ") OR (ch = TAB) OR (cr & (ch = CR)) DO Texts.Read(S, ch); INC(pos) END  (*white spaces*)
+  PROCEDURE Skip(VAR S: Texts.Scanner; VAR len: INTEGER); (*skip white spaces*)
+    VAR ch: CHAR; i: INTEGER;
+  BEGIN Texts.Read(S, ch); i := 0;
+    WHILE (ch = " ") OR (ch = TAB) OR (ch = CR) DO
+      IF ch = CR THEN INC(S.line) END ;
+      Texts.Read(S, ch); INC(i)
+    END ;
+    S.nextCh := ch; len := i
   END Skip;
 
   PROCEDURE Call*(F: Display.Frame; T: Texts.Text; pos: LONGINT; new: BOOLEAN);
-    VAR S: Texts.Scanner; res: INTEGER;
-  BEGIN Skip(S, T, pos, FALSE); Texts.OpenScanner(S, T, pos); Texts.Scan(S);
+    VAR S: Texts.Scanner; res, len: INTEGER;
+  BEGIN Texts.OpenScanner(S, T, pos); Skip(S, len); Texts.Scan(S);
     IF (S.class = Texts.Name) & (S.line = 0) THEN
-      SetPar(F, T, pos + S.len, 0); Modules.Call(S.s, res);
+      SetPar(F, T, pos + len + S.len, 0); Modules.Call(S.s, res);
       IF (res > Modules.noerr) & (res < Modules.clients) & (Log # NIL) THEN Texts.WriteString(W, "Call error: ");
         CASE res OF
            Modules.nofile: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " module not found")
@@ -379,12 +383,13 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
     END
   END Call;
 
-  PROCEDURE Batch*;  (*execute multiple commands separated by ~*)
-    VAR S: Texts.Scanner; F: Display.Frame; T: Texts.Text; pos: LONGINT;
+  PROCEDURE Batch*; (*execute multiple commands separated by ~*)
+    VAR S: Texts.Scanner; F: Display.Frame; T: Texts.Text; pos, len: LONGINT; 
   BEGIN F := Par.frame; T := Par.text; pos := Par.pos;
     WHILE pos >= 0 DO
-      Skip(S, T, pos, TRUE); Texts.OpenScanner(S, T, pos); Texts.Scan(S);
-      IF S.class = Texts.Name THEN Call(F, T, pos, FALSE);
+      Texts.OpenScanner(S, T, pos); Skip(S, len); Texts.Scan(S);
+      IF S.class = Texts.Name THEN
+        Call(F, T, pos + len, FALSE);
         IF Par.res = 0 THEN
           REPEAT Texts.Scan(S) UNTIL S.eot OR (S.class = Texts.Char) & (S.c = "~");
           IF S.eot THEN pos := -1 ELSE pos := Texts.Pos(S) END
