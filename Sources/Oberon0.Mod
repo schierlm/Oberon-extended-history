@@ -349,11 +349,14 @@ MODULE Oberon0; (*Oberon-0 command interpreter / AP 1.6.20 Extended Oberon*)
 
   PROCEDURE Init*; (*establish a working file system (root page) if necessary*)
     VAR a: FileDir.DirPage;
-  BEGIN SYSTEM.LDREG(TR, Kernel.TrapAdr); Disk.GetSector(FileDir.DirRootAdr, a);
+  BEGIN Disk.GetSector(FileDir.DirRootAdr, a);
     IF a.mark # FileDir.DirMark THEN
       InitSec(a); a.mark := FileDir.DirMark; a.m := 0; a.p0 := 0; Disk.PutSector(FileDir.DirRootAdr, a)
     END
   END Init;
 
-BEGIN IF Modules.importing # "Oberon0" THEN (*loaded by the boot loader*) Init; Modules.Init; Loop END
+BEGIN
+  IF Modules.importing # "Oberon0" THEN (*loaded by the boot loader*)
+    SYSTEM.LDREG(TR, Kernel.TrapAdr); Init; Modules.Init; Loop
+  END
 END Oberon0.
