@@ -1,4 +1,4 @@
-MODULE ORC; (*Connection to RISC; NW 11.11.2013 / AP 5.5.20*)
+MODULE ORC; (*Connection to RISC; NW 11.11.2013 / AP 6.6.20*)
   IMPORT SYSTEM, Files, Texts, Oberon, RS232;
 
   CONST stat = -52; BlkLen = 255;
@@ -85,7 +85,8 @@ MODULE ORC; (*Connection to RISC; NW 11.11.2013 / AP 5.5.20*)
       WHILE S.class = Texts.Name DO
         Texts.WriteString(W, S.s); F := Files.Old(S.s);
         IF F # NIL THEN
-          RS232.Send(REC); SendName(S.s); RS232.Rec(code);
+          RS232.Send(REC); RS232.Rec(code);
+          IF code = ACK THEN SendName(S.s); RS232.Rec(code) END ;
           IF code = ACK THEN
             Texts.WriteString(W, " sending ");
             L := Files.Length(F); Files.Set(R, F, 0); LL := 0;
@@ -97,8 +98,8 @@ MODULE ORC; (*Connection to RISC; NW 11.11.2013 / AP 5.5.20*)
               IF code = ACK THEN Texts.Write(W, ".") ELSE Texts.Write(W, "*"); n := 0 END ;
               Texts.Append(Oberon.Log, W.buf)
             UNTIL n0 < BlkLen;
-            RS232.Rec(code);
-            IF code = ACK THEN Texts.WriteInt(W, LL, 6) ELSE Texts.WriteString(W, "failed") END
+            RS232.Send(REQ); RS232.Rec(code);
+            IF code = ACK THEN Texts.WriteInt(W, LL, 6) ELSE Texts.WriteString(W, " failed") END
           ELSE Texts.WriteString(W, " no response"); Texts.WriteInt(W, ORD(code), 4)
           END
         ELSE Texts.WriteString(W, " not found")
@@ -123,7 +124,8 @@ MODULE ORC; (*Connection to RISC; NW 11.11.2013 / AP 5.5.20*)
       WHILE S.class = Texts.Name DO
         Texts.WriteString(W, S.s); orgname := S.s;
         F := Files.New(S.s); Files.Set(R, F, 0); LL := 0;
-        RS232.Send(SND); SendName(S.s); RS232.Rec(code);
+        RS232.Send(SND); RS232.Rec(code);
+        IF code = ACK THEN SendName(S.s); RS232.Rec(code) END ;
         IF code = ACK THEN
           Texts.WriteString(W, " receiving ");
           REPEAT (*receive packet*)
@@ -131,8 +133,8 @@ MODULE ORC; (*Connection to RISC; NW 11.11.2013 / AP 5.5.20*)
             WHILE n > 0 DO RS232.Rec(x); Files.Write(R, CHR(x)); DEC(n) END ;
             RS232.Send(ACK); LL := LL + L; Texts.Write(W, "."); Texts.Append(Oberon.Log, W.buf)
           UNTIL L < BlkLen;
-          RS232.Send(ACK);
-          Files.Register(F); Texts.WriteInt(W, LL, 6)
+          RS232.Send(REQ); RS232.Rec(code);
+          IF code = ACK THEN Files.Register(F); Texts.WriteInt(W, LL, 6) ELSE Texts.WriteString(W, " failed") END
         ELSE Texts.WriteString(W, " no response"); Texts.WriteInt(W, ORD(code), 4)
         END ;
         Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); Texts.Scan(S)
@@ -179,5 +181,6 @@ MODULE ORC; (*Connection to RISC; NW 11.11.2013 / AP 5.5.20*)
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END SR;
 
-BEGIN Texts.OpenWriter(W)
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Connection  11.11.13 / AP 6.6.20");
+  Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
 END ORC.

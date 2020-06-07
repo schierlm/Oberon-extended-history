@@ -1,14 +1,14 @@
-MODULE PCLink0;  (*AP 7.2.20*)
+MODULE PCLink0;  (*AP 7.2.20 / 6.6.20*)
   IMPORT Files, RS232;
   CONST BlkLen = 255; (*packet size for Send and Receive*)
-    ACK = 10H; NAK = 11H;
+    REQ = 20H; ACK = 10H; NAK = 11H;
 
   PROCEDURE Receive*; (*filename - receive file*)
     VAR x, n, i: INTEGER;
       name: ARRAY 32 OF CHAR;
       F: Files.File; R: Files.Rider;
       buf: ARRAY 256 OF BYTE;
-  BEGIN RS232.RecStr(name); F := Files.New(name);
+  BEGIN RS232.Send(ACK); RS232.RecStr(name); F := Files.New(name);
     IF F # NIL THEN
       Files.Set(R, F, 0); RS232.Send(ACK);
       REPEAT (*receive packet*)
@@ -18,7 +18,8 @@ MODULE PCLink0;  (*AP 7.2.20*)
         WHILE i < n DO Files.WriteByte(R, buf[i]); INC(i) END ;
         RS232.Send(ACK)
       UNTIL n < BlkLen;
-      Files.Register(F); RS232.Send(ACK)
+      Files.Register(F); RS232.Rec(x);
+      IF x = REQ THEN RS232.Send(ACK) ELSE RS232.Send(NAK) END
     ELSE RS232.Send(NAK)
     END
   END Receive;
@@ -28,7 +29,7 @@ MODULE PCLink0;  (*AP 7.2.20*)
       x, n, i, L: INTEGER;
       name: ARRAY 32 OF CHAR;
       F: Files.File; R: Files.Rider;
-  BEGIN RS232.RecStr(name); F := Files.Old(name);
+  BEGIN RS232.Send(ACK); RS232.RecStr(name); F := Files.Old(name);
     IF F # NIL THEN
       RS232.Send(ACK); L := Files.Length(F); Files.Set(R, F, 0);
       REPEAT (*send packet*)
@@ -38,7 +39,8 @@ MODULE PCLink0;  (*AP 7.2.20*)
         RS232.Rec(x);
         IF x # ACK THEN n := 0 END
       UNTIL n < BlkLen;
-      RS232.Rec(x)
+      RS232.Rec(x);
+      IF x = REQ THEN RS232.Send(ACK) ELSE RS232.Send(NAK) END
     ELSE RS232.Send(NAK)
     END
   END Send;
