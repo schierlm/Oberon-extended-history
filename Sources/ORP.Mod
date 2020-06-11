@@ -1,4 +1,4 @@
-MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 / AP 25.5.20 Extended Oberon*)
+MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 / AP 6.6.20 Extended Oberon*)
   IMPORT Texts, Oberon, ORS, ORB, ORG;
   (*Author: Niklaus Wirth, 2014. Oberon-2 extensions by Andreas Pirklbauer, 2020.
     Parser of Oberon-RISC compiler. Uses Scanner ORS to obtain symbols (tokens),
@@ -95,11 +95,6 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
   BEGIN (*t1 is an extension of t0*)
     RETURN (t0 = t1) OR (t1 # NIL) & IsExtension(t0, t1.base)
   END IsExtension;
-
-  PROCEDURE CheckCaseExpr(VAR x: ORG.Item);
-  BEGIN
-    IF ~(x.type.form IN {ORB.Int, ORB.Byte, ORB.Char}) THEN ORS.Mark("invalid type"); x.type := ORB.intType END
-  END CheckCaseExpr;
 
   PROCEDURE CheckReceiver(proc: ORB.Object; deref: BOOLEAN);
   BEGIN
@@ -580,10 +575,15 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
       Check(ORS.colon, ": expected"); StatSequence
     END NumericCase;
 
+    PROCEDURE CaseExpression(VAR x: ORG.Item);
+    BEGIN expression(x);
+      IF ~(x.type.form IN {ORB.Int, ORB.Byte, ORB.Char}) THEN ORS.Mark("invalid type"); x.type := ORB.intType END
+    END CaseExpression;
+
     PROCEDURE NumericCasePart;
       VAR x: ORG.Item; L0, L1, L2: LONGINT; n, labelform: INTEGER;
         tab: ARRAY NofCases OF ORG.LabelRange;  (*ordered table of label ranges*)
-    BEGIN expression(x); CheckCaseExpr(x); ORG.CaseHead(x, L0);
+    BEGIN CaseExpression(x); ORG.CaseHead(x, L0);
       Check(ORS.of, "OF expected"); n := 0; L2 := 0; labelform := x.type.form;
       WHILE (sym < ORS.end) OR (sym = ORS.bar) DO
         IF sym = ORS.bar THEN ORS.Get(sym) ELSE NumericCase(labelform, n, tab); ORG.FJump(L2) END
