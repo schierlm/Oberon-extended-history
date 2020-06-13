@@ -1,4 +1,4 @@
-MODULE ORC; (*Connection to RISC; NW 11.11.2013 / AP 6.6.20*)
+MODULE ORC; (*Connection to RISC; NW 11.11.2013 / AP 13.6.20*)
   IMPORT SYSTEM, Files, Texts, Oberon, RS232;
 
   CONST stat = -52; BlkLen = 255;
@@ -181,6 +181,6 @@ MODULE ORC; (*Connection to RISC; NW 11.11.2013 / AP 6.6.20*)
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END SR;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Connection  11.11.13 / AP 6.6.20");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Connection  11.11.13 / AP 13.6.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
 END ORC.
