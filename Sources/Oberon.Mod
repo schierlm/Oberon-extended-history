@@ -1,4 +1,4 @@
-MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 1.6.20 Extended Oberon*)
+MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 13.6.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files, Modules, Input, Display, Viewers, Fonts, Texts;
 
   CONST (*message ids*)
@@ -383,10 +383,9 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
     END
   END Call;
 
-  PROCEDURE Batch*;  (*execute multiple commands separated by ~*)
-    VAR S: Texts.Scanner; F: Display.Frame; T: Texts.Text;
-      pos, len: LONGINT; continue: BOOLEAN; 
-  BEGIN F := Par.frame; T := Par.text; pos := Par.pos; continue := pos >= 0;
+  PROCEDURE Activate*(F: Display.Frame; T: Texts.Text; pos: LONGINT);  (*execute multiple commands separated by ~*)
+    VAR S: Texts.Scanner; len: LONGINT; continue: BOOLEAN; 
+  BEGIN continue := pos >= 0;
     WHILE continue DO
       Texts.OpenScanner(S, T, pos); Skip(S, len); Texts.Scan(S); continue := FALSE;
       IF S.class = Texts.Name THEN
@@ -397,6 +396,10 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
         END
       END
     END
+  END Activate;
+
+  PROCEDURE Batch*;
+  BEGIN Activate(Par.frame, Par.text, Par.pos)
   END Batch;
 
   (*task management*)
