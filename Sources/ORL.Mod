@@ -372,21 +372,18 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 13.6.20 Extended Oberon*)
           Texts.WriteString(W, name1); Texts.WriteString(W, " at address "); Texts.WriteInt(W, destadr, 7);
           IF destadr >= 0 THEN F := Files.Old(name);
             IF F # NIL THEN filelen := Files.Length(F);
-              IF filelen > 0 THEN
-                IF Modules.AllocPtr + filelen < limit THEN
-                  Files.Set(R, F, 0); Files.ReadByte(R, b); start := Modules.AllocPtr; i := start;
-                  WHILE ~R.eof DO SYSTEM.PUT(i, b); INC(i); Files.ReadByte(R, b) END ;
-                  SYSTEM.GET(start + FPrintAdr, i);
-                  IF (filelen > FPrintAdr) & (i = FPrint) THEN res := noerr;
-                    RelocateLoaded(start, destadr);
-                    F := Files.New(name1); Files.Set(R, F, 0); i := start;
-                    WHILE i < start + filelen DO SYSTEM.GET(i, b); Files.WriteByte(R, b); INC(i) END ;
-                    Files.Register(F); Texts.WriteInt(W, Files.Length(F), 7)
-                  ELSE Texts.WriteString(W, " input file format error")
-                  END
-                ELSE Texts.WriteString(W, " insufficient space")
+              IF Modules.AllocPtr + filelen < limit THEN
+                Files.Set(R, F, 0); Files.ReadByte(R, b); start := Modules.AllocPtr; i := start;
+                WHILE ~R.eof DO SYSTEM.PUT(i, b); INC(i); Files.ReadByte(R, b) END ;
+                IF filelen > FPrintAdr THEN SYSTEM.GET(start + FPrintAdr, i) ELSE i := 0 END ;
+                IF i = FPrint THEN res := noerr;
+                  RelocateLoaded(start, destadr);
+                  F := Files.New(name1); Files.Set(R, F, 0); i := start;
+                  WHILE i < start + filelen DO SYSTEM.GET(i, b); Files.WriteByte(R, b); INC(i) END ;
+                  Files.Register(F); Texts.WriteInt(W, Files.Length(F), 7)
+                ELSE Texts.WriteString(W, "  input file format error")
                 END
-              ELSE Texts.WriteString(W, "  input file empty")
+              ELSE Texts.WriteString(W, "  insufficient space")
               END
             ELSE Texts.WriteString(W, "  input file not found")
             END
@@ -409,22 +406,19 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 13.6.20 Extended Oberon*)
       Texts.WriteString(W, "  executing "); Texts.WriteString(W, S.s);
       F := Files.Old(S.s);
       IF F # NIL THEN filelen := Files.Length(F);
-        IF filelen > 0 THEN
-          IF Modules.AllocPtr + filelen < limit THEN
-            Files.Set(R, F, 0); Files.ReadByte(R, b); start := Modules.AllocPtr; i := start;
-            WHILE ~R.eof DO SYSTEM.PUT(i, b); INC(i); Files.ReadByte(R, b) END ;
-            SYSTEM.GET(start + FPrintAdr, i);
-            IF (filelen > FPrintAdr) & (i = FPrint) THEN res := noerr;
-              RelocateLoaded(start, start); Texts.WriteString(W, " at address ");
-              Texts.WriteInt(W, start, 7); Texts.WriteInt(W, i - start, 7);
-              body := SYSTEM.VAL(Command, start); body  (*branch to initialization body of top module*)
-            ELSE Texts.WriteString(W, " input file format error")
-            END
-          ELSE Texts.WriteString(W, " insufficient space")
+        IF Modules.AllocPtr + filelen < limit THEN
+          Files.Set(R, F, 0); Files.ReadByte(R, b); start := Modules.AllocPtr; i := start;
+          WHILE ~R.eof DO SYSTEM.PUT(i, b); INC(i); Files.ReadByte(R, b) END ;
+          IF filelen > FPrintAdr THEN SYSTEM.GET(start + FPrintAdr, i) ELSE i := 0 END ;
+          IF i = FPrint THEN res := noerr;
+            RelocateLoaded(start, start); Texts.WriteString(W, " at address ");
+            Texts.WriteInt(W, start, 7); Texts.WriteInt(W, i - start, 7);
+            body := SYSTEM.VAL(Command, start); body  (*branch to initialization body of top module*)
+          ELSE Texts.WriteString(W, "  input file format error")
           END
-        ELSE Texts.WriteString(W, "  input file empty")
+        ELSE Texts.WriteString(W, "  insufficient space")
         END
-      ELSE Texts.WriteString(W, " failed")
+      ELSE Texts.WriteString(W, " not found")
       END
     ELSE Texts.WriteString(W, "Usage: ORL.Execute M.bin")
     END ;
