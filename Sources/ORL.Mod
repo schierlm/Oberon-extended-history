@@ -1,6 +1,6 @@
 MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 13.6.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, Files, Modules, Texts, Oberon;
-  CONST versionkey = 1X; versionkey0 = 0X; DescSize = 92; MnLength = 32; BootSec = 2;
+  CONST versionkey = 1X; versionkey0 = 0X; DescSize = 92; MnLength = 32; BootSec = 2; FPrint = 12345678H;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5;
     TrapAdr = 4; DestAdr = 8; MemAdr = 12; AllocAdr = 16; RootAdr = 20; StackAdr = 24; FPrintAdr = 28; ModAdr = 32;
     U = 20000000H; V = 10000000H; B = 100000H;  (*modifier bits*)
@@ -263,7 +263,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 13.6.20 Extended Oberon*)
         SYSTEM.PUT(Start + AllocAdr, AllocPtr - Start);  (*address of the end of the module space loaded*)
         SYSTEM.PUT(Start + RootAdr, SYSTEM.VAL(INTEGER, root) - Start);  (*current root of the links of loaded modules*)
         SYSTEM.PUT(Start + StackAdr, Kernel.stackOrg);  (*current limit of the module area, typically overwritten by the boot loader*)
-        SYSTEM.PUT(Start + FPrintAdr, 12345678H);  (*fingerprint*)
+        SYSTEM.PUT(Start + FPrintAdr, FPrint);  (*fingerprint*)
         MakeFileName(name, S.s, ".bin"); F := Files.New(name); Files.Set(R, F, 0); i := Start;
         WHILE i < AllocPtr DO SYSTEM.GET(i, x); Files.WriteInt(R, x); INC(i, 4) END ;
         Texts.WriteInt(W, AllocPtr - Start, 7); Files.Register(F)
@@ -373,13 +373,17 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 13.6.20 Extended Oberon*)
           IF destadr >= 0 THEN F := Files.Old(name);
             IF F # NIL THEN filelen := Files.Length(F);
               IF filelen > 0 THEN
-                IF Modules.AllocPtr + filelen < limit THEN res := noerr;
+                IF Modules.AllocPtr + filelen < limit THEN
                   Files.Set(R, F, 0); Files.ReadByte(R, b); start := Modules.AllocPtr; i := start;
                   WHILE ~R.eof DO SYSTEM.PUT(i, b); INC(i); Files.ReadByte(R, b) END ;
-                  RelocateLoaded(start, destadr);
-                  F := Files.New(name1); Files.Set(R, F, 0); i := start;
-                  WHILE i < start + filelen DO SYSTEM.GET(i, b); Files.WriteByte(R, b); INC(i) END ;
-                  Files.Register(F); Texts.WriteInt(W, Files.Length(F), 7)
+                  SYSTEM.GET(start + FPrintAdr, i);
+                  IF (filelen > FPrintAdr) & (i = FPrint) THEN res := noerr;
+                    RelocateLoaded(start, destadr);
+                    F := Files.New(name1); Files.Set(R, F, 0); i := start;
+                    WHILE i < start + filelen DO SYSTEM.GET(i, b); Files.WriteByte(R, b); INC(i) END ;
+                    Files.Register(F); Texts.WriteInt(W, Files.Length(F), 7)
+                  ELSE Texts.WriteString(W, " input file format error")
+                  END
                 ELSE Texts.WriteString(W, " insufficient space")
                 END
               ELSE Texts.WriteString(W, "  input file empty")
@@ -406,12 +410,16 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 13.6.20 Extended Oberon*)
       F := Files.Old(S.s);
       IF F # NIL THEN filelen := Files.Length(F);
         IF filelen > 0 THEN
-          IF Modules.AllocPtr + filelen < limit THEN res := noerr;
+          IF Modules.AllocPtr + filelen < limit THEN
             Files.Set(R, F, 0); Files.ReadByte(R, b); start := Modules.AllocPtr; i := start;
             WHILE ~R.eof DO SYSTEM.PUT(i, b); INC(i); Files.ReadByte(R, b) END ;
-            RelocateLoaded(start, start); Texts.WriteString(W, " at address ");
-            Texts.WriteInt(W, start, 7); Texts.WriteInt(W, i - start, 7);
-            body := SYSTEM.VAL(Command, start); body  (*branch to initialization body of top module*)
+            SYSTEM.GET(start + FPrintAdr, i);
+            IF (filelen > FPrintAdr) & (i = FPrint) THEN res := noerr;
+              RelocateLoaded(start, start); Texts.WriteString(W, " at address ");
+              Texts.WriteInt(W, start, 7); Texts.WriteInt(W, i - start, 7);
+              body := SYSTEM.VAL(Command, start); body  (*branch to initialization body of top module*)
+            ELSE Texts.WriteString(W, " input file format error")
+            END
           ELSE Texts.WriteString(W, " insufficient space")
           END
         ELSE Texts.WriteString(W, "  input file empty")
