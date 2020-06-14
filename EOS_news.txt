@@ -17,4 +17,4 @@
 2020-05-15 Oberon0 - Clear entire root page of file directory in Oberon0.ClearDirectory, except for DirMark
 2020-05-15 ORC - Change timeout code in ORC.Rec and ORC.Flush to avoid issues with signed arithmetic
 2020-06-01 Oberon - Oberon.Batch, Oberon.Return, Oberon.Par.res added
-2020-06-13 ORC, PCLink0 - Add handshake after sSND or REC and after sending or receiving a packet stream
+2020-06-13 ORC, PCLink0 - Add REQ-ACK handshake after sending SND or REC, and after sending or receiving a packet stream
