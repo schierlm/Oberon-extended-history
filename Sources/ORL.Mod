@@ -183,7 +183,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 25.5.20 Extended Oberon*)
             SYSTEM.GET(impmod.ent + vno*4, offset);
             IF ODD(inst DIV C8) THEN INC(offset, impmod.code) ELSE INC(offset, impmod.data) END
           END ;
-          SYSTEM.PUT(adr, MOV+U+B + pno*C24 + (offset - Start) DIV C16);  (*mark as fixed up by setting the B bit*)
+          SYSTEM.PUT(adr, MOV+U+B + pno*C24 + (offset - Start) DIV C16);  (*mark as fixed up by setting B*)
           IF inst DIV C30 = F2 THEN inst := inst DIV C20 * C20
           ELSE inst := IOR + (inst DIV C24 MOD C4) * C24 + (inst DIV C20 MOD C4) * C20
           END ;
@@ -334,7 +334,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 25.5.20 Extended Oberon*)
       END ;
       j := M.imp + start;
       WHILE i < j DO SYSTEM.GET(i, x);  (*code*)
-        IF (x DIV C28 * C28 = MOV+U) & (x DIV C20 MOD C4 = B DIV C20) THEN  (*marked as fixed up*)
+        IF (x DIV C28 * C28 = MOV+U) & (x DIV C20 MOD C4 = B DIV C20) THEN  (*marked as fixed up via B*)
           SYSTEM.GET(i+4, y); im := x MOD C16 * C16 + y MOD C16 + dst;
           SYSTEM.PUT(i, x DIV C16 * C16 + im DIV C16);
           SYSTEM.PUT(i+4, y DIV C16 * C16 + im MOD C16); INC(i, 4)

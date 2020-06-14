@@ -424,7 +424,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.6.20 E
       ELSIF resPtr > noref THEN res := dynptrs
       ELSIF resPvr > noref THEN res := dynpvrs
       ELSE FindStaticReferences(HandleRef, HandleRef, resPtr, resPvr);
-        IF resPtr > noerr THEN res := statptrs ELSIF resPvr > 0 THEN res := statpvrs END
+        IF resPtr > noerr THEN res := statptrs ELSIF resPvr > noerr THEN res := statpvrs END
       END
     END
   END Check;
