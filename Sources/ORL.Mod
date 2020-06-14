@@ -414,7 +414,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 13.6.20 Extended Oberon*)
             body := SYSTEM.VAL(Command, start); body  (*branch to initialization body of top module*)
           ELSE Texts.WriteString(W, " insufficient space")
           END
-        ELSE Texts.WriteString(W, "  file empty")
+        ELSE Texts.WriteString(W, "  input file empty")
         END
       ELSE Texts.WriteString(W, " failed")
       END
