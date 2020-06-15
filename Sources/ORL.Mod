@@ -372,7 +372,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 13.6.20 Extended Oberon*)
           Texts.WriteString(W, name1); Texts.WriteString(W, " at address "); Texts.WriteInt(W, destadr, 7);
           IF destadr >= 0 THEN F := Files.Old(name);
             IF F # NIL THEN filelen := Files.Length(F);
-              IF filelen > FPrintAdr THEN
+              IF filelen > ModAdr THEN
                 IF Modules.AllocPtr + filelen < limit THEN
                   Files.Set(R, F, 0); Files.ReadByte(R, b); start := Modules.AllocPtr; i := start;
                   WHILE ~R.eof DO SYSTEM.PUT(i, b); INC(i); Files.ReadByte(R, b) END ;
@@ -409,7 +409,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 13.6.20 Extended Oberon*)
       Texts.WriteString(W, "  executing "); Texts.WriteString(W, S.s);
       F := Files.Old(S.s);
       IF F # NIL THEN filelen := Files.Length(F);
-        IF filelen > FPrintAdr THEN
+        IF filelen > ModAdr THEN
           IF Modules.AllocPtr + filelen < limit THEN
             Files.Set(R, F, 0); Files.ReadByte(R, b); start := Modules.AllocPtr; i := start;
             WHILE ~R.eof DO SYSTEM.PUT(i, b); INC(i); Files.ReadByte(R, b) END ;
