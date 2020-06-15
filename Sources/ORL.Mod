@@ -360,7 +360,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 13.6.20 Extended Oberon*)
   END RelocateLoaded;
 
   PROCEDURE Relocate*;  (*relocate prelinked binary M.bin for execution at destadr and write result to output file R.bin*)
-    VAR start, i, filelen, destadr: INTEGER; b: BYTE;
+    VAR i, start, filelen, destadr, fprint: INTEGER; b: BYTE;
       name, name1: ARRAY 32 OF CHAR;
       F: Files.File; R: Files.Rider;
       S: Texts.Scanner;
@@ -376,8 +376,8 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 13.6.20 Extended Oberon*)
                 IF Modules.AllocPtr + filelen < limit THEN
                   Files.Set(R, F, 0); Files.ReadByte(R, b); start := Modules.AllocPtr; i := start;
                   WHILE ~R.eof DO SYSTEM.PUT(i, b); INC(i); Files.ReadByte(R, b) END ;
-                  SYSTEM.GET(start + FPrintAdr, i);  (*fingerprint*)
-                  IF i = FPrint THEN res := noerr;
+                  SYSTEM.GET(start + FPrintAdr, fprint);  (*fingerprint*)
+                  IF fprint = FPrint THEN res := noerr;
                     RelocateLoaded(start, destadr);
                     F := Files.New(name1); Files.Set(R, F, 0); i := start;
                     WHILE i < start + filelen DO SYSTEM.GET(i, b); Files.WriteByte(R, b); INC(i) END ;
@@ -400,7 +400,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 13.6.20 Extended Oberon*)
   END Relocate;
 
   PROCEDURE Execute*;  (*load and execute prelinked binary M.bin*)
-    VAR start, i, filelen: INTEGER; b: BYTE;
+    VAR i, start, filelen, fprint: INTEGER; b: BYTE;
       body: Modules.Command;
       F: Files.File; R: Files.Rider;
       S: Texts.Scanner;
@@ -413,8 +413,8 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 13.6.20 Extended Oberon*)
           IF Modules.AllocPtr + filelen < limit THEN
             Files.Set(R, F, 0); Files.ReadByte(R, b); start := Modules.AllocPtr; i := start;
             WHILE ~R.eof DO SYSTEM.PUT(i, b); INC(i); Files.ReadByte(R, b) END ;
-            SYSTEM.GET(start + FPrintAdr, i);  (*fingerprint*)
-            IF i = FPrint THEN res := noerr;
+            SYSTEM.GET(start + FPrintAdr, fprint);  (*fingerprint*)
+            IF fprint = FPrint THEN res := noerr;
               RelocateLoaded(start, start); Texts.WriteString(W, " at address ");
               Texts.WriteInt(W, start, 7); Texts.WriteInt(W, i - start, 7);
               body := SYSTEM.VAL(Command, start); body  (*branch to initialization body of top module*)
