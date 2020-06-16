@@ -1,4 +1,4 @@
-MODULE Oberon0; (*Oberon-0 command interpreter / AP 1.6.20 Extended Oberon*)
+MODULE Oberon0; (*Oberon-0 command interpreter / AP 13.6.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, FileDir, Files, Modules, RS232, PCLink0;
   CONST swi = -60; (*switches*)
     stat = -52; (*RS-232*)
@@ -202,11 +202,13 @@ MODULE Oberon0; (*Oberon-0 command interpreter / AP 1.6.20 Extended Oberon*)
 
   PROCEDURE WriteSector; (*secno, n, list of n values (words) - write sector*)
     VAR k, m, n, secno: INTEGER;
-      buf: ARRAY 256 OF INTEGER;
-  BEGIN RS232.RecInt(secno); RS232.RecInt(n);
+      buf, rcvd: ARRAY 256 OF INTEGER;
+  BEGIN RS232.RecInt(secno); RS232.RecInt(n); k := 0;
+    WHILE k < n DO RS232.RecInt(m); rcvd[k] := m; INC(k) END ;
+    RS232.SendStr("WriteSector"); 
     Disk.GetSector(secno*29, buf); k := 0;
-    WHILE k < n DO RS232.RecInt(m); buf[k] := m; INC(k) END ;
-    RS232.SendStr("WriteSector"); Disk.PutSector(secno*29, buf)
+    WHILE k < n DO buf[k] := rcvd[k]; INC(k) END ;
+    Disk.PutSector(secno*29, buf)
   END WriteSector;
 
   PROCEDURE ClearSector; (*secno, n - clear sector (n words)*)
