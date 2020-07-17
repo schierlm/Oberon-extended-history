@@ -1,4 +1,4 @@
-MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 13.6.20 Extended Oberon*)
+MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 17.7.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, Files, Modules, Texts, Oberon;
   CONST versionkey = 1X; versionkey0 = 0X; DescSize = 92; MnLength = 32; BootSec = 2; FPrint = 12345678H;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5;
@@ -183,7 +183,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 13.6.20 Extended Oberon*)
             SYSTEM.GET(impmod.ent + vno*4, offset);
             IF ODD(inst DIV C8) THEN INC(offset, impmod.code) ELSE INC(offset, impmod.data) END
           END ;
-          SYSTEM.PUT(adr, MOV+U+B + pno*C24 + (offset - Start) DIV C16);  (*mark as fixed up by setting B*)
+          SYSTEM.PUT(adr, MOV+U+B + pno*C24 + (offset - Start) DIV C16);  (*mark as fixed up by setting the B bit*)
           IF inst DIV C30 = F2 THEN inst := inst DIV C20 * C20
           ELSE inst := IOR + (inst DIV C24 MOD C4) * C24 + (inst DIV C20 MOD C4) * C20
           END ;
@@ -334,7 +334,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 13.6.20 Extended Oberon*)
       END ;
       j := M.imp + start;
       WHILE i < j DO SYSTEM.GET(i, x);  (*code*)
-        IF (x DIV C28 * C28 = MOV+U) & (x DIV C20 MOD C4 = B DIV C20) THEN  (*marked as fixed up via B*)
+        IF x DIV C28 * C28 + x DIV C16 MOD C8 * C16 = MOV+U+B THEN  (*marked as fixed up via the B bit*)
           SYSTEM.GET(i+4, y); im := x MOD C16 * C16 + y MOD C16 + dst;
           SYSTEM.PUT(i, x DIV C16 * C16 + im DIV C16);
           SYSTEM.PUT(i+4, y DIV C16 * C16 + im MOD C16); INC(i, 4)
@@ -431,6 +431,6 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 13.6.20 Extended Oberon*)
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END Execute;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 13.6.20");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 17.7.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); limit := Kernel.stackOrg - Kernel.stackSize
 END ORL.
