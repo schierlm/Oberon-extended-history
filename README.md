@@ -15,6 +15,8 @@ Features
 
 **REVISION:** 17.7.2020
 
+The file [**S3RISCinstall.tar.gz**](Documentation/S3RISCinstall.tar.gz) always reflects the *latest* version of Extended Oberon.
+
 There is also a version of the Revised Oberon-2 compiler for the RISC-V processor, but it is currently not public.
 
 ------------------------------------------------------
