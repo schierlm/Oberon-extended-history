@@ -669,7 +669,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 2.8.20 Extended Ob
   END ShowFonts;
 
   PROCEDURE Run(name: ARRAY OF CHAR);  (*execute multiple commands separated by ~ in the specified batch file*)
-    VAR F: Files.File; T: Texts.Text; S: Texts.Scanner;
+    VAR F: Files.File; T: Texts.Text;
       V, menu, main: Display.Frame; X, Y: INTEGER;
   BEGIN F := Files.Old(name);
     IF F # NIL THEN T := TextFrames.Text(name);
