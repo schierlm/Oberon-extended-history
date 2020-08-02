@@ -182,7 +182,9 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 2.8.20 Extended Ob
   END MakeDisplayName;
 
   PROCEDURE OpenViewers;  (*open log and system tool viewer in system track of current display*)
-    VAR logV, toolV, menu, main: Display.Frame; X, Y: INTEGER;
+    VAR logV, toolV: Viewers.Viewer;
+      menu, main: Display.Frame;
+      X, Y: INTEGER;
   BEGIN
     IF Viewers.CurDisplay # NIL THEN
       Texts.WriteString(W, Version); Texts.WriteString(W, " / Display ");
@@ -670,7 +672,8 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 2.8.20 Extended Ob
 
   PROCEDURE Run(name: ARRAY OF CHAR);  (*execute multiple commands separated by ~ in the specified batch file*)
     VAR F: Files.File; T: Texts.Text;
-      V, menu, main: Display.Frame; X, Y: INTEGER;
+      menu, main: Display.Frame;
+      V: Viewers.Viewer; X, Y: INTEGER;
   BEGIN F := Files.Old(name);
     IF F # NIL THEN T := TextFrames.Text(name);
       Oberon.AllocateSystemViewer(0, X, Y);
@@ -684,7 +687,10 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 2.8.20 Extended Ob
   PROCEDURE Batch*;
     VAR S: Texts.Scanner;
   BEGIN GetArg(S);
-    WHILE S.class = Texts.Name DO Run(S.s); Texts.Scan(S) END
+    WHILE S.class = Texts.Name DO
+      Texts.WriteString(W, S.s); Texts.WriteString(W, " executing"); EndLine;
+      Run(S.s); Texts.Scan(S)
+    END
   END Batch;
 
   PROCEDURE Trap(VAR a: INTEGER; b, c, d: INTEGER);
