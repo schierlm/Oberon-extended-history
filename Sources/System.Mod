@@ -5,7 +5,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 2.8.20 Extended Ob
   CONST Version* = "Extended Oberon System  AP 2.8.20";
     StandardMenu = "System.Close System.Copy System.Grow Edit.Search Edit.Store | System.Expand System.Spread System.Clone";
     LogMenu = "Edit.Locate Edit.Search System.Copy System.Grow System.Clear | System.Expand System.Spread System.Clone";
-    SystemLog = "System.Log"; SystemTool = "System.Tool"; SystemStartup = "System.Startup";
+    SystemLog = "System.Log"; SystemTool = "System.Tool"; SystemBatch = "System.Batch";
     TAB = Input.TAB; CR = Input.CR; LNK = 15; TaskPeriod = 500; (*ms*)
 
   TYPE Handler = PROCEDURE(name: ARRAY OF CHAR);
@@ -668,18 +668,24 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 2.8.20 Extended Ob
     Texts.Append(Oberon.Log, W.buf)
   END ShowFonts;
 
-  PROCEDURE Startup*;  (*run the commands in the startup batch file*)
-    VAR F: Files.File; T: Texts.Text;
+  PROCEDURE Run(name: ARRAY OF CHAR);  (*execute multiple commands separated by ~ in the specified batch file*)
+    VAR F: Files.File; T: Texts.Text; S: Texts.Scanner;
       V, menu, main: Display.Frame; X, Y: INTEGER;
-  BEGIN F := Files.Old(SystemStartup);
-    IF F # NIL THEN T := TextFrames.Text(SystemStartup);
+  BEGIN F := Files.Old(name);
+    IF F # NIL THEN T := TextFrames.Text(name);
       Oberon.AllocateSystemViewer(0, X, Y);
-      menu := TextFrames.NewMenu(SystemStartup, StandardMenu);
+      menu := TextFrames.NewMenu(name, StandardMenu);
       main := TextFrames.NewText(T, 0);
       V := MenuViewers.New(menu, main, TextFrames.menuH, X, Y);
-      Oberon.Activate(main, T, 0)
+      Oberon.Run(main, T, 0)
     END
-  END Startup;
+  END Run;
+
+  PROCEDURE Batch*;
+    VAR S: Texts.Scanner;
+  BEGIN GetArg(S);
+    IF S.class = Texts.Name THEN Run(S.s) END
+  END Batch;
 
   PROCEDURE Trap(VAR a: INTEGER; b, c, d: INTEGER);
     VAR u, v, w: INTEGER; mod: Modules.Module;
@@ -739,5 +745,5 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 2.8.20 Extended Ob
 
 BEGIN Texts.OpenWriter(W); defer := FALSE; T := Oberon.NewTask(Deferred, TaskPeriod);
   Oberon.OpenLog(TextFrames.Text("")); CreateDisplay("Oberon");
-  Kernel.Install(SYSTEM.ADR(Trap), Kernel.TrapAdr); Kernel.Install(SYSTEM.ADR(Abort), 0); Startup
+  Kernel.Install(SYSTEM.ADR(Trap), Kernel.TrapAdr); Kernel.Install(SYSTEM.ADR(Abort), 0); Run(SystemBatch)
 END System.
