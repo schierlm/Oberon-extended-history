@@ -321,7 +321,9 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     IF (y.mode = ORB.Const) & (y.a < 0) THEN ORS.Mark("bad index") END ;
     IF (y.mode = ORB.Const) & (lim >= 0) THEN
       IF y.a >= lim THEN ORS.Mark("bad index") END ;
-      IF x.mode IN {ORB.Var, RegI} THEN x.a := y.a * s + x.a
+      IF x.mode = ORB.Var THEN
+        IF x.r < 0 THEN (*imported*) loadAdr(x); x.mode := RegI; x.a := y.a * s ELSE x.a := y.a * s + x.a END
+      ELSIF x.mode = RegI THEN x.a := y.a * s + x.a
       ELSIF x.mode = ORB.Par THEN x.b := y.a * s + x.b
       END
     ELSE load(y);
