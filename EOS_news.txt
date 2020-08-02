@@ -21,4 +21,4 @@
 2020-06-18 Build.Tool - Allow building an entire Oberon system on a remote target system with a single Oberon.Batch command
 2020-07-17 ORL - ORL.RelocateLoaded updated
 2020-08-01 ORG - Set the register index in ORG.Set correctly when a set range in a set literal uses variable bounds
-2020-08-02 ORG - Allow index ranges incorporating a variable expression in ORG.Index
+2020-08-02 ORG, System - Allow index ranges incorporating a variable expression in ORG.Index, add System.Startup batch facility
