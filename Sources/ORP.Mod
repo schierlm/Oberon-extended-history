@@ -96,19 +96,6 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     RETURN (t0 = t1) OR (t1 # NIL) & IsExtension(t0, t1.base)
   END IsExtension;
 
-  PROCEDURE CheckType(typ: ORB.Type; expo: BOOLEAN);
-    VAR fld: ORB.Object;
-  BEGIN
-    IF typ.form = ORB.Array THEN CheckType(typ.base, expo)
-    ELSIF typ.form = ORB.Record THEN
-      IF typ.ref > 0 THEN typ.ref := 0;
-        IF ~expo THEN ORS.Mark("must be exported") END
-      END ;
-      fld := typ.dsc;
-      WHILE fld # NIL DO CheckType(fld.type, expo); fld := fld.next END
-    END
-  END CheckType;
-
   PROCEDURE CheckReceiver(proc: ORB.Object; deref: BOOLEAN);
   BEGIN
     IF ~deref & (proc.type.dsc.class # ORB.Par) THEN ORS.Mark("incompatible receiver") END
@@ -745,7 +732,8 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     VAR obj, obj0, new, bot, base: ORB.Object;
       typ, tp: ORB.Type;
       offset, off, n: LONGINT;
-  BEGIN NEW(typ); typ.form := ORB.NoTyp; typ.base := NIL; typ.mno := -level; typ.nofpar := 0; typ.len := 0; offset := 0; bot := NIL;
+  BEGIN NEW(typ); typ.form := ORB.NoTyp; typ.base := NIL; typ.mno := -level; typ.nofpar := 0; typ.len := 0; typ.ref := 0;
+    offset := 0; bot := NIL;
     IF sym = ORS.lparen THEN
       ORS.Get(sym); (*record extension*)
       IF level # 0 THEN ORS.Mark("extension of local types not implemented") END ;
@@ -771,6 +759,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
         IF obj0 # NIL THEN ORS.Mark("mult def") END ;
         NEW(new); ORS.CopyId(new.name); new.class := ORB.Fld; new.next := obj; obj := new; INC(n);
         ORS.Get(sym); CheckExport(new.expo);
+        IF new.expo THEN INC(typ.ref) END ;
         IF (sym # ORS.comma) & (sym # ORS.colon) THEN ORS.Mark("comma expected")
         ELSIF sym = ORS.comma THEN ORS.Get(sym)
         END
@@ -896,6 +885,19 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     ELSE ORS.Mark("illegal type")
     END
   END Type0;
+
+  PROCEDURE CheckType(typ: ORB.Type; expo: BOOLEAN);
+    VAR fld: ORB.Object;
+  BEGIN
+    IF typ.form = ORB.Array THEN CheckType(typ.base, expo)
+    ELSIF typ.form = ORB.Record THEN
+      IF typ.ref > 0 THEN typ.ref := 0;
+        IF ~expo THEN ORS.Mark("must be exported") END
+      END ;
+      fld := typ.dsc;
+      WHILE fld # NIL DO CheckType(fld.type, expo); fld := fld.next END
+    END
+  END CheckType;
 
   PROCEDURE Declarations(VAR varsize: LONGINT);
     VAR obj, first: ORB.Object;
