@@ -1,4 +1,4 @@
-MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 / AP 6.6.20 Extended Oberon*)
+MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 / AP 3.8.20 Extended Oberon*)
   IMPORT Texts, Oberon, ORS, ORB, ORG;
   (*Author: Niklaus Wirth, 2014. Oberon-2 extensions by Andreas Pirklbauer, 2020.
     Parser of Oberon-RISC compiler. Uses Scanner ORS to obtain symbols (tokens),
@@ -95,6 +95,19 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
   BEGIN (*t1 is an extension of t0*)
     RETURN (t0 = t1) OR (t1 # NIL) & IsExtension(t0, t1.base)
   END IsExtension;
+
+  PROCEDURE CheckType(typ: ORB.Type; expo: BOOLEAN);
+    VAR fld: ORB.Object;
+  BEGIN
+    IF typ.form = ORB.Array THEN CheckType(typ.base, expo)
+    ELSIF typ.form = ORB.Record THEN
+      IF typ.ref > 0 THEN typ.ref := 0;
+        IF ~expo THEN ORS.Mark("must be exported") END
+      END ;
+      fld := typ.dsc;
+      WHILE fld # NIL DO CheckType(fld.type, expo); fld := fld.next END
+    END
+  END CheckType;
 
   PROCEDURE CheckReceiver(proc: ORB.Object; deref: BOOLEAN);
   BEGIN
@@ -913,7 +926,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
       WHILE sym = ORS.ident DO
         ORS.CopyId(id); ORS.Get(sym); CheckExport(expo);
         IF sym = ORS.eql THEN ORS.Get(sym) ELSE ORS.Mark("=?") END ;
-        Type(tp);
+        Type(tp); CheckType(tp, expo);
         ORB.NewObj(obj, id, ORB.Typ); obj.type := tp; obj.expo := expo; obj.lev := level;
         IF tp.typobj = NIL THEN tp.typobj := obj END ;
         IF expo & (obj.type.form = ORB.Record) THEN obj.exno := exno; INC(exno) ELSE obj.exno := 0 END ;
@@ -934,7 +947,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
         IF (tp.form = ORB.Array) & (tp.len < 0) THEN ORS.Mark("open array not allowed") END ;
         obj := first;
         WHILE obj # NIL DO
-          obj.type := tp; obj.lev := level;
+          obj.type := tp; obj.lev := level; CheckType(tp, obj.expo);
           IF tp.size > 1 THEN varsize := (varsize + 3) DIV 4 * 4 (*align*) END ;
           obj.val := varsize; varsize := varsize + obj.type.size;
           IF obj.expo THEN obj.exno := exno; INC(exno) END ;
@@ -1146,7 +1159,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     Oberon.Collect(0); Oberon.Return(res)
   END Compile;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Compiler  8.3.2020 / AP 6.6.20");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Compiler  8.3.2020 / AP 3.8.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
   NEW(dummy); dummy.class := ORB.Var; dummy.type := ORB.intType;
   expression := expression0; Type := Type0; FormalType := FormalType0
