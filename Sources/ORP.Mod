@@ -947,15 +947,15 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
       WHILE sym = ORS.ident DO
         IdentList(ORB.Var, first); Type(tp);
         IF (tp.form = ORB.Array) & (tp.len < 0) THEN ORS.Mark("open array not allowed") END ;
-        obj := first;
+        obj := first; expo := TRUE;
         WHILE obj # NIL DO
-          obj.type := tp; obj.lev := level; CheckType(tp, obj.expo);
+          obj.type := tp; obj.lev := level;
           IF tp.size > 1 THEN varsize := (varsize + 3) DIV 4 * 4 (*align*) END ;
           obj.val := varsize; varsize := varsize + obj.type.size;
-          IF obj.expo THEN obj.exno := exno; INC(exno) END ;
+          IF obj.expo THEN obj.exno := exno; INC(exno) ELSE expo := FALSE END ;
           obj := obj.next
         END ;
-        Check(ORS.semicolon, "; missing")
+        CheckType(tp, expo); Check(ORS.semicolon, "; missing")
       END
     END ;
     varsize := (varsize + 3) DIV 4 * 4;
