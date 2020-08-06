@@ -17,8 +17,6 @@ Features
 
 The file [**S3RISCinstall.tar.gz**](Documentation/S3RISCinstall.tar.gz) always reflects the *latest* version of Extended Oberon, as described in the file [**EOS_news.txt**](EOS_news.txt).
 
-There is also a version of the Revised Oberon-2 compiler for the RISC-V processor, but it is currently not public.
-
 ------------------------------------------------------
 
 # Instructions for converting an existing Project Oberon 2013 system to Extended Oberon
