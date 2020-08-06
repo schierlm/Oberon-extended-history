@@ -1,4 +1,4 @@
-MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 / AP 3.8.20 Extended Oberon*)
+MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 / AP 6.8.20 Extended Oberon*)
   IMPORT Texts, Oberon, ORS, ORB, ORG;
   (*Author: Niklaus Wirth, 2014. Oberon-2 extensions by Andreas Pirklbauer, 2020.
     Parser of Oberon-RISC compiler. Uses Scanner ORS to obtain symbols (tokens),
@@ -887,13 +887,12 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
   PROCEDURE CheckType(typ: ORB.Type; expo: BOOLEAN);
     VAR fld, bot: ORB.Object;
   BEGIN
-    IF (typ.mno <= 0) & (typ.typobj = NIL) THEN  (*not imported anonymous type*)
+    IF (typ.mno <= 0) & (typ.typobj = NIL) THEN  (*not imported, anonymous*)
       IF typ.form = ORB.Array THEN CheckType(typ.base, expo)
-      ELSIF typ.form = ORB.Record THEN
-        fld := typ.dsc;
+      ELSIF typ.form = ORB.Record THEN fld := typ.dsc;
         IF typ.base # NIL THEN bot := typ.base.dsc ELSE bot := NIL END ;
         WHILE fld # bot DO
-          IF fld.expo & ~expo THEN ORS.Mark(" must be exported") END ;
+          IF fld.expo & ~expo THEN ORS.Mark("invalid field export") END ;
           CheckType(fld.type, expo & fld.expo); fld := fld.next
         END
       END
@@ -1162,7 +1161,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     Oberon.Collect(0); Oberon.Return(res)
   END Compile;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Compiler  8.3.2020 / AP 3.8.20");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Compiler  8.3.2020 / AP 6.8.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
   NEW(dummy); dummy.class := ORB.Var; dummy.type := ORB.intType;
   expression := expression0; Type := Type0; FormalType := FormalType0
