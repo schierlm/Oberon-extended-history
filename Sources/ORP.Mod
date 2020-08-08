@@ -692,20 +692,20 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
 
   (* Types and declarations *)
 
-  PROCEDURE IdentList(class: INTEGER; VAR first: ORB.Object; VAR expo: BOOLEAN);
+  PROCEDURE IdentList(class: INTEGER; VAR first: ORB.Object);
     VAR obj: ORB.Object;
   BEGIN
     IF sym = ORS.ident THEN
-      ORB.NewObj(first, ORS.id, class); ORS.Get(sym); CheckExport(first.expo); expo := first.expo;
+      ORB.NewObj(first, ORS.id, class); ORS.Get(sym); CheckExport(first.expo);
       WHILE sym = ORS.comma DO
         ORS.Get(sym);
         IF sym = ORS.ident THEN
-          ORB.NewObj(obj, ORS.id, class); ORS.Get(sym); CheckExport(obj.expo); expo := expo & obj.expo
+          ORB.NewObj(obj, ORS.id, class); ORS.Get(sym); CheckExport(obj.expo);
         ELSE ORS.Mark("ident?")
         END
       END ;
       IF sym = ORS.colon THEN ORS.Get(sym) ELSE ORS.Mark(":?") END
-    ELSE first := NIL; expo := FALSE
+    ELSE first := NIL
     END
   END IdentList;
   
@@ -780,7 +780,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
       parsize: LONGINT; cl: INTEGER; rdo: BOOLEAN;
   BEGIN
     IF sym = ORS.var THEN ORS.Get(sym); cl := ORB.Par ELSE cl := ORB.Var END ;
-    IdentList(cl, first, rdo); FormalType(tp, 0); rdo := FALSE;
+    IdentList(cl, first); FormalType(tp, 0); rdo := FALSE;
     IF (cl = ORB.Var) & (tp.form >= ORB.Array) THEN cl := ORB.Par; rdo := TRUE END ;
     IF (tp.form = ORB.Array) & (tp.len < 0) OR (tp.form = ORB.Record) THEN
       parsize := 2*ORG.WordSize  (*open array or record, needs second word for length or type tag*)
@@ -932,7 +932,9 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     IF sym = ORS.var THEN
       ORS.Get(sym);
       WHILE sym = ORS.ident DO
-        IdentList(ORB.Var, first, expo); Type(tp, expo);
+        IdentList(ORB.Var, first); obj := first; expo := TRUE;
+        WHILE (obj # NIL) & expo DO expo := obj.expo; obj := obj.next END ;
+        Type(tp, expo);
         IF (tp.form = ORB.Array) & (tp.len < 0) THEN ORS.Mark("open array not allowed") END ;
         obj := first;
         WHILE obj # NIL DO
