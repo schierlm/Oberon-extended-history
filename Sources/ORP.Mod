@@ -699,8 +699,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
       ORB.NewObj(first, ORS.id, class); ORS.Get(sym); CheckExport(first.expo);
       WHILE sym = ORS.comma DO
         ORS.Get(sym);
-        IF sym = ORS.ident THEN
-          ORB.NewObj(obj, ORS.id, class); ORS.Get(sym); CheckExport(obj.expo);
+        IF sym = ORS.ident THEN ORB.NewObj(obj, ORS.id, class); ORS.Get(sym); CheckExport(obj.expo)
         ELSE ORS.Mark("ident?")
         END
       END ;
