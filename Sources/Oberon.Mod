@@ -1,4 +1,4 @@
-MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 2.8.20 Extended Oberon*)
+MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 16.8.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files, Modules, Input, Display, Viewers, Fonts, Texts;
 
   CONST (*message ids*)
@@ -361,9 +361,21 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
     S.nextCh := ch; len := i
   END Skip;
 
+  PROCEDURE Scan(VAR S: Texts.Scanner);
+    VAR ch: CHAR; i: INTEGER;
+  BEGIN ch := S.nextCh; i := 0;
+    IF ("A" <= ch) & (ch <= "Z") OR ("a" <= ch) & (ch <= "z") OR (ch = "*") OR ("0" <= ch) & (ch <= "9") THEN (*command*)
+      REPEAT S.s[i] := ch; INC(i); Texts.Read(S, ch)
+      UNTIL ((ch < "0") & (ch # ".") & (ch # "*") OR ("9" < ch) & (ch < "A") OR ("Z" < ch) & (ch < "a") OR ("z" < ch)) OR (i = 31);
+      S.s[i] := 0X; S.len := i; S.class := Texts.Name
+    ELSE S.class := Texts.Inval
+    END ;
+    S.nextCh := ch
+  END Scan;
+
   PROCEDURE Call*(F: Display.Frame; T: Texts.Text; pos: LONGINT; new: BOOLEAN);
     VAR S: Texts.Scanner; res, len: INTEGER;
-  BEGIN Texts.OpenScanner(S, T, pos); Skip(S, len); Texts.Scan(S);
+  BEGIN Texts.OpenScanner(S, T, pos); Skip(S, len); Scan(S);
     IF (S.class = Texts.Name) & (S.line = 0) THEN
       SetPar(F, T, pos + len + S.len, 0); Modules.Call(S.s, res);
       IF (res > Modules.noerr) & (res < Modules.clients) & (Log # NIL) THEN Texts.WriteString(W, "Call error: ");
@@ -387,8 +399,8 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
     VAR S: Texts.Scanner; len: LONGINT; continue: BOOLEAN; 
   BEGIN continue := pos >= 0;
     WHILE continue DO
-      Texts.OpenScanner(S, T, pos); Skip(S, len); Texts.Scan(S); continue := FALSE;
-      IF S.class = Texts.Name THEN
+      Texts.OpenScanner(S, T, pos); Skip(S, len); Scan(S); continue := FALSE;
+      IF S.class = Texts.Name THEN S.line := 0;
         Call(F, T, pos + len, FALSE);
         IF Par.res = 0 THEN
           REPEAT Texts.Scan(S) UNTIL S.eot OR (S.class = Texts.Char) & (S.c = "~");

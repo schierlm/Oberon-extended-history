@@ -1,8 +1,8 @@
-MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 6.8.20 Extended Oberon*)
+MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 16.8.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, FileDir, Files, Modules,
     Input, Display, Viewers, Fonts, Texts, Oberon, MenuViewers, TextFrames;
 
-  CONST Version* = "Extended Oberon System  AP 6.8.20";
+  CONST Version* = "Extended Oberon System  AP 16.8.20";
     StandardMenu = "System.Close System.Copy System.Grow Edit.Search Edit.Store | System.Expand System.Spread System.Clone";
     LogMenu = "Edit.Locate Edit.Search System.Copy System.Grow System.Clear | System.Expand System.Spread System.Clone";
     SystemLog = "System.Log"; SystemTool = "System.Tool"; SystemBatch = "System.Batch";
@@ -450,7 +450,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 6.8.20 Extended Ob
       IF Modules.res = Modules.noref THEN Texts.WriteString(W, " unloading"); EndLine
       ELSE
         IF hide & (Modules.res > Modules.clients) THEN Texts.WriteString(W, " removing from module list")
-        ELSE Texts.WriteString(W, " unloading failed");
+        ELSE Texts.WriteString(W, " unloading failed, try /f option");
           IF Modules.res = Modules.clients THEN M := NIL; Modules.FindClients(WriteClient, res) END
         END ;
         EndLine; WriteReferences
