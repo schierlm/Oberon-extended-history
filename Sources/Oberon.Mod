@@ -363,14 +363,13 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
 
   PROCEDURE Scan(VAR S: Texts.Scanner);
     VAR ch: CHAR; i: INTEGER;
-  BEGIN ch := S.nextCh; i := 0;
-    IF ("A" <= ch) & (ch <= "Z") OR ("a" <= ch) & (ch <= "z") OR (ch = "*") OR ("0" <= ch) & (ch <= "9") THEN (*command*)
+  BEGIN ch := S.nextCh;
+    IF ("A" <= ch) & (ch <= "Z") OR ("a" <= ch) & (ch <= "z") OR (ch = "*") OR ("0" <= ch) & (ch <= "9") THEN i := 0;
       REPEAT S.s[i] := ch; INC(i); Texts.Read(S, ch)
       UNTIL ((ch < "0") & (ch # ".") & (ch # "*") OR ("9" < ch) & (ch < "A") OR ("Z" < ch) & (ch < "a") OR ("z" < ch)) OR (i = 31);
-      S.s[i] := 0X; S.len := i; S.class := Texts.Name
+      S.s[i] := 0X; S.len := i; S.class := Texts.Name; S.nextCh := ch
     ELSE S.class := Texts.Inval
-    END ;
-    S.nextCh := ch
+    END
   END Scan;
 
   PROCEDURE Call*(F: Display.Frame; T: Texts.Text; pos: LONGINT; new: BOOLEAN);

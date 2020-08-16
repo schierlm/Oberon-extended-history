@@ -276,7 +276,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 17.7.20 
         END
       ELSE res := badcmd
       END
-    ELSIF (ch >= "A") & (ch <= "Z") OR (ch >= "a") & (ch <= "z") OR (ch = "*") THEN (*module name*)
+    ELSIF ("A" <= ch) & (ch <= "Z") OR ("a" <= ch) & (ch <= "z") OR (ch = "*") THEN (*module name*)
       REPEAT Mname[i] := ch; INC(i); ch := name[i] UNTIL (ch = ".") OR (ch = 0X);
       IF ch = "." THEN Mname[i] := 0X; INC(i); Load(Mname, mod) ELSE res := badcmd END
     ELSE res := badcmd
