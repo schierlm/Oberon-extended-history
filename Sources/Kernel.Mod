@@ -1,4 +1,4 @@
-MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 15.5.20 Extended Oberon*)
+MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.20 Extended Oberon*)
   IMPORT SYSTEM;
   CONST TrapAdr* = 04H;
     timer = -64;
@@ -105,7 +105,7 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 15.5.20 Extended Obe
               IF offadr = 0 THEN offadr := tag + 16 ELSE INC(offadr, 4) END ;
               SYSTEM.PUT(p-4, offadr); SYSTEM.GET(offadr, offset)
             ELSIF blktyp = 1 THEN (*array of record*)
-              IF offadr = 0 THEN offadr := tag + 15; pos := p + 16; SYSTEM.PUT(p+12, pos) ELSE INC(offadr); SYSTEM.GET(p+12, pos) END ;
+              IF offadr = 0 THEN offadr := tag + 15; pos := p + 16; SYSTEM.PUT(p+12, pos) ELSE INC(offadr, 4); SYSTEM.GET(p+12, pos) END ;
               SYSTEM.GET(offadr, offset);
               IF offset = -1 THEN SYSTEM.GET(p, len); SYSTEM.GET(p+4, elemsize); INC(pos, elemsize);
                 IF pos < p + 16 + len*elemsize THEN offadr := tag + 15; SYSTEM.GET(offadr, offset); SYSTEM.PUT(p+12, pos) END
