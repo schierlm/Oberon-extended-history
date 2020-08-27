@@ -12,6 +12,7 @@ Features
 * Multiple logical displays
 * Improved decoder tools
 * Import any number of modules
+* Simple batch execution facility
 
 **REVISION:** 1.9.2020
 
