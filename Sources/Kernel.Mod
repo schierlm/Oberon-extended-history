@@ -71,7 +71,7 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.20 Extended Ober
       IF size = 32 THEN GetBlock32(p)
       ELSIF size = 64 THEN GetBlock64(p)
       ELSIF size = 128 THEN GetBlock128(p)
-      ELSE GetBlock(p, (size+255) DIV 256 * 256)
+      ELSE GetBlock(p, size)
       END ;
       IF p = 0 THEN ptr := 0
       ELSE ptr := p+8; SYSTEM.PUT(p, tag); lim := p + size; INC(p, 4); INC(allocated, size);
@@ -142,9 +142,10 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.20 Extended Ober
     VAR p, q, mark, tag, size: LONGINT;
   BEGIN p := heapOrg;
     REPEAT SYSTEM.GET(p+4, mark); q := p;
-      WHILE mark = 0 DO SYSTEM.GET(p, tag);
+      WHILE (p < heapLim) & (mark = 0) DO SYSTEM.GET(p, tag);
         IF tag MOD 4 = 0 THEN (*record*) SYSTEM.GET(tag, size) ELSE (*array*) SYSTEM.GET(p+16, size) END ;
-        INC(p, size); SYSTEM.GET(p+4, mark)
+        INC(p, size);
+        IF p < heapLim THEN SYSTEM.GET(p+4, mark) END
       END ;
       size := p - q; DEC(allocated, size);  (*size of free block*)
       IF size > 0 THEN
@@ -161,10 +162,12 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.20 Extended Ober
           SYSTEM.PUT(q, size); SYSTEM.PUT(q+4, -1); SYSTEM.PUT(q+8, list0); list0 := q; INC(q, size)
         END
       END ;
-      IF mark > 0 THEN SYSTEM.GET(p, tag);
-        IF tag MOD 4 = 0 THEN (*record*) SYSTEM.GET(tag, size) ELSE (*array*) SYSTEM.GET(p+16, size) END ;
-        SYSTEM.PUT(p+4, 0); INC(p, size);
-      ELSE (*free*) SYSTEM.GET(p, size); INC(p, size)
+      IF p < heapLim THEN (*mark # 0*)
+        IF mark > 0 THEN SYSTEM.GET(p, tag);
+          IF tag MOD 4 = 0 THEN (*record*) SYSTEM.GET(tag, size) ELSE (*array*) SYSTEM.GET(p+16, size) END ;
+          SYSTEM.PUT(p+4, 0); INC(p, size);
+        ELSE (*free*) SYSTEM.GET(p, size); INC(p, size)
+        END
       END
     UNTIL p >= heapLim
   END Collect;
@@ -264,9 +267,17 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.20 Extended Ober
   PROCEDURE Init*;
   BEGIN Install(SYSTEM.ADR(Trap), TrapAdr);  (*install temporary trap*)
     SYSTEM.GET(12, MemLim); SYSTEM.GET(24, heapOrg);
-    stackOrg := heapOrg; stackSize := 8000H; heapLim := MemLim;
-    list1 := 0; list2 := 0; list3 := 0; list0 := heapOrg;
-    SYSTEM.PUT(list0, heapLim - heapOrg); SYSTEM.PUT(list0+4, -1); SYSTEM.PUT(list0+8, 0);
+    stackOrg := heapOrg; stackSize := 8000H; heapLim := MemLim - (MemLim - heapOrg) MOD 256;
+    list0 := heapOrg; SYSTEM.PUT(list0, heapLim - heapOrg); SYSTEM.PUT(list0+4, -1); SYSTEM.PUT(list0+8, 0);
+    IF MemLim - heapLim < 128 THEN list1 := 0
+    ELSE list1 := heapLim; INC(heapLim, 128); SYSTEM.PUT(list1, 128); SYSTEM.PUT(list1+4, -1); SYSTEM.PUT(list1+8, 0)
+    END ;
+    IF MemLim - heapLim < 64 THEN list2 := 0
+    ELSE list2 := heapLim; INC(heapLim, 64); SYSTEM.PUT(list2, 64); SYSTEM.PUT(list2+4, -1); SYSTEM.PUT(list2+8, 0)
+    END ;
+    IF MemLim - heapLim < 32 THEN list3 := 0
+    ELSE list3 := heapLim; INC(heapLim, 32); SYSTEM.PUT(list3, 32); SYSTEM.PUT(list3+4, -1); SYSTEM.PUT(list3+8, 0)
+    END ;
     allocated := 0; clock := 0
   END Init;
 

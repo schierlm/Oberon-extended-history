@@ -23,4 +23,5 @@
 2020-08-01 ORG - Set the register index in ORG.Set correctly when a set range in a set literal uses variable bounds
 2020-08-02 ORG, System - Allow index ranges incorporating a variable expression in ORG.Index, add System.Batch facility
 2020-08-06 ORP - Report an error in ORP.RecordType if a field of a private record is exported
-2020-09-01 Kernel - Use the correct increment in Kernel.Mark when traversing the pointer offsets for arrays of records
+2020-08-27 Kernel - Use the correct increment in Kernel.Mark when traversing the pointer offsets for arrays of records
+2020-09-01 Kernel - New relies on correct block size, heap no longer has hole at the end, Scan no longer accesses memory >heapLim
