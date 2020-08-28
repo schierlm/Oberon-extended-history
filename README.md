@@ -1,4 +1,4 @@
-# The Extended Oberon operating system and the Oberon-2 (2020 Edition) programming language
+# The Extended Oberon operating system and the programming language Oberon-2 (2020 Edition)
 The Extended Oberon System (EOS) is a revision of the *Project Oberon 2013* operating system and its compiler.
 
 Note: In this repository, the term "Project Oberon 2013" refers to a re-implementation of the original "Project Oberon" on an FPGA development board around 2013, as published at www.projectoberon.com.
