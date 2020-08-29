@@ -24,4 +24,4 @@
 2020-08-02 ORG, System - Allow index ranges incorporating a variable expression in ORG.Index, add System.Batch facility
 2020-08-06 ORP - Report an error in ORP.RecordType if a field of a private record is exported
 2020-08-27 Kernel - Use correct increment in Kernel.Mark when traversing pointer offsets for arrays of records
-2020-08-30 Kernel - Kernel.New relies on correct rounding for size > 128, Kernel.Collect no longer accesses memory > heapLim
+2020-08-30 Kernel - Rely on correct rounding for size > 128 in Kernel.New, No longer access memory > heapLim in Kernel.Collect
