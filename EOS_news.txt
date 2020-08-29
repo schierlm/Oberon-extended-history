@@ -22,6 +22,6 @@
 2020-07-17 ORL - Improve code in ORL.RelocateLoaded to mark an instruction as fixed up by setting the B bit
 2020-08-01 ORG - Set the register index in ORG.Set correctly when a set range in a set literal uses variable bounds
 2020-08-02 ORG, System - Allow index ranges incorporating a variable expression in ORG.Index, add System.Batch facility
-2020-08-06 ORP - Report an error in ORP.RecordType if a field of a private record is exported
+2020-08-06 ORP - Report a cpmpile-time error in ORP.RecordType if a field of a private record is exported
 2020-08-27 Kernel - Use correct increment in Kernel.Mark when traversing pointer offsets for arrays of records
 2020-08-30 Kernel - Rely on correct rounding for size > 128 in Kernel.New, don't access memory locations > heapLim in Kernel.Collect
