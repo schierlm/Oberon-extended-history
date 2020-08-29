@@ -142,10 +142,10 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.20 Extended Ober
     VAR p, q, mark, tag, size: LONGINT;
   BEGIN p := heapOrg;
     REPEAT SYSTEM.GET(p+4, mark); q := p;
-      WHILE (p < heapLim) & (mark = 0) DO SYSTEM.GET(p, tag);
+      WHILE mark = 0 DO SYSTEM.GET(p, tag);
         IF tag MOD 4 = 0 THEN (*record*) SYSTEM.GET(tag, size) ELSE (*array*) SYSTEM.GET(p+16, size) END ;
         INC(p, size);
-        IF p < heapLim THEN SYSTEM.GET(p+4, mark) END
+        IF p < heapLim THEN SYSTEM.GET(p+4, mark) ELSE mark := -1 END
       END ;
       size := p - q; DEC(allocated, size);  (*size of free block*)
       IF size > 0 THEN
@@ -162,12 +162,10 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.20 Extended Ober
           SYSTEM.PUT(q, size); SYSTEM.PUT(q+4, -1); SYSTEM.PUT(q+8, list0); list0 := q; INC(q, size)
         END
       END ;
-      IF p < heapLim THEN (*mark # 0*)
-        IF mark > 0 THEN SYSTEM.GET(p, tag);
-          IF tag MOD 4 = 0 THEN (*record*) SYSTEM.GET(tag, size) ELSE (*array*) SYSTEM.GET(p+16, size) END ;
-          SYSTEM.PUT(p+4, 0); INC(p, size);
-        ELSE (*free*) SYSTEM.GET(p, size); INC(p, size)
-        END
+      IF mark > 0 THEN SYSTEM.GET(p, tag);
+        IF tag MOD 4 = 0 THEN (*record*) SYSTEM.GET(tag, size) ELSE (*array*) SYSTEM.GET(p+16, size) END ;
+        SYSTEM.PUT(p+4, 0); INC(p, size)
+      ELSIF p < heapLim THEN (*free*) SYSTEM.GET(p, size); INC(p, size)
       END
     UNTIL p >= heapLim
   END Collect;

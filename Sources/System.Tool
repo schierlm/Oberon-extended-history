@@ -12,7 +12,7 @@ System.Directory ^
 
 ORP.Compile @  ORP.Compile @/s  ORP.Compile ^/s ORP.Compile ~
 System.Free ~  # free modules as a group, /f hides modules if refs exist
-System.Open Draw.Tool
+System.Open Draw.Tool      System.Batch ~
 System.CopyFiles ~
 System.RenameFiles ~         Stars.Open Stars.Run System.Free Stars~
 System.DeleteFiles ~           14.ShowModules  *Stars.Stop
