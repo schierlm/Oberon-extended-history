@@ -264,9 +264,17 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.20 Extended Ober
   PROCEDURE Init*;
   BEGIN Install(SYSTEM.ADR(Trap), TrapAdr);  (*install temporary trap*)
     SYSTEM.GET(12, MemLim); SYSTEM.GET(24, heapOrg);
-    stackOrg := heapOrg; stackSize := 8000H; heapLim := MemLim;
-    list1 := 0; list2 := 0; list3 := 0; list0 := heapOrg;
-    SYSTEM.PUT(list0, heapLim - heapOrg); SYSTEM.PUT(list0+4, -1); SYSTEM.PUT(list0+8, 0);
+    stackOrg := heapOrg; stackSize := 8000H; heapLim := MemLim DIV 256 * 256;
+    list0 := heapOrg; SYSTEM.PUT(list0, heapLim - heapOrg); SYSTEM.PUT(list0+4, -1); SYSTEM.PUT(list0+8, 0);
+    IF MemLim - heapLim < 128 THEN list1 := 0
+    ELSE list1 := heapLim; INC(heapLim, 128); SYSTEM.PUT(list1, 128); SYSTEM.PUT(list1+4, -1); SYSTEM.PUT(list1+8, 0)
+    END ;
+    IF MemLim - heapLim < 64 THEN list2 := 0
+    ELSE list2 := heapLim; INC(heapLim, 64); SYSTEM.PUT(list2, 64); SYSTEM.PUT(list2+4, -1); SYSTEM.PUT(list2+8, 0)
+    END ;
+    IF MemLim - heapLim < 32 THEN list3 := 0
+    ELSE list3 := heapLim; INC(heapLim, 32); SYSTEM.PUT(list3, 32); SYSTEM.PUT(list3+4, -1); SYSTEM.PUT(list3+8, 0)
+    END ;
     allocated := 0; clock := 0
   END Init;
 
