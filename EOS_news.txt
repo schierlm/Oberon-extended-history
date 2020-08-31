@@ -25,5 +25,5 @@
 2020-08-06 ORP - Report a compile-time error in ORP.RecordType if a field of a private record is exported
 2020-08-27 Kernel - Use correct increment in Kernel.Mark when traversing pointer offsets for arrays of records
 2020-08-30 Kernel - Rely on correct rounding of size in Kernel.New, prevent accessing memory locations > heapLim in Kernel.Collect
-2020-08-31 Fonts - Considerably reduce the number of calls to module SYSTEM
+2020-08-31 Fonts - Replace all calls to SYSTEM.PUT and SYSTEM.GET with array operations, leaving only one call to SYSTEM.ADR
 
