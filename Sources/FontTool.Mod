@@ -60,7 +60,7 @@ MODULE FontTool; (*JG 18.11.90; PDR 8.6.12; NW 22.2.2020 / AP 1.9.20 Extended Ob
             RdInt16(R, box[j].w); RdInt16(R, box[j].h);
             NofBytes := NofBytes + 5 + (box[j].w + 7) DIV 8 * box[j].h;
             INC(j)
-          END;
+          END ;
           NofBytes := NofBytes + (-NofBytes) MOD 4;
           Texts.WriteInt(W, NofRuns, 4); Texts.WriteInt(W, NofBoxes, 4); Texts.WriteInt(W, NofBytes, 6); Texts.WriteLn(W);
           raster[0] := 0X; raster[1] := 0X; raster[2] := 0X; raster[3] := 0X; raster[4] := 0X;
