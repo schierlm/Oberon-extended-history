@@ -1,6 +1,5 @@
 MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 1.9.20 Extended Oberon*)
   IMPORT SYSTEM, Files;
-
   CONST FontFileId = 0DBH;
 
   TYPE Raster = POINTER TO RasterDesc;
@@ -47,7 +46,7 @@ MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 1.9.20 Extended Obero
     VAR F: Font;
       f: Files.File; R: Files.Rider;
       NofRuns, NofBoxes, height, minX, maxX, minY, maxY, b: BYTE;
-      NofBytes, i, j, k, n, a, a0: INTEGER;
+      NofBytes, j, k, m, n, a, a0: INTEGER;
       run: ARRAY 16 OF RunRec;
       box: ARRAY 512 OF BoxRec;
 
@@ -68,17 +67,17 @@ MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 1.9.20 Extended Obero
           Files.ReadByte(R, b); (*variant*)
           RdInt16(R, height); RdInt16(R, minX); RdInt16(R, maxX); RdInt16(R, minY); RdInt16(R, maxY); RdInt16(R, NofRuns);
           NofBoxes := 0; k := 0;
-          WHILE k # NofRuns DO
+          WHILE k # NofRuns DO  (*read runs*)
             RdInt16(R, run[k].beg); RdInt16(R, run[k].end);
             NofBoxes := NofBoxes + run[k].end - run[k].beg;
             INC(k)
           END ;
-          NofBytes := 512 + 5; i := 0;
-          WHILE i # NofBoxes DO
-            RdInt16(R, box[i].dx); RdInt16(R, box[i].x); RdInt16(R, box[i].y);
-            RdInt16(R, box[i].w); RdInt16(R, box[i].h);
-            NofBytes := NofBytes + 5 + (box[i].w + 7) DIV 8 * box[i].h;
-            INC(i)
+          NofBytes := 512 + 5; j := 0;
+          WHILE j # NofBoxes DO  (*read boxes*)
+            RdInt16(R, box[j].dx); RdInt16(R, box[j].x); RdInt16(R, box[j].y);
+            RdInt16(R, box[j].w); RdInt16(R, box[j].h);
+            NofBytes := NofBytes + 5 + (box[j].w + 7) DIV 8 * box[j].h;
+            INC(j)
           END ;
           NEW(F); NEW(F.raster, NofBytes);
           F.name := name;
@@ -87,19 +86,19 @@ MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 1.9.20 Extended Obero
           F.base := SYSTEM.ADR(F.raster^); a0 := 512;
           F.raster[a0] := 0; F.raster[a0+1] := 0; F.raster[a0+2] := 0; F.raster[a0+3] := 0; F.raster[a0+4] := 0;
           (*null pattern for characters not in a run*)
-          INC(a0, 3); a := a0+2; i := 0; j := 0; k := 0;
+          INC(a0, 3); a := a0+2; j := 0; k := 0; m := 0;
           WHILE k < NofRuns DO
-            WHILE (j < run[k].beg) & (j < 128) DO Put(F.raster, j*4, a0); INC(j) END ;
-            WHILE (j < run[k].end) & (j < 128) DO Put(F.raster, j*4, a+3);
-              F.raster[a] := box[i].dx; F.raster[a+1] := box[i].x; F.raster[a+2] := box[i].y;
-              F.raster[a+3] := box[i].w; F.raster[a+4] := box[i].h; INC(a, 5);
-              n := (box[i].w + 7) DIV 8 * box[i].h;
+            WHILE (m < run[k].beg) & (m < 128) DO Put(F.raster, m*4, a0); INC(m) END ;
+            WHILE (m < run[k].end) & (m < 128) DO Put(F.raster, m*4, a+3);
+              F.raster[a] := box[j].dx; F.raster[a+1] := box[j].x; F.raster[a+2] := box[j].y;
+              F.raster[a+3] := box[j].w; F.raster[a+4] := box[j].h; INC(a, 5);
+              n := (box[j].w + 7) DIV 8 * box[j].h;
               WHILE n # 0 DO DEC(n); Files.ReadByte(R, b); F.raster[a] := b; INC(a) END ;
-              INC(i); INC(j)
+              INC(j); INC(m)
             END ;
             INC(k)
           END ;
-          WHILE j < 128 DO Put(F.raster, j*4, a0); INC(j) END ;
+          WHILE m < 128 DO Put(F.raster, m*4, a0); INC(m) END ;
           F.next := root; root := F
         ELSE (*bad file id*) F := Default
         END
