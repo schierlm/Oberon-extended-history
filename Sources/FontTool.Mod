@@ -37,8 +37,8 @@ MODULE FontTool; (*JG 18.11.90; PDR 8.6.12; NW 22.2.2020 / AP 1.9.20 Extended Ob
       Texts.WriteString(W, S.s);
       Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); f := Files.Old(S.s);
       IF f # NIL THEN
-	Files.Set(R, f, 0); Files.Read(R, b);
-	IF b = FontFileId THEN
+        Files.Set(R, f, 0); Files.Read(R, b);
+        IF b = FontFileId THEN
           Files.Read(R, b); (*abstraction*)
           Files.Read(R, b); (*family*)
           Files.Read(R, b); (*variant*)
@@ -84,8 +84,8 @@ MODULE FontTool; (*JG 18.11.90; PDR 8.6.12; NW 22.2.2020 / AP 1.9.20 Extended Ob
             IF j # 0 THEN
               Texts.Write(W, CHR(i)); Texts.Write(W, " "); WriteHex(i);
               IF j >= 4400 THEN
-		Texts.WriteString(W, "??"); Texts.WriteInt(W, i, 15); Texts.WriteInt(W, j, 15);
-		Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
+                Texts.WriteString(W, "??"); Texts.WriteInt(W, i, 15); Texts.WriteInt(W, j, 15);
+                Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
               END ;
               Texts.WriteInt(W, ORD(raster[j]), 4); Texts.WriteInt(W, ORD(raster[j+1]), 4);
               Texts.WriteInt(W, LSL(ASR(ORD(raster[j+2]), 24), 24), 4);
