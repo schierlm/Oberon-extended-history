@@ -24,7 +24,7 @@ System.ShowClients ORS~  System.ShowGroupReferences Hilbert Viewers ~
 PCLink1.Run  PCLink1.Stop    Oberon0Tool.Run  Oberon0Tool.Stop  # run only of of these 2
 Hilbert.Draw  Sierpinski.Draw  Blink.Run  Stars.Open
 Tools.Inspect 0  Tools.Sector 1  Tools.ShowFile
-Tools.Recall  Tools.Clear
+Tools.Recall  Tools.Clear  FontTool.Show Oberon10.Scn.Fnt ~
 
 # ------------ building the system ----------------
 
