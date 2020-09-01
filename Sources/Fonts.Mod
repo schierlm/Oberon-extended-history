@@ -35,10 +35,9 @@ MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 1.9.20 Extended Obero
   END Get;
 
   PROCEDURE GetPat*(fnt: Font; ch: CHAR; VAR dx, x, y, w, h, patadr: INTEGER);
-    VAR pa: INTEGER; dxb, xb, yb, wb, hb: BYTE;
+    VAR pa: INTEGER; yb: BYTE;
   BEGIN Get(fnt.raster, (ORD(ch) MOD 80H)*4, pa); patadr := fnt.base + pa;
-    dxb := fnt.raster[pa-3]; xb := fnt.raster[pa-2]; yb := fnt.raster[pa-1]; wb := fnt.raster[pa]; hb := fnt.raster[pa+1];
-    dx := dxb; x := xb; y := yb; w := wb; h := hb;
+    dx := fnt.raster[pa-3]; x := fnt.raster[pa-2]; yb := fnt.raster[pa-1]; w := fnt.raster[pa]; h := fnt.raster[pa+1];
     IF yb < 128 THEN y := yb ELSE y := yb - 256 END
   END GetPat;
 
