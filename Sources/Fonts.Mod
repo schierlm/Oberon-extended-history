@@ -1,6 +1,6 @@
 MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 1.9.20 Extended Oberon*)
   IMPORT SYSTEM, Files;
-  CONST FontFileId = 0DBH;
+  CONST FontFileId = 0DBH; a0 = 515;
 
   TYPE Raster = POINTER TO RasterDesc;
     RasterDesc = ARRAY OF BYTE;
@@ -45,7 +45,7 @@ MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 1.9.20 Extended Obero
     VAR F: Font;
       f: Files.File; R: Files.Rider;
       NofRuns, NofBoxes, height, minX, maxX, minY, maxY, b: BYTE;
-      NofBytes, j, k, m, n, a, a0: INTEGER;
+      NofBytes, j, k, m, n, a: INTEGER;
       run: ARRAY 16 OF RunRec;
       box: ARRAY 512 OF BoxRec;
 
@@ -79,13 +79,12 @@ MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 1.9.20 Extended Obero
             INC(j)
           END ;
           NEW(F); NEW(F.raster, NofBytes);
-          F.name := name;
+          F.name := name; F.base := SYSTEM.ADR(F.raster^);
           F.height := height; F.minX := minX; F.maxX := maxX; F.maxY := maxY;
           IF minY >= 80H THEN F.minY := minY - 100H ELSE F.minY := minY END ;
-          F.base := SYSTEM.ADR(F.raster^); a0 := 512;
-          F.raster[a0] := 0; F.raster[a0+1] := 0; F.raster[a0+2] := 0; F.raster[a0+3] := 0; F.raster[a0+4] := 0;
+          F.raster[a0-3] := 0; F.raster[a0-2] := 0; F.raster[a0-1] := 0; F.raster[a0] := 0; F.raster[a0+1] := 0;
           (*null pattern for characters not in a run*)
-          INC(a0, 3); a := a0+2; j := 0; k := 0; m := 0;
+          a := a0+2; j := 0; k := 0; m := 0;
           WHILE k < NofRuns DO
             WHILE (m < run[k].beg) & (m < 128) DO Put(F.raster, m*4, a0); INC(m) END ;
             WHILE (m < run[k].end) & (m < 128) DO Put(F.raster, m*4, a+3);
