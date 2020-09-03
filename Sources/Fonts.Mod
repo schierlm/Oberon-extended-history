@@ -1,5 +1,5 @@
 MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 1.9.20 Extended Oberon*)
-  IMPORT SYSTEM, Files;
+  IMPORT Files;
   CONST FontFileId = 0DBH; A = 512;
 
   TYPE Raster = POINTER TO RasterDesc;
@@ -77,7 +77,7 @@ MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 1.9.20 Extended Obero
             INC(j)
           END ;
           NEW(F); NEW(F.raster, NofBytes);
-          F.name := name; F.base := SYSTEM.ADR(F.raster^);
+          F.name := name; F.base := ORD(F.raster);
           F.height := height; F.minX := minX; F.maxX := maxX; F.maxY := maxY;
           IF minY >= 80H THEN F.minY := minY - 100H ELSE F.minY := minY END ;
           F.raster[A] := 0; F.raster[A+1] := 0; F.raster[A+2] := 0; F.raster[A+3] := 0; F.raster[A+4] := 0;

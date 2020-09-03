@@ -1,4 +1,4 @@
-MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 1.8.20 Extended Oberon*)
+MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 1.9.20 Extended Oberon*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser ORP; result in array "code".
@@ -1052,7 +1052,9 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
 
   PROCEDURE Ord*(VAR x: Item);
   BEGIN
-    IF x.mode IN {ORB.Var, ORB.Par, RegI, Cond} THEN load(x) END
+    IF x.mode IN {ORB.Var, ORB.Par, RegI, Cond} THEN load(x);
+      IF (x.type.form = ORB.Pointer) & (x.type.base.form = ORB.Array) THEN Put1(Add, x.r, x.r, 16) END
+    END
   END Ord;
 
   PROCEDURE Len*(VAR x: Item);
