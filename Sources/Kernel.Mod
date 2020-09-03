@@ -35,9 +35,8 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.20 Extended Ober
     VAR q: LONGINT;
   BEGIN
     IF list1 # 0 THEN p := list1; SYSTEM.GET(list1+8, list1)
-    ELSE GetBlock(q, 256);
-      IF q # 0 THEN SYSTEM.PUT(q+128, 128); SYSTEM.PUT(q+132, -1); SYSTEM.PUT(q+136, list1); list1 := q + 128 END ;
-      p := q
+    ELSE GetBlock(q, 256); p := q;
+      IF q # 0 THEN SYSTEM.PUT(q+128, 128); SYSTEM.PUT(q+132, -1); SYSTEM.PUT(q+136, list1); list1 := q + 128 END
     END
   END GetBlock128;
 
@@ -45,9 +44,8 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.20 Extended Ober
     VAR q: LONGINT;
   BEGIN
     IF list2 # 0 THEN p := list2; SYSTEM.GET(list2+8, list2)
-    ELSE GetBlock128(q);
-      IF q # 0 THEN SYSTEM.PUT(q+64, 64); SYSTEM.PUT(q+68, -1); SYSTEM.PUT(q+72, list2); list2 := q + 64 END ;
-      p := q
+    ELSE GetBlock128(q); p := q;
+      IF q # 0 THEN SYSTEM.PUT(q+64, 64); SYSTEM.PUT(q+68, -1); SYSTEM.PUT(q+72, list2); list2 := q + 64 END
     END
   END GetBlock64;
 
@@ -55,9 +53,8 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.20 Extended Ober
     VAR q: LONGINT;
   BEGIN
     IF list3 # 0 THEN p := list3; SYSTEM.GET(list3+8, list3)
-    ELSE GetBlock64(q);
-      IF q # 0 THEN SYSTEM.PUT(q+32, 32); SYSTEM.PUT(q+36, -1); SYSTEM.PUT(q+40, list3); list3 := q + 32 END ;
-      p := q
+    ELSE GetBlock64(q); p := q;
+      IF q # 0 THEN SYSTEM.PUT(q+32, 32); SYSTEM.PUT(q+36, -1); SYSTEM.PUT(q+40, list3); list3 := q + 32 END
     END
   END GetBlock32;
 
