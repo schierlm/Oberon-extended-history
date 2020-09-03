@@ -88,7 +88,7 @@ MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 1.9.20 Extended Obero
             WHILE (m < run[k].end) & (m < 128) DO Put(F.raster, m*4, a+3);
               F.raster[a] := box[j].dx; F.raster[a+1] := box[j].x; F.raster[a+2] := box[j].y;
               F.raster[a+3] := box[j].w; F.raster[a+4] := box[j].h; INC(a, 5);
-              n := (box[j].w + 7) DIV 8 * box[j].h;
+              n := (box[j].w + 7) DIV 8 * box[j].h; (*pattern length*)
               WHILE n # 0 DO DEC(n); Files.ReadByte(R, b); F.raster[a] := b; INC(a) END ;
               INC(j); INC(m)
             END ;
