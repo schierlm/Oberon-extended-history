@@ -1,6 +1,6 @@
 MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 1.9.20 Extended Oberon*)
   IMPORT SYSTEM, Files;
-  CONST FontFileId = 0DBH; a0 = 512+3;
+  CONST FontFileId = 0DBH; A = 512;
 
   TYPE Raster = POINTER TO RasterDesc;
     RasterDesc = ARRAY OF BYTE;
@@ -22,16 +22,14 @@ MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 1.9.20 Extended Obero
   VAR Default*, root*: Font;
 
   PROCEDURE Put(r: Raster; i, x: INTEGER);
-  BEGIN (*put an 4 byte integer into a byte array, least significant byte first*)
-    r[i] := x MOD 100H;
+  BEGIN r[i] := x MOD 100H;
     r[i+1] := x DIV 100H MOD 100H;
     r[i+2] := x DIV 10000H MOD 100H;
     r[i+3] := x DIV 1000000H MOD 100H
   END Put;
 
   PROCEDURE Get(r: Raster; i: INTEGER; VAR x: INTEGER);
-  BEGIN (*get a 4 byte integer from a byte array*)
-    x := ((r[i+3] * 100H + r[i+2]) * 100H + r[i+1]) * 100H + r[i]
+  BEGIN x := ((r[i+3] * 100H + r[i+2]) * 100H + r[i+1]) * 100H + r[i]
   END Get;
 
   PROCEDURE GetPat*(fnt: Font; ch: CHAR; VAR dx, x, y, w, h, patadr: INTEGER);
@@ -82,11 +80,11 @@ MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 1.9.20 Extended Obero
           F.name := name; F.base := SYSTEM.ADR(F.raster^);
           F.height := height; F.minX := minX; F.maxX := maxX; F.maxY := maxY;
           IF minY >= 80H THEN F.minY := minY - 100H ELSE F.minY := minY END ;
-          F.raster[a0-3] := 0; F.raster[a0-2] := 0; F.raster[a0-1] := 0; F.raster[a0] := 0; F.raster[a0+1] := 0;
+          F.raster[A] := 0; F.raster[A+1] := 0; F.raster[A+2] := 0; F.raster[A+3] := 0; F.raster[A+4] := 0;
           (*null pattern for characters not in a run*)
-          a := a0+2; j := 0; k := 0; m := 0;
+          a := A+5; j := 0; k := 0; m := 0;
           WHILE k < NofRuns DO
-            WHILE (m < run[k].beg) & (m < 128) DO Put(F.raster, m*4, a0); INC(m) END ;
+            WHILE (m < run[k].beg) & (m < 128) DO Put(F.raster, m*4, A+3); INC(m) END ;
             WHILE (m < run[k].end) & (m < 128) DO Put(F.raster, m*4, a+3);
               F.raster[a] := box[j].dx; F.raster[a+1] := box[j].x; F.raster[a+2] := box[j].y;
               F.raster[a+3] := box[j].w; F.raster[a+4] := box[j].h; INC(a, 5);
@@ -96,7 +94,7 @@ MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 1.9.20 Extended Obero
             END ;
             INC(k)
           END ;
-          WHILE m < 128 DO Put(F.raster, m*4, a0); INC(m) END ;
+          WHILE m < 128 DO Put(F.raster, m*4, A+3); INC(m) END ;
           F.next := root; root := F
         ELSE (*bad file id*) F := Default
         END
