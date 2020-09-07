@@ -1,5 +1,5 @@
-MODULE FontTool; (*JG 18.11.90; PDR 8.6.12; NW 22.2.2020 / AP 1.9.20 Extended Oberon*)
-  IMPORT SYSTEM, Files, Input, Texts, Oberon;
+MODULE FontTool; (*JG 18.11.90; PDR 8.6.12; NW 22.2.2020 / AP 6.9.20 Extended Oberon*)
+  IMPORT Files, Input, Texts, Oberon;
   CONST FontFileId = 0DBX; TAB = Input.TAB;
 
   TYPE RunRec = RECORD beg, end: INTEGER END ;
@@ -102,7 +102,8 @@ MODULE FontTool; (*JG 18.11.90; PDR 8.6.12; NW 22.2.2020 / AP 1.9.20 Extended Ob
     END
   END Show;
 
-BEGIN Texts.OpenWriter(W)
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "FontTool 6.9.2013");
+  Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
 END FontTool.
 
 FontTool.Show Oberon10.Scn.Fnt ~
