@@ -25,9 +25,9 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 13.9.20 Extended Oberon*)
     IF (F # NIL) & (F.handle # NIL) THEN F.handle(F, M) END
   END Handle;
 
-  PROCEDURE RasterBase*(raster: Raster): INTEGER;
+  PROCEDURE GetBase*(raster: Raster): INTEGER;
   BEGIN RETURN SYSTEM.ADR(raster^)
-  END RasterBase;
+  END GetBase;
 
   (* raster ops *)
     
