@@ -14,7 +14,7 @@ Features
 * Import any number of modules
 * Simple batch execution facility
 
-**REVISION:** 6.9.2020
+**REVISION:** 13.9.2020
 
 The file [**S3RISCinstall.tar.gz**](Documentation/S3RISCinstall.tar.gz) always reflects the *latest* version of Extended Oberon, as described in the file [**EOS_news.txt**](EOS_news.txt).
 

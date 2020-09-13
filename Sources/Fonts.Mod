@@ -1,16 +1,13 @@
-MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 1.9.20 Extended Oberon*)
-  IMPORT Files;
+MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 13.9.20 Extended Oberon*)
+  IMPORT Display, Files;
   CONST FontFileId = 0DBH; A = 512;
 
-  TYPE Raster = POINTER TO RasterDesc;
-    RasterDesc = ARRAY OF BYTE;
-
-    Font* = POINTER TO FontDesc;
+  TYPE Font* = POINTER TO FontDesc;
     FontDesc* = RECORD
       name*: ARRAY 32 OF CHAR;
       height*, minX*, maxX*, minY*, maxY*, base: INTEGER;
       next*: Font;
-      raster: Raster
+      raster: Display.Raster
     END ;
 
     RunRec = RECORD beg, end: BYTE END ;
@@ -21,14 +18,14 @@ MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 1.9.20 Extended Obero
 
   VAR Default*, root*: Font;
 
-  PROCEDURE Put(r: Raster; i, x: INTEGER);
+  PROCEDURE Put(r: Display.Raster; i, x: INTEGER);
   BEGIN r[i] := x MOD 100H;
     r[i+1] := x DIV 100H MOD 100H;
     r[i+2] := x DIV 10000H MOD 100H;
     r[i+3] := x DIV 1000000H MOD 100H
   END Put;
 
-  PROCEDURE Get(r: Raster; i: INTEGER; VAR x: INTEGER);
+  PROCEDURE Get(r: Display.Raster; i: INTEGER; VAR x: INTEGER);
   BEGIN x := ((r[i+3] * 100H + r[i+2]) * 100H + r[i+1]) * 100H + r[i]
   END Get;
 
@@ -77,7 +74,7 @@ MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 1.9.20 Extended Obero
             INC(j)
           END ;
           NEW(F); NEW(F.raster, NofBytes);
-          F.name := name; F.base := ORD(F.raster);
+          F.name := name; F.base := Display.RasterBase(F.raster);
           F.height := height; F.minX := minX; F.maxX := maxX; F.maxY := maxY;
           IF minY >= 80H THEN F.minY := minY - 100H ELSE F.minY := minY END ;
           F.raster[A] := 0; F.raster[A+1] := 0; F.raster[A+2] := 0; F.raster[A+3] := 0; F.raster[A+4] := 0;
