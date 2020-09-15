@@ -22,7 +22,7 @@ MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 15.9.20 Extended Ober
   VAR Default*, root*: Font;
 
   PROCEDURE Base(r: Raster): INTEGER;
-  BEGIN RETURN SYSTEM.ADR(r^)
+  BEGIN RETURN SYSTEM.ADR(r[0])
   END Base;
 
   PROCEDURE Put(r: Raster; i, x: INTEGER);
