@@ -1,6 +1,6 @@
-MODULE FontTool; (*JG 18.11.90; PDR 8.6.12; NW 22.2.2020 / AP 6.9.20 Extended Oberon*)
-  IMPORT Files, Input, Texts, Oberon;
-  CONST FontFileId = 0DBH; LargeFontSize = 4920; TAB = Input.TAB;
+MODULE FontTool; (*JG 18.11.90; PDR 8.6.12; NW 22.2.2020 / AP 15.9.20 Extended Oberon*)
+  IMPORT Files, Texts, Oberon;
+  CONST FontFileId = 0DBH; LargeFontSize = 4920; TAB = 09X;
 
   TYPE RunRec = RECORD beg, end: INTEGER END ;
     BoxRec = RECORD dx, x, y, w, h: INTEGER END ;

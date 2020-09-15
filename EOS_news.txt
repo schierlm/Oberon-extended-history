@@ -26,5 +26,4 @@
 2020-08-27 Kernel - Use correct increment in Kernel.Mark when traversing pointer offsets for arrays of records
 2020-08-30 Kernel - Rely on correct rounding of size in Kernel.New, prevent accessing memory locations > heapLim in Kernel.Collect
 2020-09-01 Fonts - Replace all calls to module SYSTEM with array and pointer operations
-2020-09-06 Oberon-2 language - Define ORD(p) for both pointers to records and pointers to arrays
-2020-09-13 Display, Fonts - move definition of raster to Display, eliminate ORD(pointer) loophole in Fonts
+2020-09-15 Oberon-2 language - Define ORD(p) for pointers to records and pointers to arrays

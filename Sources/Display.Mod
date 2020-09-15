@@ -1,4 +1,4 @@
-MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 13.9.20 Extended Oberon*)
+MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 15.9.20 Extended Oberon*)
   IMPORT SYSTEM;
 
   CONST black* = 0; white* = 1;  (*black = background*)
@@ -13,9 +13,6 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 13.9.20 Extended Oberon*)
         handle*: Handler
       END ;
 
-    Raster* = POINTER TO RasterDesc;
-    RasterDesc* = ARRAY OF BYTE;
-
   VAR Base*, Width*, Height*: INTEGER;
     arrow*, star*, hook*, updown*, block*, cross*, grey*: INTEGER;
     (*a pattern is an array of bytes; the first is its width (< 32), the second its height, the rest the raster*)
@@ -24,10 +21,6 @@ MODULE Display;  (*NW 5.11.2013 / 17.1.2019 / AP 13.9.20 Extended Oberon*)
   BEGIN
     IF (F # NIL) & (F.handle # NIL) THEN F.handle(F, M) END
   END Handle;
-
-  PROCEDURE GetBase*(r: Raster): INTEGER;
-  BEGIN RETURN SYSTEM.ADR(r^)
-  END GetBase;
 
   (* raster ops *)
     

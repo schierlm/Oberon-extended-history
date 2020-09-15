@@ -133,9 +133,9 @@ END PrimeNumbers.
 ORP.Compile @/s  Fractions.Generate 16
 
 MODULE Fractions;  (*NW  10.10.07;  Tabulate fractions 1/n*)
-  IMPORT Input, Texts, Oberon;
+  IMPORT Texts, Oberon;
   
-  CONST Base = 10; N = 32; TAB = Input.TAB;
+  CONST Base = 10; N = 32; TAB = 09X;
   VAR W: Texts.Writer;
   
   PROCEDURE Generate*;
