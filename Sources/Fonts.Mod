@@ -73,7 +73,7 @@ MODULE Fonts; (*JG 18.11.90; PDR 8.6.12; NW 18.1.2019 / AP 15.9.20 Extended Ober
             NofBoxes := NofBoxes + run[k].end - run[k].beg;
             INC(k)
           END ;
-          NofBytes := 512 + 5; j := 0;
+          NofBytes := A + 5; j := 0;
           WHILE j # NofBoxes DO  (*read boxes*)
             RdInt16(R, box[j].dx); RdInt16(R, box[j].x); RdInt16(R, box[j].y);
             RdInt16(R, box[j].w); RdInt16(R, box[j].h);
