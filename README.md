@@ -18,6 +18,8 @@ Features
 
 The file [**S3RISCinstall.tar.gz**](Documentation/S3RISCinstall.tar.gz) always reflects the *latest* version of Extended Oberon, as described in the file [**EOS_news.txt**](EOS_news.txt).
 
+Documentation: [**Documentation**](Documentation)
+
 ------------------------------------------------------
 
 # Instructions for converting an existing Project Oberon 2013 system to Extended Oberon
