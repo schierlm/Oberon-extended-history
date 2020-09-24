@@ -42,8 +42,8 @@ ORP.Compile Fonts.Mod/s Texts.Mod/s ~
 ORP.Compile Oberon.Mod/s ~                      Edit.Open Oberon.Mod
 ORP.Compile MenuViewers.Mod/s ~             Edit.Open MenuViewers.Mod
 ORP.Compile TextFrames.Mod/s ~                Edit.Open TextFrames.Mod
-ORP.Compile System.Mod/s ~                       Edit.Open System.Mod
-ORP.Compile Edit.Mod/s Tools.Mod/s ~        Edit.Open Edit.Mod
+ORP.Compile System.Mod/s Edit.Mod/s ~          Edit.Open System.Mod
+ORP.Compile Tools.Mod/s FontTool.Mod/s ~      Edit.Open Edit.Mod
 
 ORP.Compile PCLink1.Mod/s Clipboard.Mod/s Out.Mod/s ~
 ORP.Compile RS232.Mod/s SCC.Mod/s Net.Mod/s ~
