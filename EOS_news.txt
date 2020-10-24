@@ -26,4 +26,4 @@
 2020-08-27 Kernel - Use correct increment in Kernel.Mark when traversing pointer offsets for arrays of records
 2020-08-30 Kernel - Rely on correct rounding of size in Kernel.New, prevent accessing memory locations > heapLim in Kernel.Collect
 2020-09-01 Fonts - Replace all calls to module SYSTEM with array and pointer operations
-
+2020-10-24 Oberon, System - Oberon.Batch (but not System.Batch) invokes the garbage collector after each executed command

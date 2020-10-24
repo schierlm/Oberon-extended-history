@@ -1,4 +1,4 @@
-MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 16.8.20 Extended Oberon*)
+MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 24.10.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files, Modules, Input, Display, Viewers, Fonts, Texts;
 
   CONST (*message ids*)
@@ -56,7 +56,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
       vwr*: Viewers.Viewer;
       frame*: Display.Frame;
       text*: Texts.Text;
-      pos*: LONGINT;
+      cmd*, pos*: LONGINT;
       res*: INTEGER
     END;
 
@@ -337,14 +337,33 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
     END
   END AllocateSystemViewer;
 
+  (*garbage collection*)
+
+  PROCEDURE GC;
+    VAR mod: Modules.Module;
+  BEGIN
+    IF (ActCnt <= 0) OR (Kernel.allocated >= Kernel.heapLim - Kernel.heapOrg - 10000H) THEN
+      mod := Modules.root; LED(21H);
+      WHILE mod # NIL DO
+        IF mod.name[0] # 0X THEN Kernel.Mark(mod.ptr) END ;
+        mod := mod.next
+      END ;
+      LED(23H);
+      Files.RestoreList; LED(27H);
+      Kernel.Collect; LED(20H);
+      Modules.Collect;
+      ActCnt := BasicCycle
+    END
+  END GC;
+
   (*command interpretation*)
 
-  PROCEDURE SetPar*(F: Display.Frame; T: Texts.Text; pos: LONGINT; res: INTEGER);
-  BEGIN Par.vwr := Viewers.This(F.X, F.Y); Par.frame := F; Par.text := T; Par.pos := pos; Par.res := res
+  PROCEDURE SetPar*(F: Display.Frame; T: Texts.Text; cmd, pos: LONGINT; res: INTEGER);
+  BEGIN Par.vwr := Viewers.This(F.X, F.Y); Par.frame := F; Par.text := T; Par.cmd := cmd; Par.pos := pos; Par.res := res
   END SetPar;
 
   PROCEDURE ClearPar*;
-  BEGIN Par.vwr := NIL; Par.frame := NIL; Par.text := NIL; Par.pos := 0; Par.res := 0
+  BEGIN Par.vwr := NIL; Par.frame := NIL; Par.text := NIL; Par.cmd := 0; Par.pos := 0; Par.res := 0
   END ClearPar;
 
   PROCEDURE Return*(n: INTEGER);
@@ -376,7 +395,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
     VAR S: Texts.Scanner; res, len: INTEGER;
   BEGIN Texts.OpenScanner(S, T, pos); Skip(S, len); Scan(S);
     IF (S.class = Texts.Name) & (S.line = 0) THEN
-      SetPar(F, T, pos + len + S.len, 0); Modules.Call(S.s, res);
+      SetPar(F, T, pos, pos + len + S.len, 0); Modules.Call(S.s, res);
       IF (res > Modules.noerr) & (res < Modules.clients) & (Log # NIL) THEN Texts.WriteString(W, "Call error: ");
         CASE res OF
            Modules.nofile: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " module not found")
@@ -394,43 +413,33 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
     END
   END Call;
 
-  PROCEDURE Run*(F: Display.Frame; T: Texts.Text; pos: LONGINT);  (*execute multiple commands separated by ~*)
-    VAR S: Texts.Scanner; len: LONGINT; continue: BOOLEAN; 
+  PROCEDURE Execute(F: Display.Frame; T: Texts.Text; pos: LONGINT; gc: BOOLEAN);  (*execute multiple commands separated by ~*)
+    VAR S: Texts.Scanner; len: LONGINT; continue: BOOLEAN;
   BEGIN continue := pos >= 0;
     WHILE continue DO
       Texts.OpenScanner(S, T, pos); Skip(S, len); Scan(S); continue := FALSE;
       IF S.class = Texts.Name THEN S.line := 0;
         Call(F, T, pos + len, FALSE);
+        IF gc THEN ActCnt := 0; GC END ;
         IF Par.res = 0 THEN
           REPEAT Texts.Scan(S) UNTIL S.eot OR (S.class = Texts.Char) & (S.c = "~");
           IF ~S.eot THEN pos := Texts.Pos(S); continue := TRUE END
         END
       END
     END
+  END Execute;
+
+  PROCEDURE Run*(F: Display.Frame; T: Texts.Text; pos: LONGINT);
+  BEGIN Execute(F, T, pos, FALSE)  (*without GC*)
   END Run;
 
   PROCEDURE Batch*;
-  BEGIN Run(Par.frame, Par.text, Par.pos)
+    VAR S: Texts.Scanner;
+  BEGIN Texts.OpenScanner(S, Par.text, Par.cmd); Texts.Scan(S);
+    Execute(Par.frame, Par.text, Par.pos, (S.class = Texts.Name) & (S.s = "Oberon.Batch"))  (*with GC*)
   END Batch;
 
   (*task management*)
-
-  PROCEDURE GC;
-    VAR mod: Modules.Module;
-  BEGIN
-    IF (ActCnt <= 0) OR (Kernel.allocated >= Kernel.heapLim - Kernel.heapOrg - 10000H) THEN
-      mod := Modules.root; LED(21H);
-      WHILE mod # NIL DO
-        IF mod.name[0] # 0X THEN Kernel.Mark(mod.ptr) END ;
-        mod := mod.next
-      END ;
-      LED(23H);
-      Files.RestoreList; LED(27H);
-      Kernel.Collect; LED(20H);
-      Modules.Collect;
-      ActCnt := BasicCycle
-    END
-  END GC;
 
   PROCEDURE NewTask*(h: Handler; period: INTEGER): Task;
     VAR t: Task;
