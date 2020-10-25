@@ -26,7 +26,7 @@ Hilbert.Draw  Sierpinski.Draw  Blink.Run  Stars.Open
 Tools.Inspect 0  Tools.Sector 1  Tools.ShowFile
 Tools.Recall  Tools.Clear  FontTool.Show Oberon10.Scn.Fnt ~
 
-# ----- building the system (see below for single-click builds) -----
+# --------------- building the system ---------------
 
 ORP.Compile ORS.Mod/s ORB.Mod/s ~         Edit.Open Build.Tool ~
 ORP.Compile ORG.Mod/s ORP.Mod/s ~
@@ -56,7 +56,7 @@ ORP.Compile Hilbert.Mod/s Stars.Mod/s ~
 ORP.Compile Rectangles.Mod/s Checkers.Mod/s ~
 ORP.Compile Math.Mod/s PIO.Mod/s Blink.Mod/s ~
 
-# ------------ building the system with a single mouse click----------------
+# ---------- building the system with a single mouse click ----------
 
 Oberon.Batch
   ORP.Compile Kernel.Mod/s Disk.Mod/s FileDir.Mod/s Files.Mod/s Modules.Mod/s ~
@@ -85,5 +85,4 @@ Oberon.Batch
   ORP.Compile Hilbert.Mod/s Stars.Mod/s ~
   ORP.Compile Rectangles.Mod/s Checkers.Mod/s ~
   ORP.Compile Math.Mod/s PIO.Mod/s Blink.Mod/s ~
-
 ~
