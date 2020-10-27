@@ -1,4 +1,4 @@
-MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 24.10.20 Extended Oberon*)
+MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 1.11.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files, Modules, Input, Display, Viewers, Fonts, Texts;
 
   CONST (*message ids*)
@@ -418,7 +418,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
   BEGIN continue := pos >= 0;
     WHILE continue DO
       Texts.OpenScanner(S, T, pos); Skip(S, len); Scan(S); continue := FALSE;
-      IF S.class = Texts.Name THEN S.line := 0;
+      IF (S.class = Texts.Name) & (S.s # "Oberon.Batch") THEN S.line := 0;
         Call(F, T, pos + len, FALSE);
         IF gc THEN ActCnt := 0; GC END ;
         IF Par.res = 0 THEN
