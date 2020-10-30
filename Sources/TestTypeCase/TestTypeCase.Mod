@@ -10,7 +10,7 @@ MODULE TestTypeCase;
    *
    * Allows...
    *
-   *   1. Local variables or (value or VAR) parameters as case variables
+   *   1. Local variables or pointer value parameters or record VAR parameters as case variables
    *   2. Assignments to *fields* p.f of a case variable p (either a pointer or record)
    *   3. Passing a case variable p as a *value* parameter to a procedure P(p)
    *   4. Passing a case variable r of type RECORD as a VAR parameter to a procedure P(r),
