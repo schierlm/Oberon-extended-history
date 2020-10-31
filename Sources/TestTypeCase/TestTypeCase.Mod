@@ -15,7 +15,7 @@ MODULE TestTypeCase;
    * - The case variable cannot be a global variable, but must be either a local variable of pointer
    *   type, a value parameter of pointer type or a variable parameter of record type.
    * - A case variable of pointer type cannot be passed as a variable parameter to a procedure.
-   * - A case variable of a pointer type must point to a record (pointers to arrays not allowed).
+   * - A case variable of pointer type must point to a record (pointers to arrays not allowed).
    * - Case variables cannot be assigned to a different value by the statements Si of a type case
    *   statement. However, individual elements (fields) of case variables may be modified.
    * - If the value of the case expression does not correspond to any case label in the source text,
