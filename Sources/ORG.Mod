@@ -302,16 +302,6 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     END
   END MakeItem;
 
-  PROCEDURE SetParam*(VAR x: Item);
-  BEGIN
-    IF (x.mode IN {ORB.Var, ORB.Par}) & (x.type.form = ORB.Pointer) THEN x.b := 1 END
-  END SetParam;
-
-  PROCEDURE CheckParam*(VAR x: Item);
-  BEGIN
-    IF (x.mode IN {ORB.Var, ORB.Par}) & (x.type.form = ORB.Pointer) & (x.b = 1) THEN ORS.Mark("invalid parameter") END
-  END CheckParam;
-
   (* Code generation for Selectors, Variables, Constants *)
 
   PROCEDURE Field*(VAR x: Item; y: ORB.Object);   (* x := x.y *)
@@ -776,6 +766,16 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     incR;
     IF par.class = ORB.Par THEN (*record*) loadTypTagAdr(par.type) END  (*type tag -> R1*)
   END ReceiverParam;
+
+  PROCEDURE SetParam*(VAR x: Item);
+  BEGIN
+    IF (x.mode IN {ORB.Var, ORB.Par}) & (x.type.form = ORB.Pointer) THEN x.b := 1 END
+  END SetParam;
+
+  PROCEDURE CheckParam*(VAR x: Item);
+  BEGIN
+    IF (x.mode IN {ORB.Var, ORB.Par}) & (x.type.form = ORB.Pointer) & (x.b = 1) THEN ORS.Mark("invalid parameter") END
+  END CheckParam;
 
   (*For Statements*)
 
