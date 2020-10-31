@@ -40,7 +40,7 @@ MODULE TestTypeCase;
    *   4. Assignments to individual fields x.f of a case variable x
    *   5. Passing a case variable of a pointer type as a *value* parameter to another procedure
    *   6. Passing a case variable of a record type as a *value* parameter to another procedure
-   *   6. Passing a case variable of a record type as a *variable* parameter to another procedure
+   *   7. Passing a case variable of a record type as a *variable* parameter to another procedure
    *)
 
   TYPE R0 = RECORD fld0: INTEGER END; 
