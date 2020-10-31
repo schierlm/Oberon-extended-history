@@ -683,8 +683,9 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
         ORS.Get(sym);
         IF sym = ORS.ident THEN obj := ORB.thisObj() END ;
         IF (obj # NIL) & (obj.type # NIL) & (obj.type.form = ORB.Pointer) OR (obj.type.form = ORB.Record) THEN
-          IF (obj.lev = 0) OR (obj.type.form = ORB.Record) & (obj.class # ORB.Par) OR
-            (obj.type.form = ORB.Pointer) & ((obj.class # ORB.Var) OR (obj.type.base.form # ORB.Record))
+          IF (obj.lev = 0) OR
+            (obj.type.form = ORB.Pointer) & ((obj.class # ORB.Var) OR (obj.type.base.form # ORB.Record)) OR
+            (obj.type.form = ORB.Record) & (obj.class # ORB.Par)
           THEN ORS.Mark("invalid case variable")
           END ;
           TypeCasePart
@@ -973,8 +974,8 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     IF sym = ORS.ident THEN
       qualident(obj);
       IF obj.class = ORB.Typ THEN typ := obj.type;
-        IF (class = ORB.Par) & (typ.form = ORB.Record) OR
-          (class = ORB.Var) & (typ.form = ORB.Pointer) & (typ.base.form = ORB.Record) THEN
+        IF (class = ORB.Var) & (typ.form = ORB.Pointer) & (typ.base.form = ORB.Record) OR
+          (class = ORB.Par) & (typ.form = ORB.Record) THEN
           IF typ.form = ORB.Pointer THEN rec := typ.base ELSE rec := typ END ;
           IF rec.mno # -level THEN ORS.Mark("must be bound to record of same scope"); rec := NIL END
         ELSE ORS.Mark("invalid receiver type")
