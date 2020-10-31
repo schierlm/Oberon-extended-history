@@ -301,7 +301,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
         END
       ELSIF fct = 5 THEN (*CHR*) CheckInt(x); ORG.Ord(x)
       ELSIF fct = 6 THEN (*LEN*)
-          IF x.type.form = ORB.Array THEN ORG.Len(x) ELSE ORS.Mark("not an array") END
+        IF x.type.form = ORB.Array THEN ORG.Len(x) ELSE ORS.Mark("not an array") END
       ELSIF fct IN {7, 8, 9} THEN (*LSL, ASR, ROR*) CheckInt(y);
         IF x.type.form IN {ORB.Int, ORB.Set} THEN ORG.Shift(fct-7, x, y); restyp := x.type ELSE ORS.Mark("bad type") END
       ELSIF fct = 11 THEN (*ADC*) ORG.ADC(x, y)
