@@ -10,14 +10,17 @@ MODULE TestTypeCase;
    *
    * which implements the following rules and restrictions:
    *
-   * - Case variables must be simple identifiers that cannot be followed by selectors, i.e. they
-   *   cannot be elements of a structure (such as array elements or record fields).
-   * - The case variable cannot be a global variable, but must be either a local variable of pointer
-   *   type, a value parameter of pointer type or a variable parameter of record type.
-   * - A case variable of pointer type must point to a record (pointers to arrays not allowed).
+   * - The case variable must be simple identifier that cannot be followed by a selector, i.e. it
+   *   cannot be an element of a structure (such as an array element or a record field).
+   *
+   * - The case variable cannot be a global variable, but must be either a local variable or value
+   *   parameter of pointer type (pointing to a record) or a variable parameter of record type
+   *
    * - A case variable of pointer type cannot be passed as a variable parameter to a procedure.
-   * - Case variables cannot be assigned to a different value by the statements Si of a type case
+   *
+   * - The case variable cannot be assigned a different value by the statements Si of a type case
    *   statement. However, individual elements (fields) of case variables may be modified.
+   *
    * - If the value of the case expression does not correspond to any case label in the source text,
    *   the statement sequence following the symbol ELSE is selected, if there is one, otherwise no
    *   action is taken.
