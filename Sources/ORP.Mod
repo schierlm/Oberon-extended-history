@@ -607,7 +607,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
         IF x.mode = ORB.SProc THEN StandProc(obj.val)
         ELSE selector(x, sel);
           IF sym = ORS.becomes THEN (*assignment*)
-            IF ~sel & (obj.dsc # NIL) & (obj.dsc.val > 0) THEN ORS.Mark("assignment not allowed") END ;
+            IF ~sel & (obj.dsc # NIL) & (obj.dsc.val > 0) THEN ORS.Mark("invalid assignment") END ;
             ORS.Get(sym); CheckReadOnly(x); expression(y);
             IF CompTypes(x.type, y.type, FALSE) THEN
               IF (x.type.form <= ORB.Pointer) OR (x.type.form = ORB.Proc) THEN ORG.Store(x, y)
@@ -682,10 +682,10 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
       ELSIF sym = ORS.case THEN
         ORS.Get(sym);
         IF sym = ORS.ident THEN obj := ORB.thisObj() END ;
-        IF (obj # NIL) & (obj.type # NIL) &
-          ((obj.type.form = ORB.Pointer) & (obj.class = ORB.Var) OR
-          (obj.type.form = ORB.Record) & (obj.class = ORB.Par)) THEN
-          IF obj.lev = 0 THEN ORS.Mark("global case variable not allowed") END ;
+        IF (obj # NIL) & (obj.type # NIL) & (obj.type.form = ORB.Pointer) OR (obj.type.form = ORB.Record) THEN
+          IF (obj.lev = 0) OR (obj.type.form = ORB.Pointer) & (obj.class # ORB.Var) OR
+            (obj.type.form = ORB.Record) & (obj.class # ORB.Par) THEN ORS.Mark("invalid case variable")
+          END ;
           TypeCasePart
         ELSE NumericCasePart
         END ;

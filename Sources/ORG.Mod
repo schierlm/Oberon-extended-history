@@ -309,7 +309,9 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
 
   PROCEDURE CheckCase*(VAR x: Item);
   BEGIN
-    IF (x.mode IN {ORB.Var, ORB.Par}) & (x.type.form = ORB.Pointer) & (x.b = 1) THEN ORS.Mark("not allowed") END
+    IF (x.mode IN {ORB.Var, ORB.Par}) & (x.type.form = ORB.Pointer) & (x.b = 1) THEN
+      ORS.Mark("invalid parameter")
+    END
   END CheckCase;
 
   (* Code generation for Selectors, Variables, Constants *)
