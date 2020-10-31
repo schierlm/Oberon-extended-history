@@ -145,7 +145,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
           END
         UNTIL sym # ORS.comma;
         Check(ORS.rbrak, "no ]"); deref := FALSE
-      ELSIF sym = ORS.period THEN
+      ELSIF sym = ORS.period THEN sel := TRUE;
         ORS.Get(sym);
         IF sym = ORS.ident THEN
           IF x.type.form = ORB.Pointer THEN ORG.DeRef(x); x.type := x.type.base; deref := TRUE END ;
@@ -165,7 +165,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
                   END
                 ELSE (*method call*) CheckReceiver(obj, deref); ORG.Method(x, obj, deref, FALSE)
                 END
-              ELSE ORG.Field(x, obj); deref := FALSE; sel := TRUE
+              ELSE ORG.Field(x, obj); deref := FALSE
               END ;
               x.type := obj.type
             ELSE ORS.Mark("undef")
