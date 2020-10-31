@@ -685,7 +685,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
         IF (obj # NIL) & (obj.type # NIL) & (obj.type.form = ORB.Pointer) OR (obj.type.form = ORB.Record) THEN
           IF (obj.lev = 0) OR (obj.type.form = ORB.Record) & (obj.class # ORB.Par) OR
             (obj.type.form = ORB.Pointer) & ((obj.class # ORB.Var) OR (obj.type.base.form # ORB.Record))
-            THEN ORS.Mark("invalid case variable")
+          THEN ORS.Mark("invalid case variable")
           END ;
           TypeCasePart
         ELSE NumericCasePart
