@@ -240,7 +240,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
       IF CompTypes(par.type, x.type, varpar) THEN
         IF ~varpar THEN ORG.ValueParam(x)
         ELSE (*par.class = Par*)
-          IF ~par.rdo THEN CheckReadOnly(x); ORG.CheckCase(x) END ;
+          IF ~par.rdo THEN CheckReadOnly(x); ORG.CheckParam(x) END ;
           ORG.VarParam(x, par.type)
         END
       ELSIF (x.type.form = ORB.Array) & (par.type.form = ORB.Array) &
@@ -359,7 +359,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
       qualident(obj);
       IF obj.class = ORB.SFunc THEN StandFunc(x, obj.val, obj.type)
       ELSE ORG.MakeItem(x, obj, level); selector(x, sel);
-        IF ~sel & (obj.dsc # NIL) & (obj.dsc.val > 0) THEN ORG.SetCase(x) END ;
+        IF ~sel & (obj.dsc # NIL) & (obj.dsc.val > 0) THEN ORG.SetParam(x) END ;
         IF sym = ORS.lparen THEN
           ORS.Get(sym);
           IF (x.type.form IN {ORB.Proc, ORB.TProc}) & (x.type.base.form # ORB.NoTyp) THEN

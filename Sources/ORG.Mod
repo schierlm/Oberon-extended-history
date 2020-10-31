@@ -302,17 +302,15 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     END
   END MakeItem;
 
-  PROCEDURE SetCase*(VAR x: Item);
+  PROCEDURE SetParam*(VAR x: Item);
   BEGIN
     IF (x.mode IN {ORB.Var, ORB.Par}) & (x.type.form = ORB.Pointer) THEN x.b := 1 END
-  END SetCase;
+  END SetParam;
 
-  PROCEDURE CheckCase*(VAR x: Item);
+  PROCEDURE CheckParam*(VAR x: Item);
   BEGIN
-    IF (x.mode IN {ORB.Var, ORB.Par}) & (x.type.form = ORB.Pointer) & (x.b = 1) THEN
-      ORS.Mark("invalid parameter")
-    END
-  END CheckCase;
+    IF (x.mode IN {ORB.Var, ORB.Par}) & (x.type.form = ORB.Pointer) & (x.b = 1) THEN ORS.Mark("invalid parameter") END
+  END CheckParam;
 
   (* Code generation for Selectors, Variables, Constants *)
 
