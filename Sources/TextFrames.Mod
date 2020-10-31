@@ -1,4 +1,4 @@
-MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.6.20 Extended Oberon*)
+MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.11.20 Extended Oberon*)
   IMPORT Input, Display, Viewers, Fonts, Texts, Oberon;
 
   CONST replace* = Texts.replace; insert* = Texts.insert; delete* = Texts.delete; unmark* = Texts.unmark;  (*message ids*)
@@ -105,8 +105,8 @@ MODULE TextFrames; (*JG 8.10.90 / NW 16.11.2015 / AP 1.6.20 Extended Oberon*)
     ELSE
       IF X < CL + 3 THEN X := CL + 4 ELSIF X > CL + DW - 4 THEN X := CL + DW - 4 END
     END ;
-    IF Y < 6 THEN Y := 6 ELSIF Y > DH - 6 THEN Y := DH - 6 END;
-    Display.CopyPatternClipped(Display.white, Display.updown, X-4, Y-4, 0, 0, 0, 0, Display.invert)
+    IF Y < 7 THEN Y := 7 ELSIF Y > DH - 7 THEN Y := DH - 7 END;
+    Display.CopyPatternClipped(Display.white, Display.updown, X-4, Y-7, 0, 0, 0, 0, Display.invert)
   END FlipSM;
 
   PROCEDURE UpdateMark (F: Frame);  (*in scroll bar*)
