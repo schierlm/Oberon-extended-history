@@ -1,6 +1,6 @@
 MODULE TestTypeCase;
   (*
-   * The type case statement CASE p OF T1... | T2... END in Extended Oberon..
+   * The type case statement CASE p OF T1... | T2... END
    *
    * Disallows...
    *
@@ -10,7 +10,7 @@ MODULE TestTypeCase;
    *
    * Allows...
    *
-   *   1. Local variables or pointer value parameters or record VAR parameters as case variables
+   *   1. Local pointer variables or pointer value parameters or record VAR parameters as case variables
    *   2. Assignments to *fields* p.f of a case variable p (either a pointer or record)
    *   3. Passing a case variable p as a *value* parameter to a procedure P(p)
    *   4. Passing a case variable r of type RECORD as a VAR parameter to a procedure P(r),
