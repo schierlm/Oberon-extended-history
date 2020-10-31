@@ -10,15 +10,18 @@ MODULE TestTypeCase;
    *
    * which implements the following rules and restrictions for type case statements
    *
-   *  - Case variables must be simple identifiers that cannot be followed by selectors,
-   *    i.e. case variables cannot be elements of a structure (such as array elements or record fields).
-   *  - If the type of the case variable is a record type, the case variable must be a variable parameter
-   *    of the procedure containing the type case statement.
-   *  - If the type of the case variable is a pointer type, the case variable must be a local variable
-   *    or a value parameter passed to the procedure containing the type case statement,
-   *    and the case variable cannot itself be passed as a variable parameter to another procedure.
-   *  - Assignments to case variables within the statement sequences of a type case statement are
-   *    not allowed (but assignments to individual fields of case variables are allowed).
+   * - Case variables must be simple identifiers that cannot be followed by selectors, i.e. they cannot
+   *   be elements of a structure (such as array elements or record fields).
+   * - If the type of the case variable is a record type, the case variable must be a variable
+   *   parameter of the procedure containing the type case statement.
+   * - If the type of the case variable is a pointer type, the case variable must be either a local
+   *   variable or a value parameter passed to the procedure containing the type case statement,
+   *   and the case variable cannot itself be passed as a variable parameter to another procedure.
+   * - Assignments to case variables within the body of a type case statement are not allowed
+   *   (however, assignments to individual fields of case variables are allowed).
+   * - If the value of the case expression does not correspond to any case label in the source text,
+   *   the statement sequence following the symbol ELSE is selected, if there is one, otherwise no
+   *   action is taken.
    *
    * Such a type case statement disallows...
    *
