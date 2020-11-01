@@ -13,7 +13,7 @@ MODULE TestTypeCase;
    * - The case variable must be simple identifier that cannot be followed by a selector, i.e. it
    *   cannot be an element of a structure (such as an array element or a record field).
    *
-   * - The case variable cannot be a global variable, but must be either a local variable or value
+   * - The case variable cannot be imported or global, but must be either a local variable or value
    *   parameter of pointer type (pointing to a record) or a variable parameter of record type.
    *
    * - A case variable of pointer type cannot be passed as a variable parameter to a procedure.
