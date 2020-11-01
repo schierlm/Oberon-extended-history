@@ -1,30 +1,4 @@
-MODULE TestTypeCase;
-  (*
-   * Test of a type case statement
-   *
-   *    CASE x OF
-   *       T1: S1
-   *     | T2: S2
-   *    ELSE S3
-   *    END
-   *
-   * which implements the following rules and restrictions:
-   *
-   * - The case variable must be simple identifier that cannot be followed by a selector, i.e. it
-   *   cannot be an element of a structure (such as an array element or a record field).
-   *
-   * - The case variable cannot be global or imported, but must be either a local variable or value
-   *   parameter of pointer type (pointing to a record) or a variable parameter of record type.
-   *
-   * - A case variable of pointer type cannot be passed as a variable parameter to a procedure.
-   *
-   * - The case variable cannot be assigned a different value by the statements Si of a type case
-   *   statement. However, individual elements (fields) of case variables may be modified.
-   *
-   * - If the value of the case expression does not correspond to any case label in the source text,
-   *   the statement sequence following the symbol ELSE is selected, if there is one, otherwise no
-   *   action is taken.
-   *)
+MODULE TestTypeCase;  (*test type case statements / AP 1.11.20 Extended Oberon*)
 
   TYPE R0 = RECORD fld0: INTEGER END; 
     R1 = RECORD (R0) fld1: INTEGER END ;
