@@ -1,6 +1,6 @@
 MODULE TestTypeCase;  (*test type case statements / AP 1.11.20 Extended Oberon*)
 
-  TYPE R0 = RECORD fld0: INTEGER END; 
+  TYPE R0 = RECORD fld0: INTEGER END ;
     R1 = RECORD (R0) fld1: INTEGER END ;
     R2 = RECORD (R0) fld2: INTEGER END ;
 
@@ -80,7 +80,7 @@ MODULE TestTypeCase;  (*test type case statements / AP 1.11.20 Extended Oberon*)
   BEGIN r := r1;
     CASE r OF  (*ERROR "invalid case variable" - a record must be a variable parameter*)
       R1: r.fld1 := 345
-    END ;
+    END
   END check4;
 
   PROCEDURE check5(p: P0);
@@ -95,7 +95,7 @@ MODULE TestTypeCase;  (*test type case statements / AP 1.11.20 Extended Oberon*)
     CASE p OF P1:  (*ERROR "invalid case variable" - a pointer must be either a local variable or a value parameter*)
       p0 := p2;
       p.fld1 := {4,1}
-    END;
+    END
   END check6;
 
   PROCEDURE check7();

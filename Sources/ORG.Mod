@@ -767,15 +767,15 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     IF par.class = ORB.Par THEN (*record*) loadTypTagAdr(par.type) END  (*type tag -> R1*)
   END ReceiverParam;
 
-  PROCEDURE SetParam*(VAR x: Item);
+  PROCEDURE SetCaseVar*(VAR x: Item);
   BEGIN
     IF (x.mode IN {ORB.Var, ORB.Par}) & (x.type.form = ORB.Pointer) THEN x.b := 1 END
-  END SetParam;
+  END SetCaseVar;
 
-  PROCEDURE CheckParam*(VAR x: Item);
+  PROCEDURE CheckCaseVar*(VAR x: Item);
   BEGIN
     IF (x.mode IN {ORB.Var, ORB.Par}) & (x.type.form = ORB.Pointer) & (x.b = 1) THEN ORS.Mark("invalid parameter") END
-  END CheckParam;
+  END CheckCaseVar;
 
   (*For Statements*)
 
