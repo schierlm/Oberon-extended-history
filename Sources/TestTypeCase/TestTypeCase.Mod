@@ -29,7 +29,7 @@ MODULE TestTypeCase;  (*test type case statements / AP 1.11.20 Extended Oberon*)
   BEGIN p0 := p1;
     CASE p0 OF  (*ERROR "invalid case variable" - global case variables are not allowed*)
       P1:
-        AssignGlobal();  (*if p were allowed to be global, the dynamic type of p0 would be set to P2 here*)
+        AssignGlobal();  (*if p0 were allowed to be global, the dynamic type of p0 would be set to P2 here*)
         p0.fld1 := 123  (*and there would be a type violation here, as p0 is considered of type P1*)
     END
   END check0;
