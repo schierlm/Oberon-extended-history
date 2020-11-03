@@ -45,8 +45,9 @@ MODULE TestTypeCase;  (*test type case statements / AP 1.11.20 Extended Oberon*)
         Proc5(p.fld1);
         p := p2;  (*ERROR "invalid assignment"  - cannot modify a case variable through an assignment*)
         p.fld1 := 123;
-        CASE pa OF
+        CASE p OF
           P1:
+            p := p1;  (*ERROR "invalid assignment"  - cannot modify a case variable through an assignment*)
             Proc1(p);
             Proc2(p)   (*ERROR "invalid parameter" - cannot pass a case variable of a pointer type as a VAR parameter*)
         END ;
