@@ -607,7 +607,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
         IF x.mode = ORB.SProc THEN StandProc(obj.val)
         ELSE selector(x, sel);
           IF sym = ORS.becomes THEN (*assignment*)
-            IF ~sel & (obj.lev > 0) & obj.expo THEN (*type case var*) ORS.Mark("invalid assignment") END ;
+            IF ~sel & obj.expo & (obj.lev > 0) THEN (*type case var*) ORS.Mark("invalid assignment") END ;
             ORS.Get(sym); CheckReadOnly(x); expression(y);
             IF CompTypes(x.type, y.type, FALSE) THEN
               IF (x.type.form <= ORB.Pointer) OR (x.type.form = ORB.Proc) THEN ORG.Store(x, y)
