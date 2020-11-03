@@ -359,7 +359,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
       qualident(obj);
       IF obj.class = ORB.SFunc THEN StandFunc(x, obj.val, obj.type)
       ELSE ORG.MakeItem(x, obj, level); selector(x, sel);
-        IF ~sel & (obj.dsc # NIL) & (obj.dsc.val > 0) THEN (*type case var*) ORG.SetCaseVar(x) END ;
+        IF ~sel & obj.expo & (obj.lev > 0) THEN (*type case var*) ORG.SetCaseVar(x) END ;
         IF sym = ORS.lparen THEN
           ORS.Get(sym);
           IF (x.type.form IN {ORB.Proc, ORB.TProc}) & (x.type.base.form # ORB.NoTyp) THEN
@@ -522,13 +522,14 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     PROCEDURE TypeCase(obj: ORB.Object; VAR L0: LONGINT);
       VAR typobj: ORB.Object; x: ORG.Item;
         orgtype: ORB.Type;  (*original type of case var*)
-    BEGIN
+        orgexpo: BOOLEAN;  (*"obj.expo" here abused to mark obj as type case var*)
+    BEGIN (*obj.lev > 0*)
       IF sym = ORS.ident THEN
-        qualident(typobj); ORG.MakeItem(x, obj, level); orgtype := obj.type;
+        qualident(typobj); ORG.MakeItem(x, obj, level); orgtype := obj.type; orgexpo := obj.expo;
         IF typobj.class # ORB.Typ THEN ORS.Mark("not a type") END ;
-        TypeTest(x, typobj.type, FALSE); obj.type := typobj.type;
+        TypeTest(x, typobj.type, FALSE); obj.type := typobj.type; obj.expo := TRUE;
         ORG.CFJump(x); Check(ORS.colon, ": expected"); StatSequence;
-        ORG.FJump(L0); ORG.Fixup(x); obj.type := orgtype
+        ORG.FJump(L0); ORG.Fixup(x); obj.type := orgtype; obj.expo := orgexpo;
       ELSE ORS.Mark("type id expected"); Check(ORS.colon, ": expected"); StatSequence
       END
     END TypeCase;
@@ -536,12 +537,11 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     PROCEDURE TypeCasePart;
       VAR obj: ORB.Object; L0: LONGINT;
     BEGIN qualident(obj); Check(ORS.of, "OF expected"); L0 := 0;
-      IF obj.dsc = NIL THEN (*mark as type case var*) NEW(obj.dsc); obj.dsc.val := 1 ELSE INC(obj.dsc.val) END ;
       WHILE (sym < ORS.end) OR (sym = ORS.bar) DO
         IF sym = ORS.bar THEN ORS.Get(sym) ELSE TypeCase(obj, L0) END
       END ;
       IF sym = ORS.else THEN ORS.Get(sym); StatSequence END ;
-      DEC(obj.dsc.val); ORG.FixLink(L0)
+      ORG.FixLink(L0)
     END TypeCasePart;
 
     PROCEDURE CaseLabel(VAR x: ORG.Item);
@@ -607,7 +607,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
         IF x.mode = ORB.SProc THEN StandProc(obj.val)
         ELSE selector(x, sel);
           IF sym = ORS.becomes THEN (*assignment*)
-            IF ~sel & (obj.dsc # NIL) & (obj.dsc.val > 0) THEN (*type case var*) ORS.Mark("invalid assignment") END ;
+            IF ~sel & (obj.lev > 0) & obj.expo THEN (*type case var*) ORS.Mark("invalid assignment") END ;
             ORS.Get(sym); CheckReadOnly(x); expression(y);
             IF CompTypes(x.type, y.type, FALSE) THEN
               IF (x.type.form <= ORB.Pointer) OR (x.type.form = ORB.Proc) THEN ORG.Store(x, y)
