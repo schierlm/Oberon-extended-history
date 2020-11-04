@@ -77,10 +77,6 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     IF x.mode # ORB.Const THEN ORS.Mark("not a constant"); x.mode := ORB.Const END
   END CheckConst;
 
-  PROCEDURE SetReadOnly(VAR x: ORG.Item);
-  BEGIN x.rdo := TRUE
-  END SetReadOnly;
-
   PROCEDURE CheckReadOnly(VAR x: ORG.Item);
   BEGIN
     IF x.rdo THEN ORS.Mark("read-only") END
@@ -94,6 +90,11 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     ELSE expo := FALSE
     END
   END CheckExport;
+
+  PROCEDURE CheckTypeCase(VAR x: ORG.Item; obj: ORB.Object; selected: BOOLEAN);
+  BEGIN
+    IF ~selected & (obj.lev > 0) & (obj.exno > 0) & (obj.type.form = ORB.Pointer) THEN x.rdo := TRUE END
+  END CheckTypeCase;
 
   PROCEDURE IsExtension(t0, t1: ORB.Type): BOOLEAN;
   BEGIN (*t1 is an extension of t0*)
@@ -362,8 +363,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     IF sym = ORS.ident THEN
       qualident(obj);
       IF obj.class = ORB.SFunc THEN StandFunc(x, obj.val, obj.type)
-      ELSE ORG.MakeItem(x, obj, level); selector(x, sel);
-        IF ~sel & obj.expo & (obj.lev > 0) & (obj.type.form = ORB.Pointer) THEN (*type case var*) SetReadOnly(x) END ;
+      ELSE ORG.MakeItem(x, obj, level); selector(x, sel); CheckTypeCase(x, obj, sel);
         IF sym = ORS.lparen THEN
           ORS.Get(sym);
           IF (x.type.form IN {ORB.Proc, ORB.TProc}) & (x.type.base.form # ORB.NoTyp) THEN
@@ -526,14 +526,13 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     PROCEDURE TypeCase(obj: ORB.Object; VAR L0: LONGINT);
       VAR typobj: ORB.Object; x: ORG.Item;
         orgtype: ORB.Type;  (*original type of case var*)
-        orgexpo: BOOLEAN;  (*"obj.expo" here abused to mark obj as type case var*)
     BEGIN (*obj.lev > 0*)
       IF sym = ORS.ident THEN
-        qualident(typobj); ORG.MakeItem(x, obj, level); orgtype := obj.type; orgexpo := obj.expo;
+        qualident(typobj); ORG.MakeItem(x, obj, level); orgtype := obj.type;
         IF typobj.class # ORB.Typ THEN ORS.Mark("not a type") END ;
-        TypeTest(x, typobj.type, FALSE); obj.type := typobj.type; obj.expo := TRUE;
+        TypeTest(x, typobj.type, FALSE); obj.type := typobj.type; INC(obj.exno);
         ORG.CFJump(x); Check(ORS.colon, ": expected"); StatSequence;
-        ORG.FJump(L0); ORG.Fixup(x); obj.type := orgtype; obj.expo := orgexpo
+        ORG.FJump(L0); ORG.Fixup(x); obj.type := orgtype; DEC(obj.exno)
       ELSE ORS.Mark("type id expected"); Check(ORS.colon, ": expected"); StatSequence
       END
     END TypeCase;
@@ -611,8 +610,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
         IF x.mode = ORB.SProc THEN StandProc(obj.val)
         ELSE selector(x, sel);
           IF sym = ORS.becomes THEN (*assignment*)
-            IF ~sel & obj.expo & (obj.lev > 0) & (obj.type.form = ORB.Pointer) THEN (*type case var*) SetReadOnly(x) END ;
-            ORS.Get(sym); CheckReadOnly(x); expression(y);
+            ORS.Get(sym); CheckTypeCase(x, obj, sel); CheckReadOnly(x); expression(y);
             IF CompTypes(x.type, y.type, FALSE) THEN
               IF (x.type.form <= ORB.Pointer) OR (x.type.form = ORB.Proc) THEN ORG.Store(x, y)
               ELSE ORG.StoreStruct(x, y)
