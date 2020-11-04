@@ -65,11 +65,11 @@ MODULE TestTypeCase;  (*test type case statements / AP 1.11.20 Extended Oberon*)
 
   PROCEDURE check3(VAR r: R0);
     VAR rr: R1;
-  BEGIN r := r1;           (*projection of the fields of R1 onto the fiels of R0*)
+  BEGIN r := r1;           (*projection of the fields of r1 onto the fiels of r0*)
     CASE r OF
       R1:
         rr := r;
-        r := r1;           (*ERROR "read-only" - cannot modify a case variable through an assignment*)
+        r := r1;           (*projection of the fields of r1 onto the fiels of r0*)
         Proc3(r);
         Proc4(r);
         r.fld1 := 234
