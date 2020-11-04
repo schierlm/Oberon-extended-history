@@ -27,10 +27,10 @@ MODULE TestTypeCase;  (*test type case statements / AP 1.11.20 Extended Oberon*)
 
   PROCEDURE check0();
   BEGIN p0 := p1;
-    CASE p0 OF  (*ERROR "invalid case variable" - global case variables are not allowed*)
+    CASE p0 OF             (*ERROR "invalid case variable" - global case variables are not allowed*)
       P1:
-        AssignGlobal();  (*if p0 were allowed to be global, the dynamic type of p0 would be set to P2 here*)
-        p0.fld1 := 123  (*and there would be a type violation here, as p0 is considered of type P1*)
+        AssignGlobal();    (*if p0 were allowed to be global, the dynamic type of p0 would be set to P2 here*)
+        p0.fld1 := 123     (*and there would be a type violation here, as p0 is considered of type P1*)
     END
   END check0;
 
@@ -41,35 +41,35 @@ MODULE TestTypeCase;  (*test type case statements / AP 1.11.20 Extended Oberon*)
       P1:
         pa := p;
         Proc1(p);
-        Proc2(p);  (*ERROR "invalid parameter" - cannot pass a case variable of a pointer type as a VAR parameter*)
+        Proc2(p);          (*ERROR "read-only" - cannot pass a case variable of a pointer type as a VAR parameter*)
         Proc5(p.fld1);
-        p := p2;  (*ERROR "invalid assignment"  - cannot modify a case variable through an assignment*)
+        p := p2;           (*ERROR "read-only" - cannot modify a case variable through an assignment*)
         p.fld1 := 123;
         CASE p OF
           P1:
-            p := p1;  (*ERROR "invalid assignment"  - cannot modify a case variable through an assignment*)
+            p := p1;       (*ERROR "read-only" - cannot modify a case variable through an assignment*)
             Proc1(p);
-            Proc2(p)   (*ERROR "invalid parameter" - cannot pass a case variable of a pointer type as a VAR parameter*)
+            Proc2(p)       (*ERROR "read-only" - cannot pass a case variable of a pointer type as a VAR parameter*)
         END ;
-        p := p1  (*ERROR "invalid assignment" - cannot modify a case variable through an assignment*)
+        p := p1            (*ERROR "read-only" - cannot modify a case variable through an assignment*)
     END
   END check1;
 
   PROCEDURE check2();
   BEGIN p0 := p1;
     IF p0 IS P1 THEN
-      AssignGlobal();  (*the runtime type of p0 is not P1 anymore, but P2, after this statement*)
+      AssignGlobal();      (*the runtime type of p0 is not P1 anymore, but P2, after this statement*)
       p0(P1).fld1 := 123;  (*thereore, there (correctly) will be a type guard failure at runtime here*)
     END
   END check2;
 
   PROCEDURE check3(VAR r: R0);
     VAR rr: R1;
-  BEGIN r := r1; (*projection of the fields of R1 onto the fiels of R0*)
+  BEGIN r := r1;           (*projection of the fields of R1 onto the fiels of R0*)
     CASE r OF
       R1:
         rr := r;
-        r := r1;  (*ERROR "invalid assignment" - cannot modify a case variable through an assignment*)
+        r := r1;           (*ERROR "read-only" - cannot modify a case variable through an assignment*)
         Proc3(r);
         Proc4(r);
         r.fld1 := 234
@@ -79,7 +79,7 @@ MODULE TestTypeCase;  (*test type case statements / AP 1.11.20 Extended Oberon*)
   PROCEDURE check4();
     VAR r: R1;
   BEGIN r := r1;
-    CASE r OF  (*ERROR "invalid case variable" - a record must be a variable parameter*)
+    CASE r OF              (*ERROR "invalid case variable" - a record must be a variable parameter*)
       R1: r.fld1 := 345
     END
   END check4;
@@ -93,7 +93,7 @@ MODULE TestTypeCase;  (*test type case statements / AP 1.11.20 Extended Oberon*)
 
   PROCEDURE check6(VAR p: P0);
   BEGIN
-    CASE p OF P1:  (*ERROR "invalid case variable" - a pointer must be either a local variable or a value parameter*)
+    CASE p OF P1:          (*ERROR "invalid case variable" - a pointer must be either a local variable or a value parameter*)
       p0 := p2;
       p.fld1 := {4,1}
     END
@@ -102,7 +102,7 @@ MODULE TestTypeCase;  (*test type case statements / AP 1.11.20 Extended Oberon*)
   PROCEDURE check7();
     VAR q: P;
   BEGIN q := p;
-    CASE q OF  (*ERROR "invalid case variable" - a pointer must be a pointer to record*)
+    CASE q OF              (*ERROR "invalid case variable" - a pointer must be a pointer to record*)
       P: q[3] := 3
     END
   END check7;

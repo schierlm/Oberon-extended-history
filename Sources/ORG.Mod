@@ -276,11 +276,11 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   (* Items: Conversion from constants or from Objects on the Heap to Items on the Stack*)
 
   PROCEDURE MakeConstItem*(VAR x: Item; typ: ORB.Type; val: LONGINT);
-  BEGIN x.mode := ORB.Const; x.type := typ; x.a := val; x.b := 0
+  BEGIN x.mode := ORB.Const; x.type := typ; x.a := val
   END MakeConstItem;
 
   PROCEDURE MakeRealItem*(VAR x: Item; val: REAL);
-  BEGIN x.mode := ORB.Const; x.type := ORB.realType; x.a := SYSTEM.VAL(LONGINT, val); x.b := 0
+  BEGIN x.mode := ORB.Const; x.type := ORB.realType; x.a := SYSTEM.VAL(LONGINT, val)
   END MakeRealItem;
 
   PROCEDURE MakeStringItem*(VAR x: Item; len: LONGINT);  (*copies string from ORS-buffer to ORG-string array*)
@@ -298,7 +298,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     IF y.class = ORB.Par THEN x.b := 0
     ELSIF (y.class = ORB.Const) & (y.type.form = ORB.String) THEN x.r := y.lev;
       x.a := y.val MOD C20; (*strx/exno*) x.b := y.val DIV C20 (*len*)
-    ELSE x.b := 0; x.r := y.lev
+    ELSE x.r := y.lev
     END
   END MakeItem;
 
@@ -766,16 +766,6 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     incR;
     IF par.class = ORB.Par THEN (*record*) loadTypTagAdr(par.type) END  (*type tag -> R1*)
   END ReceiverParam;
-
-  PROCEDURE SetCaseVar*(VAR x: Item);
-  BEGIN
-    IF (x.mode IN {ORB.Var, ORB.Par}) & (x.type.form = ORB.Pointer) THEN x.b := 1 END
-  END SetCaseVar;
-
-  PROCEDURE CheckCaseVar*(VAR x: Item);
-  BEGIN
-    IF (x.mode IN {ORB.Var, ORB.Par}) & (x.type.form = ORB.Pointer) & (x.b = 1) THEN ORS.Mark("invalid parameter") END
-  END CheckCaseVar;
 
   (*For Statements*)
 
