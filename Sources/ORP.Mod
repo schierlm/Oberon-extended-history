@@ -77,6 +77,11 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     IF x.mode # ORB.Const THEN ORS.Mark("not a constant"); x.mode := ORB.Const END
   END CheckConst;
 
+  PROCEDURE CheckCase(VAR x: ORG.Item; obj: ORB.Object; selected: BOOLEAN);
+  BEGIN (*check for case variable of pointer type*)
+    IF ~selected & (obj.lev > 0) & (obj.exno > 0) & (obj.type.form = ORB.Pointer) THEN x.rdo := TRUE END
+  END CheckCase;
+
   PROCEDURE CheckReadOnly(VAR x: ORG.Item);
   BEGIN
     IF x.rdo THEN ORS.Mark("read-only") END
@@ -90,11 +95,6 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     ELSE expo := FALSE
     END
   END CheckExport;
-
-  PROCEDURE CheckTypeCase(VAR x: ORG.Item; obj: ORB.Object; selected: BOOLEAN);
-  BEGIN
-    IF ~selected & (obj.lev > 0) & (obj.exno > 0) & (obj.type.form = ORB.Pointer) THEN x.rdo := TRUE END
-  END CheckTypeCase;
 
   PROCEDURE IsExtension(t0, t1: ORB.Type): BOOLEAN;
   BEGIN (*t1 is an extension of t0*)
@@ -363,7 +363,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     IF sym = ORS.ident THEN
       qualident(obj);
       IF obj.class = ORB.SFunc THEN StandFunc(x, obj.val, obj.type)
-      ELSE ORG.MakeItem(x, obj, level); selector(x, sel); CheckTypeCase(x, obj, sel);
+      ELSE ORG.MakeItem(x, obj, level); selector(x, sel); CheckCase(x, obj, sel);
         IF sym = ORS.lparen THEN
           ORS.Get(sym);
           IF (x.type.form IN {ORB.Proc, ORB.TProc}) & (x.type.base.form # ORB.NoTyp) THEN
@@ -610,7 +610,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
         IF x.mode = ORB.SProc THEN StandProc(obj.val)
         ELSE selector(x, sel);
           IF sym = ORS.becomes THEN (*assignment*)
-            ORS.Get(sym); CheckTypeCase(x, obj, sel); CheckReadOnly(x); expression(y);
+            ORS.Get(sym); CheckCase(x, obj, sel); CheckReadOnly(x); expression(y);
             IF CompTypes(x.type, y.type, FALSE) THEN
               IF (x.type.form <= ORB.Pointer) OR (x.type.form = ORB.Proc) THEN ORG.Store(x, y)
               ELSE ORG.StoreStruct(x, y)
