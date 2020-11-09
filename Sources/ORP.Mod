@@ -17,6 +17,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     dc: LONGINT;    (*data counter*)
     level, exno, version: INTEGER;
     newSF: BOOLEAN;  (*option flag*)
+    selected: BOOLEAN;  (*set when a selection is processed*)
     expression: PROCEDURE (VAR x: ORG.Item);  (*to avoid forward reference*)
     Type: PROCEDURE (VAR type: ORB.Type; expo: BOOLEAN);
     FormalType: PROCEDURE (VAR typ: ORB.Type; dim: INTEGER);
@@ -91,9 +92,11 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     END
   END CheckExport;
 
-  PROCEDURE CheckTypeCase(VAR x: ORG.Item; obj: ORB.Object; selected: BOOLEAN);
+  PROCEDURE CheckTypeCase(VAR x: ORG.Item; obj: ORB.Object; sel: BOOLEAN);
   BEGIN
-    IF ~selected & (obj.lev > 0) & (obj.exno > 0) & (obj.type.form = ORB.Pointer) THEN x.rdo := TRUE END
+    IF sel THEN selected := TRUE
+    ELSIF (obj.lev > 0) & (obj.exno > 0) & (obj.type.form = ORB.Pointer) THEN x.rdo := TRUE
+    END
   END CheckTypeCase;
 
   PROCEDURE CheckReceiver(proc: ORB.Object; deref: BOOLEAN);
@@ -537,9 +540,9 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
       END
     END TypeCase;
 
-    PROCEDURE TypeCasePart;
-      VAR obj: ORB.Object; L0: LONGINT;
-    BEGIN qualident(obj); Check(ORS.of, "OF expected"); L0 := 0;
+    PROCEDURE TypeCasePart(obj: ORB.Object);
+      VAR L0: LONGINT;
+    BEGIN Check(ORS.of, "OF expected"); L0 := 0;
       WHILE (sym < ORS.end) OR (sym = ORS.bar) DO
         IF sym = ORS.bar THEN ORS.Get(sym) ELSE TypeCase(obj, L0) END
       END ;
@@ -582,16 +585,10 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
       Check(ORS.colon, ": expected"); StatSequence
     END NumericCase;
 
-    PROCEDURE CaseExpression(VAR x: ORG.Item);
-    BEGIN expression(x);
-      IF ~(x.type.form IN {ORB.Int, ORB.Byte, ORB.Char}) THEN ORS.Mark("invalid type"); x.type := ORB.intType END
-    END CaseExpression;
-
-    PROCEDURE NumericCasePart;
-      VAR x: ORG.Item; L0, L1, L2: LONGINT; n, labelform: INTEGER;
+    PROCEDURE NumericCasePart(VAR x: ORG.Item);
+      VAR L0, L1, L2: LONGINT; n, labelform: INTEGER;
         tab: ARRAY NofCases OF ORG.LabelRange;  (*ordered table of label ranges*)
-    BEGIN CaseExpression(x); ORG.CaseHead(x, L0);
-      Check(ORS.of, "OF expected"); n := 0; L2 := 0; labelform := x.type.form;
+    BEGIN Check(ORS.of, "OF expected"); ORG.CaseHead(x, L0); n := 0; L2 := 0; labelform := x.type.form;
       WHILE (sym < ORS.end) OR (sym = ORS.bar) DO
         IF sym = ORS.bar THEN ORS.Get(sym) ELSE NumericCase(labelform, n, tab); ORG.FJump(L2) END
       END ;
@@ -600,7 +597,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     END NumericCasePart;
 
   BEGIN (* StatSequence *)
-    REPEAT (*sync*) obj := NIL;
+    REPEAT (*sync*) obj := NIL; selected := FALSE;
       IF ~((sym >= ORS.ident) & (sym <= ORS.for) OR (sym >= ORS.semicolon)) THEN
         ORS.Mark("statement expected");
         REPEAT ORS.Get(sym) UNTIL sym >= ORS.ident
@@ -684,13 +681,16 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
       ELSIF sym = ORS.case THEN
         ORS.Get(sym);
         IF sym = ORS.ident THEN obj := ORB.thisObj() END ;
-        IF (obj # NIL) & (obj.type.form IN {ORB.Pointer, ORB.Record}) THEN
+        expression(x);
+        IF ~selected & (obj # NIL) & (obj.type.form IN {ORB.Pointer, ORB.Record}) THEN
           IF (obj.type.form = ORB.Pointer) & ((obj.class # ORB.Var) OR (obj.type.base.form # ORB.Record)) OR
             (obj.type.form = ORB.Record) & (obj.class # ORB.Par) OR (obj.lev <= 0)
           THEN ORS.Mark("invalid case variable")
           END ;
-          TypeCasePart
-        ELSE NumericCasePart
+          TypeCasePart(obj)
+        ELSE
+          IF ~(x.type.form IN {ORB.Int, ORB.Byte, ORB.Char}) THEN ORS.Mark("invalid case expression"); x.type := ORB.intType END ;
+          NumericCasePart(x)
         END ;
         Check(ORS.end, "no END")
       END ;

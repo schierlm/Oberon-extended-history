@@ -28,3 +28,4 @@
 2020-09-01 Fonts - Replace all calls to module SYSTEM with array and pointer operations
 2020-10-24 Oberon, System - Oberon.Batch (but not System.Batch) invokes the garbage collector after each executed command
 2020-11-01 ORG, ORB - Restrict the type case statement such that type loopholes are no longer possible
+2020-11-09 ORP - Re-allow elements of a structure in case expressions of the numeric case statement in all cases
