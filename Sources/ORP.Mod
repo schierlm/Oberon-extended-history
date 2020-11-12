@@ -1,4 +1,4 @@
-MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 / AP 11.11.20 Extended Oberon*)
+MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 / AP 12.11.20 Extended Oberon*)
   IMPORT Texts, Oberon, ORS, ORB, ORG;
   (*Author: Niklaus Wirth, 2014. Oberon-2 extensions by Andreas Pirklbauer, 2020.
     Parser of Oberon-RISC compiler. Uses Scanner ORS to obtain symbols (tokens),
@@ -366,7 +366,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     IF sym = ORS.ident THEN
       qualident(obj);
       IF obj.class = ORB.SFunc THEN StandFunc(x, obj.val, obj.type)
-      ELSE ORG.MakeItem(x, obj, level); selector(x, sel); CheckCase(x, obj, sel);
+      ELSE ORG.MakeItem(x, obj); selector(x, sel); CheckCase(x, obj, sel);
         IF sym = ORS.lparen THEN
           ORS.Get(sym);
           IF (x.type.form IN {ORB.Proc, ORB.TProc}) & (x.type.base.form # ORB.NoTyp) THEN
@@ -531,7 +531,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
         orgtype: ORB.Type;  (*original type of case var*)
     BEGIN (*obj.lev > 0*)
       IF sym = ORS.ident THEN
-        qualident(typobj); ORG.MakeItem(x, obj, level); orgtype := obj.type;
+        qualident(typobj); ORG.MakeItem(x, obj); orgtype := obj.type;
         IF typobj.class # ORB.Typ THEN ORS.Mark("not a type") END ;
         TypeTest(x, typobj.type, FALSE); obj.type := typobj.type; INC(obj.exno);
         ORG.CFJump(x); Check(ORS.colon, ": expected"); StatSequence;
@@ -603,7 +603,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
         REPEAT ORS.Get(sym) UNTIL sym >= ORS.ident
       END ;
       IF sym = ORS.ident THEN
-        qualident(obj); ORG.MakeItem(x, obj, level);
+        qualident(obj); ORG.MakeItem(x, obj);
         IF x.mode = ORB.SProc THEN StandProc(obj.val)
         ELSE selector(x, sel);
           IF sym = ORS.becomes THEN (*assignment*)
@@ -664,7 +664,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
       ELSIF sym = ORS.for THEN
         ORS.Get(sym);
         IF sym = ORS.ident THEN
-          qualident(obj); ORG.MakeItem(x, obj, level); CheckInt(x); CheckReadOnly(x);
+          qualident(obj); ORG.MakeItem(x, obj); CheckInt(x); CheckReadOnly(x);
           IF sym = ORS.becomes THEN
             ORS.Get(sym); expression(y); CheckInt(y); ORG.For0(x, y); L0 := ORG.Here();
             Check(ORS.to, "no TO"); expression(z); CheckInt(z); obj.rdo := TRUE;
@@ -682,14 +682,16 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
         ORS.Get(sym);
         IF sym = ORS.ident THEN obj := ORB.thisObj() END ;
         expression(x);
-        IF ~selected & (obj # NIL) & (obj.type.form IN {ORB.Pointer, ORB.Record}) THEN
-          IF (obj.type.form = ORB.Pointer) & ((obj.class # ORB.Var) OR (obj.type.base.form # ORB.Record)) OR
-            (obj.type.form = ORB.Record) & (obj.class # ORB.Par) OR (obj.lev <= 0)
+        IF ~selected & (x.type.form IN {ORB.Pointer, ORB.Record}) THEN
+          IF (x.type.form = ORB.Pointer) & ((x.mode # ORB.Var) OR (x.type.base.form # ORB.Record)) OR
+            (x.type.form = ORB.Record) & (x.mode # ORB.Par) OR (obj.lev <= 0)
           THEN ORS.Mark("invalid case variable")
           END ;
           TypeCasePart(obj)
         ELSE
-          IF ~(x.type.form IN {ORB.Int, ORB.Byte, ORB.Char}) THEN ORS.Mark("invalid case expression"); x.type := ORB.intType END ;
+          IF ~(x.type.form IN {ORB.Int, ORB.Byte, ORB.Char}) THEN
+            ORS.Mark("invalid case expression"); x.type := ORB.intType
+          END ;
           NumericCasePart(x)
         END ;
         Check(ORS.end, "no END")
@@ -1160,7 +1162,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     Oberon.Collect(0); Oberon.Return(res)
   END Compile;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Compiler  8.3.2020 / AP 11.11.20");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Compiler  8.3.2020 / AP 12.11.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
   NEW(dummy); dummy.class := ORB.Var; dummy.type := ORB.intType;
   expression := expression0; Type := Type0; FormalType := FormalType0
