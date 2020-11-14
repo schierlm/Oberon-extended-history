@@ -355,7 +355,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
   END set; 
 
   PROCEDURE factor(VAR x: ORG.Item);
-    VAR obj: ORB.Object; rx: LONGINT; sel: BOOLEAN;
+    VAR obj: ORB.Object; rx: LONGINT;
   BEGIN (*sync*)
     IF (sym < ORS.char) OR (sym > ORS.ident) THEN ORS.Mark("expression expected");
       REPEAT ORS.Get(sym) UNTIL (sym >= ORS.char) & (sym <= ORS.for) OR (sym >= ORS.then)
@@ -519,7 +519,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
   END StandProc;
 
   PROCEDURE StatSequence;
-    VAR obj: ORB.Object; sel: BOOLEAN;
+    VAR obj: ORB.Object;
       x, y, z, w: ORG.Item;
       L0, L1, rx: LONGINT;
 
