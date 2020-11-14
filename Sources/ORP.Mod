@@ -17,7 +17,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     dc: LONGINT;    (*data counter*)
     level, exno, version: INTEGER;
     newSF: BOOLEAN;  (*option flag*)
-    selected: BOOLEAN;  (*set when a selection is processed*)
+    selected: BOOLEAN;  (*set by CheckCase after a selection is processed*)
     expression: PROCEDURE (VAR x: ORG.Item);  (*to avoid forward reference*)
     Type: PROCEDURE (VAR type: ORB.Type; expo: BOOLEAN);
     FormalType: PROCEDURE (VAR typ: ORB.Type; dim: INTEGER);
@@ -143,8 +143,8 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     VAR y: ORG.Item; obj, fld: ORB.Object; xt: ORB.Type; deref, sel: BOOLEAN;
   BEGIN deref := FALSE; sel := FALSE;
     WHILE (sym = ORS.lbrak) OR (sym = ORS.period) OR (sym = ORS.arrow)
-        OR (sym = ORS.lparen) & (x.type.form IN {ORB.Record, ORB.Pointer}) DO
-      IF sym = ORS.lbrak THEN sel := TRUE;
+        OR (sym = ORS.lparen) & (x.type.form IN {ORB.Record, ORB.Pointer}) DO sel := TRUE;
+      IF sym = ORS.lbrak THEN
         IF x.type.form = ORB.Pointer THEN ORG.DeRef(x); x.type := x.type.base END ;
         REPEAT ORS.Get(sym); expression(y);
           IF x.type.form = ORB.Array THEN
@@ -153,7 +153,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
           END
         UNTIL sym # ORS.comma;
         Check(ORS.rbrak, "no ]"); deref := FALSE
-      ELSIF sym = ORS.period THEN sel := TRUE;
+      ELSIF sym = ORS.period THEN
         ORS.Get(sym);
         IF sym = ORS.ident THEN
           IF x.type.form = ORB.Pointer THEN ORG.DeRef(x); x.type := x.type.base; deref := TRUE END ;
@@ -182,7 +182,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
           END
         ELSE ORS.Mark("ident?")
         END
-      ELSIF sym = ORS.arrow THEN sel := TRUE;
+      ELSIF sym = ORS.arrow THEN
         ORS.Get(sym);
         IF x.type.form = ORB.Pointer THEN ORG.DeRef(x); x.type := x.type.base; deref := TRUE
         ELSE ORS.Mark("not a pointer")
