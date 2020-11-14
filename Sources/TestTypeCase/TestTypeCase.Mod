@@ -52,6 +52,7 @@ MODULE TestTypeCase;  (*test type case statements / AP 1.11.20 Extended Oberon*)
             Proc2(p)       (*ERROR "read-only" - cannot pass a case variable of a pointer type as a VAR parameter*)
         END ;
         p := p1            (*ERROR "read-only" - cannot modify a case variable through an assignment*)
+    ELSE p := p1           (*ERROR "read-only" - cannot modify a case variable through an assignment*)
     END ;
     CASE p.fld0 OF         (*selecting a field is allowed for the numeric case statement*)
       33..44: INC(p.fld0)

@@ -529,11 +529,11 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     PROCEDURE TypeCase(obj: ORB.Object; VAR L0: LONGINT);
       VAR typobj: ORB.Object; x: ORG.Item;
         orgtype: ORB.Type;  (*original type of case var*)
-    BEGIN (*obj.lev > 0*)
+    BEGIN (*obj.lev > 0 & obj.exno > 0*)
       IF sym = ORS.ident THEN
         qualident(typobj); ORG.MakeItem(x, obj); orgtype := obj.type;
         IF typobj.class # ORB.Typ THEN ORS.Mark("not a type") END ;
-        TypeTest(x, typobj.type, FALSE); obj.type := typobj.type; INC(obj.exno);
+        TypeTest(x, typobj.type, FALSE); obj.type := typobj.type;
         ORG.CFJump(x); Check(ORS.colon, ": expected"); StatSequence;
         ORG.FJump(L0); ORG.Fixup(x); obj.type := orgtype; DEC(obj.exno)
       ELSE ORS.Mark("type id expected"); Check(ORS.colon, ": expected"); StatSequence
@@ -542,12 +542,12 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
 
     PROCEDURE TypeCasePart(obj: ORB.Object);
       VAR L0: LONGINT;
-    BEGIN Check(ORS.of, "OF expected"); L0 := 0;
+    BEGIN Check(ORS.of, "OF expected"); L0 := 0; INC(obj.exno);
       WHILE (sym < ORS.end) OR (sym = ORS.bar) DO
         IF sym = ORS.bar THEN ORS.Get(sym) ELSE TypeCase(obj, L0) END
       END ;
       IF sym = ORS.else THEN ORS.Get(sym); StatSequence END ;
-      ORG.FixLink(L0)
+      ORG.FixLink(L0); DEC(obj.exno)
     END TypeCasePart;
 
     PROCEDURE CaseLabel(VAR x: ORG.Item);
