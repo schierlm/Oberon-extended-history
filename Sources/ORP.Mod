@@ -532,7 +532,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
         IF typobj.class # ORB.Typ THEN ORS.Mark("not a type") END ;
         TypeTest(x, typobj.type, FALSE); obj.type := typobj.type;
         ORG.CFJump(x); Check(ORS.colon, ": expected"); StatSequence;
-        ORG.FJump(L0); ORG.Fixup(x); obj.type := orgtype; DEC(obj.exno)
+        ORG.FJump(L0); ORG.Fixup(x); obj.type := orgtype;
       ELSE ORS.Mark("type id expected"); Check(ORS.colon, ": expected"); StatSequence
       END
     END TypeCase;
