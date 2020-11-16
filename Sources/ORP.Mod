@@ -17,7 +17,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     dc: LONGINT;    (*data counter*)
     level, exno, version: INTEGER;
     newSF: BOOLEAN;  (*option flag*)
-    selected: BOOLEAN;  (*set when a selection is processed*)
+    selected: BOOLEAN;  (*to detect whether a selection has been processed*)
     expression: PROCEDURE (VAR x: ORG.Item);  (*to avoid forward reference*)
     Type: PROCEDURE (VAR type: ORB.Type; expo: BOOLEAN);
     FormalType: PROCEDURE (VAR typ: ORB.Type; dim: INTEGER);
@@ -92,10 +92,15 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     END
   END CheckExport;
 
-  PROCEDURE CheckCase(VAR x: ORG.Item; obj: ORB.Object; selected: BOOLEAN);
+  PROCEDURE CheckCase(VAR x: ORG.Item; obj: ORB.Object; sel: BOOLEAN);
   BEGIN
-    IF ~selected & (obj.lev > 0) & (obj.exno > 0) & (obj.type.form = ORB.Pointer) THEN x.rdo := TRUE END
+    IF ~sel & (obj.lev > 0) & (obj.exno > 0) & (obj.type.form = ORB.Pointer) THEN x.rdo := TRUE END
   END CheckCase;
+
+  PROCEDURE SetSel(sel: BOOLEAN);
+  BEGIN
+    IF sel THEN selected := TRUE END
+  END SetSel;
 
   PROCEDURE CheckReceiver(proc: ORB.Object; deref: BOOLEAN);
   BEGIN
@@ -137,11 +142,11 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     IF ~guard THEN x.type := ORB.boolType END
   END TypeTest;
 
-  PROCEDURE selector(VAR x: ORG.Item);
-    VAR y: ORG.Item; obj, fld: ORB.Object; xt: ORB.Type; deref: BOOLEAN;
-  BEGIN deref := FALSE;
+  PROCEDURE selector(VAR x: ORG.Item; VAR sel: BOOLEAN);
+    VAR y: ORG.Item; obj, fld: ORB.Object; xt: ORB.Type; deref, s: BOOLEAN;
+  BEGIN deref := FALSE; s := FALSE;
     WHILE (sym = ORS.lbrak) OR (sym = ORS.period) OR (sym = ORS.arrow)
-        OR (sym = ORS.lparen) & (x.type.form IN {ORB.Record, ORB.Pointer}) DO selected := TRUE;
+        OR (sym = ORS.lparen) & (x.type.form IN {ORB.Record, ORB.Pointer}) DO s := TRUE;
       IF sym = ORS.lbrak THEN
         IF x.type.form = ORB.Pointer THEN ORG.DeRef(x); x.type := x.type.base END ;
         REPEAT ORS.Get(sym); expression(y);
@@ -196,7 +201,8 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
         END ;
         Check(ORS.rparen, " ) missing")
       END
-    END
+    END ;
+    sel := s
   END selector;
 
   PROCEDURE EqualSignatures(t0, t1: ORB.Type): BOOLEAN;
@@ -355,7 +361,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
   END set; 
 
   PROCEDURE factor(VAR x: ORG.Item);
-    VAR obj: ORB.Object; rx: LONGINT;
+    VAR obj: ORB.Object; rx: LONGINT; sel: BOOLEAN;
   BEGIN (*sync*)
     IF (sym < ORS.char) OR (sym > ORS.ident) THEN ORS.Mark("expression expected");
       REPEAT ORS.Get(sym) UNTIL (sym >= ORS.char) & (sym <= ORS.for) OR (sym >= ORS.then)
@@ -363,7 +369,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     IF sym = ORS.ident THEN
       qualident(obj);
       IF obj.class = ORB.SFunc THEN StandFunc(x, obj.val, obj.type)
-      ELSE ORG.MakeItem(x, obj); selector(x); CheckCase(x, obj, selected);
+      ELSE ORG.MakeItem(x, obj); selector(x, sel); CheckCase(x, obj, sel); SetSel(sel);
         IF sym = ORS.lparen THEN
           ORS.Get(sym);
           IF (x.type.form IN {ORB.Proc, ORB.TProc}) & (x.type.base.form # ORB.NoTyp) THEN
@@ -519,7 +525,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
   END StandProc;
 
   PROCEDURE StatSequence;
-    VAR obj: ORB.Object;
+    VAR obj: ORB.Object; sel: BOOLEAN;
       x, y, z, w: ORG.Item;
       L0, L1, rx: LONGINT;
 
@@ -594,7 +600,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     END NumericCasePart;
 
   BEGIN (* StatSequence *)
-    REPEAT (*sync*) obj := NIL; selected := FALSE;
+    REPEAT (*sync*) obj := NIL;
       IF ~((sym >= ORS.ident) & (sym <= ORS.for) OR (sym >= ORS.semicolon)) THEN
         ORS.Mark("statement expected");
         REPEAT ORS.Get(sym) UNTIL sym >= ORS.ident
@@ -602,9 +608,9 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
       IF sym = ORS.ident THEN
         qualident(obj); ORG.MakeItem(x, obj);
         IF x.mode = ORB.SProc THEN StandProc(obj.val)
-        ELSE selector(x);
+        ELSE selector(x, sel);
           IF sym = ORS.becomes THEN (*assignment*)
-            ORS.Get(sym); CheckCase(x, obj, selected); CheckReadOnly(x); expression(y);
+            ORS.Get(sym); CheckCase(x, obj, sel); CheckReadOnly(x); expression(y);
             IF CompTypes(x.type, y.type, FALSE) THEN
               IF (x.type.form <= ORB.Pointer) OR (x.type.form = ORB.Proc) THEN ORG.Store(x, y)
               ELSE ORG.StoreStruct(x, y)
@@ -678,7 +684,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
       ELSIF sym = ORS.case THEN
         ORS.Get(sym);
         IF sym = ORS.ident THEN obj := ORB.thisObj() END ;
-        expression(x);
+        selected := FALSE; expression(x);
         IF ~selected & (obj # NIL) & (x.type.form IN {ORB.Pointer, ORB.Record}) THEN
           IF (x.type.form = ORB.Pointer) & ((x.mode # ORB.Var) OR (x.type.base.form # ORB.Record)) OR
             (x.type.form = ORB.Record) & (x.mode # ORB.Par) OR (obj.lev <= 0)
