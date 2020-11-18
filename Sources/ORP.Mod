@@ -369,7 +369,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     IF sym = ORS.ident THEN
       qualident(obj);
       IF obj.class = ORB.SFunc THEN StandFunc(x, obj.val, obj.type)
-      ELSE ORG.MakeItem(x, obj); selector(x, sel); CheckCase(x, obj, sel); SetSel(sel);
+      ELSE ORG.MakeItem(x, obj); selector(x, sel); SetSel(sel); CheckCase(x, obj, sel);
         IF sym = ORS.lparen THEN
           ORS.Get(sym);
           IF (x.type.form IN {ORB.Proc, ORB.TProc}) & (x.type.base.form # ORB.NoTyp) THEN
@@ -687,7 +687,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
         selected := FALSE; expression(x);
         IF ~selected & (obj # NIL) & (x.type.form IN {ORB.Pointer, ORB.Record}) THEN
           IF (x.type.form = ORB.Pointer) & ((x.mode # ORB.Var) OR (x.type.base.form # ORB.Record)) OR
-            (x.type.form = ORB.Record) & (x.mode # ORB.Par) OR (obj.lev <= 0)
+            (x.type.form = ORB.Record) & (x.mode # ORB.Par) OR (obj.lev # level)
           THEN ORS.Mark("invalid case variable")
           END ;
           TypeCasePart(obj)
