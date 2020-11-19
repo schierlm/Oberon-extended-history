@@ -685,12 +685,9 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
         ORS.Get(sym);
         IF sym = ORS.ident THEN obj := ORB.thisObj() END ;
         selected := FALSE; expression(x);
-        IF ~selected & (obj # NIL) & (x.type.form IN {ORB.Pointer, ORB.Record}) THEN
-          IF (x.type.form = ORB.Pointer) & ((x.mode # ORB.Var) OR (x.type.base.form # ORB.Record)) OR
-            (x.type.form = ORB.Record) & (x.mode # ORB.Par) OR (obj.lev <= 0)
-          THEN ORS.Mark("invalid case variable")
-          END ;
-          TypeCasePart(obj)
+        IF ~selected & (obj # NIL) & (obj.class # ORB.Mod) & (obj.lev > 0) &
+          ((x.type.form = ORB.Pointer) & (x.mode = ORB.Var) & (x.type.base.form = ORB.Record) OR
+          (x.type.form = ORB.Record) & (x.mode = ORB.Par)) THEN TypeCasePart(obj)
         ELSE
           IF ~(x.type.form IN {ORB.Int, ORB.Byte, ORB.Char}) THEN
             ORS.Mark("invalid case expression"); x.type := ORB.intType

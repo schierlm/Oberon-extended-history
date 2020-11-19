@@ -1,5 +1,5 @@
 MODULE TestTypeCase;  (*test type case statements / AP 1.11.20 Extended Oberon*)
-
+  IMPORT Texts, Oberon;
   TYPE R0 = RECORD fld0: INTEGER END ;
     R1 = RECORD (R0) fld1: INTEGER END ;
     R2 = RECORD (R0) fld2: INTEGER END ;
@@ -27,10 +27,13 @@ MODULE TestTypeCase;  (*test type case statements / AP 1.11.20 Extended Oberon*)
 
   PROCEDURE check0();
   BEGIN p0 := p1;
-    CASE p0 OF             (*ERROR "invalid case variable" - global case variables are not allowed*)
+    CASE p0 OF             (*ERROR "invalid case expression" - global case variables are not allowed*)
       P1:
         AssignGlobal();    (*if p0 were allowed to be global, the dynamic type of p0 would be set to P2 here*)
         p0.fld1 := 123     (*and there would be a type violation here, as p0 is considered of type P1*)
+    END ;
+    CASE Oberon.Log OF
+      Texts.Text: p0 := p1
     END
   END check0;
 
@@ -83,7 +86,7 @@ MODULE TestTypeCase;  (*test type case statements / AP 1.11.20 Extended Oberon*)
   PROCEDURE check4();
     VAR r: R1;
   BEGIN r := r1;
-    CASE r OF              (*ERROR "invalid case variable" - a record must be a variable parameter*)
+    CASE r OF              (*ERROR "invalid case expression" - a record must be a variable parameter*)
       R1: r.fld1 := 345
     END
   END check4;
@@ -97,7 +100,7 @@ MODULE TestTypeCase;  (*test type case statements / AP 1.11.20 Extended Oberon*)
 
   PROCEDURE check6(VAR p: P0);
   BEGIN
-    CASE p OF P1:          (*ERROR "invalid case variable" - a pointer must be either a local variable or a value parameter*)
+    CASE p OF P1:          (*ERROR "invalid case expression" - a pointer must be either a local variable or a value parameter*)
       p0 := p2;
       p.fld1 := {4,1}
     END
@@ -106,7 +109,7 @@ MODULE TestTypeCase;  (*test type case statements / AP 1.11.20 Extended Oberon*)
   PROCEDURE check7();
     VAR q: P;
   BEGIN q := p;
-    CASE q OF              (*ERROR "invalid case variable" - a pointer must be a pointer to record*)
+    CASE q OF              (*ERROR "invalid case expression" - a pointer must be a pointer to record*)
       P: q[3] := 3
     END
   END check7;
