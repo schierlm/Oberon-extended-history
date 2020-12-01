@@ -29,3 +29,4 @@
 2020-10-24 Oberon, System - Oberon.Batch (but not System.Batch) invokes the garbage collector after each executed command
 2020-11-01 ORG, ORB - Restrict the type case statement such that type loopholes are no longer possible
 2020-11-12 ORP - Allow elements of a structure as numeric case expressions in all cases
+2020-12-01 ORL - Don't provide a hint to the bootloader for Kernel.MemLim and Kernel.stackOrg anymore
