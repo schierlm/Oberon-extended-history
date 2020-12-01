@@ -1,4 +1,4 @@
-MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 6.8.20 Extended Oberon*)
+MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 1.12.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, Files, Modules, Texts, Oberon;
   CONST versionkey = 1X; versionkey0 = 0X; DescSize = 92; MnLength = 32; BootSec = 2; FPrint = 12345678H;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5;
@@ -260,10 +260,10 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 6.8.20 Extended Oberon*)
         SYSTEM.PUT(Start, BCT + (x DIV 4) - 1);  (*branch instruction to the initialization body of the top module*)
         SYSTEM.PUT(Start + TrapAdr, 0);  (*trap handler, typically overwritten by the inner core*)
         SYSTEM.PUT(Start + DestAdr, 0);  (*destination address of the prelinked, executable binary*)
-        SYSTEM.PUT(Start + MemAdr, Kernel.MemLim);  (*limit of available memory, typically overwritten by the boot loader*)
+        SYSTEM.PUT(Start + MemAdr, 0);  (*limit of available memory, typically overwritten by the boot loader*)
         SYSTEM.PUT(Start + AllocAdr, AllocPtr - Start);  (*address of the end of the module space loaded*)
         SYSTEM.PUT(Start + RootAdr, SYSTEM.VAL(INTEGER, root) - Start);  (*current root of the links of loaded modules*)
-        SYSTEM.PUT(Start + StackAdr, Kernel.stackOrg);  (*current limit of the module area, typically overwritten by the boot loader*)
+        SYSTEM.PUT(Start + StackAdr, 0);  (*current limit of the module area, typically overwritten by the boot loader*)
         SYSTEM.PUT(Start + FPrintAdr, FPrint);  (*fingerprint*)
         MakeFileName(name, S.s, ".bin"); F := Files.New(name); Files.Set(R, F, 0); i := Start;
         WHILE i < AllocPtr DO SYSTEM.GET(i, x); Files.WriteInt(R, x); INC(i, 4) END ;
@@ -432,6 +432,6 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 6.8.20 Extended Oberon*)
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END Execute;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 6.8.20");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 1.12.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); limit := Kernel.stackOrg - Kernel.stackSize
 END ORL.
