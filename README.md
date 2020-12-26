@@ -14,7 +14,7 @@ Features
 * Import any number of modules
 * Simple batch execution facility
 
-**REVISION:** 1.12.2020
+**REVISION:** 12.12.2020
 
 The file [**S3RISCinstall.tar.gz**](Documentation/S3RISCinstall.tar.gz) always reflects the *latest* version of Extended Oberon, as described in the file [**EOS_news.txt**](EOS_news.txt).
 
@@ -32,7 +32,7 @@ Documentation: [**Documentation**](Documentation)
 
 **STEP 1**: Build a slightly modified Project Oberon 2013 compiler on your Project Oberon 2013 system
 
-Edit the file *ORG.Mod* on your Original system and set the following constants to the indicated new values:
+Edit the file *ORG.Mod* on your original system and set the following constants to the indicated new values:
 
      CONST ...
        maxCode = 8800; maxStrx = 3200; ...
@@ -47,7 +47,34 @@ This step is (unfortunately) necessary since the original Oberon-07 compiler has
 
 ------------------------------------------------------
 
-**STEP 2**: Download and import the Extended Oberon files to your Project Oberon 2013 system
+**STEP 2**: Build a slightly modified version of module Oberon on your Project Oberon 2013 system
+
+Edit the file *Oberon.Mod* on your original system and add the following line anywhere in the source text
+
+     PROCEDURE Return*(n: INTEGER); BEGIN END Return;
+
+Then recompile the following modules on your original system:
+
+     ORP.Compile Oberon.Mod/s ~
+     ORP.Compile MenuViewers.Mod/s TextFrames.Mod/s ~
+     ORP.Compile System.Mod/s Edit.Mod/s ~
+     ORP.Compile Tools.Mod/s PCLink1.Mod/s ~
+
+Then re-compile the Oberon compiler again(!) before (!) restarting the system:
+
+     ORP.Compile ORS.Mod/s ORB.Mod/s ~
+     ORP.Compile ORG.Mod/s ORP.Mod/s ~
+     ORP.Compile ORL.Mod/s ORX.Mod/s ORTool.Mod/s ~
+
+------------------------------------------------------
+
+**STEP 3:** Restart the Oberon system
+
+You are now running a slightly modified version  of your your original Project Oberon 2013 system.
+
+------------------------------------------------------
+
+**STEP 4**: Download and import the Extended Oberon files to your (slightly modified) Project Oberon 2013 system
 
 Download all files from the [**Sources**](Sources/) directory of this repository. Convert the *source* files to Oberon format (Oberon uses CR as line endings) using the command [**dos2oberon**](dos2oberon), also available in this repository (example shown for Linux or MacOS):
 
@@ -66,7 +93,7 @@ If you just follow the compilation sequence shown in *System.Tool*, you should b
 
 ------------------------------------------------------
 
-**STEP 3:** Build a cross-development toolchain by compiling the "new" compiler and boot linker/loader on the "old" system
+**STEP 5:** Build a cross-development toolchain by compiling the "new" compiler and boot linker/loader on the "old" system
 
      ORP.Compile ORS.Mod/s ORB.Mod/s ~
      ORP.Compile ORG.Mod/s ORP.Mod/s ~
@@ -82,7 +109,7 @@ Compile the remaining modules of the cross-development toolchain (where *ORL* us
 
 ------------------------------------------------------
 
-**STEP 4:** Use the cross-development toolchain on your Project Oberon 2013 system to build Extended Oberon
+**STEP 6:** Use the cross-development toolchain on your Project Oberon 2013 system to build Extended Oberon
 
 First, load the temporary version of ORL (using module *Disk* compiled for the "old" system):
 
@@ -111,7 +138,7 @@ Compile the remaining modules of Extended Oberon:
 
 ------------------------------------------------------
 
-**STEP 5:** Re-compile the Oberon compiler itself before (!) restarting the system:
+**STEP 7:** Re-compile the Oberon compiler itself before (!) restarting the system:
 
      ORP.Compile ORS.Mod/s ORB.Mod/s ~
      ORP.Compile ORG.Mod/s ORP.Mod/s ~
@@ -121,6 +148,6 @@ This step is necessary because Extended Oberon uses a different Oberon object fi
 
 ------------------------------------------------------
 
-**STEP 6:** Restart the Oberon system
+**STEP 8:** Restart the Oberon system
 
 You are now running Extended Oberon. Re-compile any other modules that you may have on your system.

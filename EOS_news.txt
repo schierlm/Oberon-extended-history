@@ -30,3 +30,5 @@
 2020-11-01 ORG, ORB - Restrict the type case statement such that type loopholes are no longer possible
 2020-11-12 ORP - Allow elements of a structure as numeric case expressions in all cases
 2020-12-01 ORL - Don't provide a hint to the bootloader for Kernel.MemLim and Kernel.stackOrg anymore
+2020-12-02 Disk - Enlarge the boot area from sectors 2-63 by 96 sectors to sectors 2-159, ie by an additional 96KB
+

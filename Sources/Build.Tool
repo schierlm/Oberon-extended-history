@@ -53,7 +53,7 @@ Oberon.Batch
 ~
 
 # ---------------------------------------------------------------------------------------------------------------------
-#  5. Load an ENTIRE Oberon system in a single boot file to a target system (without enlarging its boot area)
+#  5. Load an ENTIRE Oberon system in a single boot file to a target system WITHOUT rebuilding the target system
 #     (restart the target system over the data link, then execute the following commands on the host system)
 # ---------------------------------------------------------------------------------------------------------------------
 ORP.Compile System1.Mod/s ~                # compile the files needed to include an ENTIRE Oberon system in a boot file
@@ -61,12 +61,12 @@ ORL.Link System1 ~                         # generate a boot file containing the
 ORC.Load System1.bin ~                     # load the ENTIRE Oberon system over the data link to the target system AND start it
 
 # ---------------------------------------------------------------------------------------------------------------------
-#  6. Load an ENTIRE Oberon system in a single boot file to a target system AND configure an ENLARGED boot area there
+#  6. Load an ENTIRE Oberon system in a single boot file to a target system AND rebuild the target system
 #     (restart the target system over the data link, then execute the following commands on the host system)
 # ---------------------------------------------------------------------------------------------------------------------
-ORP.Compile Disk1.Mod/s System1.Mod/s ~                  # compile the files needed to include an ENTIRE Oberon system in a single boot file
+ORP.Compile System1.Mod/s ~                              # compile the files needed to include an ENTIRE Oberon system in a boot file
+ORL.Link Modules ~                                       # (optional) generate a REGULAR boot file (Modules.bin)
 ORL.Link System1 ~                                       # generate a boot file containing the ENTIRE Oberon system (System1.bin)
-ORL.Link Modules ~                                       # (optional) generate a REGULAR boot file (Modules.bin, with Disk built from Disk1.Mod)
 ORC.Load System1.bin ~                                   # load the ENTIRE Oberon system over the data link to the target system AND start it
 ORC.SR 101 ~                                             # clear the file directory on the target system
 ORC.Send System1.bin Oberon10.Scn.Fnt System.Tool
@@ -75,22 +75,17 @@ ORC.Send System1.bin Oberon10.Scn.Fnt System.Tool
       Oberon0.rsc Oberon0Tool.rsc
       Edit.rsc PCLink1.rsc
       ORP.rsc ORG.rsc
-      ORB.rsc ORS.rsc ORTool.rsc ~              # Group A: send the files for booting with the ENLARGED boot file to the target system
+      ORB.rsc ORS.rsc ORTool.rsc ~         # Group A: send the files for booting with a boot file containing the ENTIRE Oberon system to the target system
 ORC.Send Modules.bin
       Input.rsc Display.rsc Viewers.rsc
       Fonts.rsc Texts.rsc Oberon.rsc
       MenuViewers.rsc TextFrames.rsc
-      System.rsc ~                   # (optional) Group B: send the files for booting with the REGULAR boot file to the target system
-# Decide which boot file to load onto the enlarged boot area of the disk of the target system (sectors 2-159)
-ORC.SR 100 System1.bin ~        # EITHER load the ENLARGED boot file containing the ENTIRE Oberon system onto the boot area
+      System.rsc ~                         # Group B (optional): send the files for booting with the REGULAR boot file to the target system
+# Decide which boot file to load onto the boot area of the disk of the target system (sectors 2-159)
+ORC.SR 100 System1.bin ~        # EITHER load the boot file containing the ENTIRE Oberon system onto the boot area
 ORC.SR 100 Modules.bin ~        # OR load the REGULAR boot file onto the boot area (requires the files from group B above)
 # Reboot the target system
 ORC.SR 102 BootLoadDisk.rsc ~   # reboot the target system from its local disk (i.e. initiate the "regular" boot process)
-
-#
-# IMPORTANT: Please re-build the entire Oberon system and the Oberon compiler on the host system (see System.Tool),
-#            as object files (Disk.rsc) and binaries (Modules.bin) have been overwritten by the commands above!
-#
 
 # ---------------------------------------------------------------------------------------------------------------------
 #  7. Extract the code section of the boot loader and convert it to a PROM file in hex format
