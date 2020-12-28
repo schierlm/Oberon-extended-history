@@ -429,13 +429,11 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
 
   (*--------------------------- unloading ---------------------------*)
 
-  PROCEDURE Unload(mod: Module); (*module and selected imports from memory*)
+  PROCEDURE Unload(mod: Module); (*module from memory*)
     VAR imp: Module; p, q: INTEGER;
   BEGIN (*mod.refcnt = 0 & mod.name[0] # 0X*)
     mod.name[0] := 0X; p := mod.imp; q := mod.cmd;
-    WHILE p < q DO (*imports*) SYSTEM.GET(p, imp); DEC(imp.refcnt); INC(p, 4);
-      IF (imp.name[0] # 0X) & imp.selected & (imp.refcnt = 0) THEN Unload(imp) END
-    END ;
+    WHILE p < q DO (*imports*) SYSTEM.GET(p, imp); DEC(imp.refcnt); INC(p, 4) END ;
     IF mod.hidden THEN mod.hidden := FALSE; DEC(NofHidden) END ;
     IF mod.selected THEN mod.selected := FALSE; DEC(NofSelected) END ;
     IF mod = root THEN (*increase size of available module space*)
@@ -458,10 +456,12 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
     VAR mod: Module;
   BEGIN res := noref;
     IF NofSelected > 0 THEN Check(res);
-      IF res = noref THEN (*unload*) mod := root;
-        WHILE mod # NIL DO
-          IF (mod.name[0] # 0X) & mod.selected & (mod.refcnt = 0) THEN Unload(mod) END ;
-          mod := mod.next
+      IF res = noref THEN (*unload*)
+        WHILE NofSelected > 0 DO mod := root;
+          WHILE mod # NIL DO
+            IF (mod.name[0] # 0X) & mod.selected & (mod.refcnt = 0) THEN Unload(mod) END ;
+            mod := mod.next
+          END
         END
       ELSIF (res > clients) & hide THEN (*hide*) mod := root;
         WHILE mod # NIL DO
@@ -500,10 +500,12 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
         END ;
         WHILE continue DO Check(res);
           IF res = noref THEN (*unload current selection of k modules and start over*)
-            mod := root; k := 0; continue := FALSE;
-            WHILE mod # NIL DO
-              IF (mod.name[0] # 0X) & mod.hidden & mod.selected & (mod.refcnt = 0) THEN Unload(mod) END ;
-              mod := mod.next
+            k := 0; continue := FALSE;
+            WHILE NofSelected > 0 DO mod := root;
+              WHILE mod # NIL DO
+                IF (mod.name[0] # 0X) & mod.hidden & mod.selected & (mod.refcnt = 0) THEN Unload(mod) END ;
+                mod := mod.next
+              END
             END
           ELSIF k < NofHidden THEN
             mod := root; q := 0; m1 := NIL;
