@@ -503,7 +503,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
             k := 0; continue := FALSE;
             WHILE NofSelected > 0 DO mod := root;
               WHILE mod # NIL DO
-                IF (mod.name[0] # 0X) & mod.hidden & mod.selected & (mod.refcnt = 0) THEN Unload(mod) END ;
+                IF (mod.name[0] # 0X) & mod.selected & (mod.refcnt = 0) THEN Unload(mod) END ;
                 mod := mod.next
               END
             END
