@@ -1,4 +1,4 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.12.20 Extended Oberon*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files;
   CONST versionkey = 1X; TR = 13; DescSize = 92; MnLength = 32;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5; nocmd* = 6; badcmd* = 7; nomod* = 8;
@@ -490,12 +490,10 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.12.20 
     VAR mod, m, m1: Module; continue: BOOLEAN;
       p, q, k, res: INTEGER;
   BEGIN
-    IF NofHidden > 0 THEN k := 0;
-      IF NofSelected > 0 THEN (*save selection*) mod := root;
-        WHILE mod # NIL DO mod.sel := mod.selected; mod.selected := FALSE; mod := mod.next END
-      END ;
+    IF NofHidden > 0 THEN k := 0; NofSelected := 0; mod := root;
+      WHILE mod # NIL DO mod.sel := mod.selected; mod.selected := FALSE; mod := mod.next END ; (*save selection*)
       WHILE k < NofHidden DO INC(k);
-        mod := root; p := 0; continue := TRUE;
+        mod := root; p := 0; NofSelected := k; continue := TRUE;
         WHILE mod # NIL DO (*set first selection of k modules among hidden modules*)
           IF (mod.name[0] # 0X) & mod.hidden THEN mod.selected := p < k; INC(p) END ;
           mod := mod.next
@@ -529,19 +527,10 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.12.20 
           END
         END
       END ;
-      IF NofSelected > 0 THEN (*restore selection without re-selecting the just unloaded hidden modules*)
-        mod := root; NofSelected := 0;
-        WHILE mod # NIL DO
-          IF mod.sel & (mod.name[0] # 0X) THEN mod.selected := TRUE; INC(NofSelected)
-          ELSE mod.selected := FALSE
-          END ;
-          mod := mod.next
-        END
-      ELSE (*cleanup*) mod := root;
-        WHILE mod # NIL DO
-          IF mod.hidden THEN mod.selected := FALSE END ;
-          mod := mod.next
-        END
+      NofSelected := 0; mod := root; 
+      WHILE mod # NIL DO (*restore selection without re-selecting the just unloaded hidden modules*)
+        IF mod.sel & (mod.name[0] # 0X) THEN mod.selected := TRUE; INC(NofSelected) ELSE mod.selected := FALSE END ;
+        mod := mod.next
       END
     END
   END Collect;
