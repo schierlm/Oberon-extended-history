@@ -1,6 +1,6 @@
 MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files;
-  CONST versionkey = 1X; TR = 13; DescSize = 96; MnLength = 32;
+  CONST versionkey = 1X; TR = 13; LNK = 15; DescSize = 96; MnLength = 32;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4;
     nospace* = 5; nocmd* = 6; badcmd* = 7; nomod* = 8; badclose* = 9;
     noref* = 0; clients* = 10; dyntypes* = 11; dynptrs* = 12; dynpvrs* = 13; statptrs* = 14; statpvrs* = 15;
@@ -221,7 +221,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
           END ;
           SYSTEM.PUT(adr, inst); adr := adr - disp*4
         END ;
-        M := curmod; curmod := mod; body; curmod := M    (*initialize module*)
+        impmod := curmod; curmod := mod; body; curmod := impmod    (*initialize module*)
       ELSIF res >= badkey THEN importing := name;
         WHILE nofimps > 0 DO DEC(nofimps); DEC(import[nofimps].refcnt) END
       END
@@ -230,12 +230,13 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
   END Load;
 
   PROCEDURE SetClose*(cmd: Command); (*set module finalization sequence*)
-  BEGIN
-    IF curmod # NIL THEN
-      IF (cmd = NIL) OR (curmod.code <= ORD(cmd)) & (ORD(cmd) < curmod.imp) THEN curmod.close := cmd
-      ELSE res := badclose; imported := curmod.name
+    VAR u: INTEGER; mod: Module;
+  BEGIN u := SYSTEM.REG(LNK) - 4; mod := root;
+    WHILE (mod # NIL) & ((u < mod.code) OR (u >= mod.imp)) DO mod := mod.next END ; (*search for caller*)
+    IF mod # NIL THEN
+      IF (mod = curmod) &(mod.code <= ORD(cmd)) & (ORD(cmd) < mod.imp) THEN mod.close := cmd
+      ELSE res := badclose; imported := mod.name
       END
-    ELSE res := badclose
     END
   END SetClose;
 
@@ -555,6 +556,6 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
     limit := Kernel.stackOrg - Kernel.stackSize; NofHidden := 0; Deselect
   END Init;
 
-BEGIN Init; Load("Oberon", M); M := NIL; curmod := NIL;
+BEGIN Init; Load("Oberon", M);
   LED(res); REPEAT UNTIL FALSE  (*only if load fails*)
 END Modules.
