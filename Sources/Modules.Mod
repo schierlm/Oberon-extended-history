@@ -231,7 +231,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
 
   PROCEDURE SetClose*(cmd: Command); (*set module finalization sequence*)
     VAR u: INTEGER; mod: Module;
-  BEGIN u := SYSTEM.REG(LNK) - 4; mod := root;
+  BEGIN u := SYSTEM.REG(LNK); mod := root;
     WHILE (mod # NIL) & ((u < mod.code) OR (u >= mod.imp)) DO mod := mod.next END ; (*search for caller*)
     IF mod # NIL THEN
       IF (mod = curmod) & (mod.code <= ORD(cmd)) & (ORD(cmd) < mod.imp) THEN mod.close := cmd
