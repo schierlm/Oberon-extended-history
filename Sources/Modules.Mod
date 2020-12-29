@@ -1,8 +1,9 @@
 MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files;
   CONST versionkey = 1X; TR = 13; DescSize = 96; MnLength = 32;
-    noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5; nocmd* = 6; badcmd* = 7; nomod* = 8;
-    noref* = 0; clients* = 9; dyntypes* = 10; dynptrs* = 11; dynpvrs* = 12; statptrs* = 13; statpvrs* = 14;
+    noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4;
+    nospace* = 5; nocmd* = 6; badcmd* = 7; nomod* = 8; badclose* = 9;
+    noref* = 0; clients* = 10; dyntypes* = 11; dynptrs* = 12; dynpvrs* = 13; statptrs* = 14; statpvrs* = 15;
     U = 20000000H; V = 10000000H; B = 100000H;  (*modifier bits*)
     MOV = 40000000H; IOR = 40060000H; BCT = 0E7000000H; BLT = 0F7000000H; F2 = -2;  (*instructions*)
     C4 = 10H; C6 = 40H; C8 = 100H; C10 = 400H; C12 = 1000H; C14 = 4000H; C16 = 10000H; C18 = 40000H;
@@ -230,7 +231,12 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
 
   PROCEDURE SetClose*(cmd: Command); (*set module finalization sequence*)
   BEGIN
-    IF (curmod # NIL) & (curmod.code <= ORD(cmd)) & (ORD(cmd) < curmod.imp) THEN curmod.close := cmd END
+    IF curmod # NIL THEN
+      IF (cmd = NIL) OR (curmod.code <= ORD(cmd)) & (ORD(cmd) < curmod.imp) THEN curmod.close := cmd
+      ELSE res := badclose; imported := curmod.name
+      END
+    ELSE res := badclose
+    END
   END SetClose;
 
   PROCEDURE ThisCommand*(mod: Module; name: ARRAY OF CHAR): Command;
@@ -289,10 +295,10 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
       j := 0; ch := name[i]; INC(i);
       WHILE ch # 0X DO Cname[j] := ch; INC(j); ch := name[i]; INC(i) END ;
       Cname[j] := 0X;
-      P := ThisCommand(mod, Cname); err := res;
+      P := ThisCommand(mod, Cname);
       IF res = noerr THEN P END
-    ELSE err := res
-    END
+    END ;
+    err := res
   END Call;
 
   (*--------------------------- selections ---------------------------*)

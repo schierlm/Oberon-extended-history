@@ -1,4 +1,4 @@
-MODULE Oberon0; (*Oberon-0 command interpreter / AP 13.6.20 Extended Oberon*)
+MODULE Oberon0; (*Oberon-0 command interpreter / AP 12.12.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, FileDir, Files, Modules, RS232, PCLink0;
   CONST swi = -60; (*switches*)
     stat = -52; (*RS-232*)
@@ -180,6 +180,7 @@ MODULE Oberon0; (*Oberon-0 command interpreter / AP 13.6.20 Extended Oberon*)
       ELSIF res = Modules.nospace THEN RS232.SendStr(" insufficient space")
       ELSIF res = Modules.nocmd THEN RS232.SendStr(" command not found")
       ELSIF res = Modules.badcmd THEN RS232.SendStr(" invalid command")
+      ELSIF res = Modules.badclose THEN RS232.SendStr(" invalid finalization")
       END
     ELSE RS232.SendStr(" done")
     END
