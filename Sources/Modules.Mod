@@ -221,7 +221,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
           END ;
           SYSTEM.PUT(adr, inst); adr := adr - disp*4
         END ;
-        impmod := curmod; curmod := mod; body; curmod := impmod    (*initialize module*)
+        impmod := curmod; curmod := mod; body; curmod := impmod  (*initialize module*)
       ELSIF res >= badkey THEN importing := name;
         WHILE nofimps > 0 DO DEC(nofimps); DEC(import[nofimps].refcnt) END
       END
