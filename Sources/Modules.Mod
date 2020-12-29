@@ -1,6 +1,6 @@
 MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files;
-  CONST versionkey = 1X; TR = 13; DescSize = 92; MnLength = 32;
+  CONST versionkey = 1X; TR = 13; DescSize = 96; MnLength = 32;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5; nocmd* = 6; badcmd* = 7; nomod* = 8;
     noref* = 0; clients* = 9; dyntypes* = 10; dynptrs* = 11; dynpvrs* = 12; statptrs* = 13; statpvrs* = 14;
     U = 20000000H; V = 10000000H; B = 100000H;  (*modifier bits*)
@@ -17,13 +17,14 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
       next*: Module;
       key*, num*, size*, refcnt*: INTEGER;
       data*, str*, tdx*, code*, imp*, cmd*, ent*, ptr*, pvr*: INTEGER;  (*addresses*)
-      selected*, marked, hidden, sel: BOOLEAN
+      selected*, marked, hidden, sel: BOOLEAN;
+      close: Command  (*module finalization sequence*)
     END ;
 
     ClientHandler* = PROCEDURE(mod, imp: Module; VAR continue: BOOLEAN): INTEGER;
     RefHandler* = PROCEDURE(src, dst: LONGINT; s: ARRAY OF CHAR; VAR continue: BOOLEAN): INTEGER;
 
-  VAR root*, M: Module;
+  VAR root*, M, curmod: Module;
     AllocPtr*, res*, NofSelected*, NofHidden*, limit: INTEGER;
     importing*, imported*: ModuleName;
 
@@ -109,7 +110,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
       END ;
       IF res = noerr THEN (*read file*)
         INC(p, DescSize); (*allocate descriptor*)
-        mod.name := name; mod.key := key; mod.refcnt := 0;
+        mod.name := name; mod.key := key; mod.refcnt := 0; mod.close := NIL;
         mod.selected := FALSE; mod.hidden := FALSE; mod.marked := FALSE; mod.sel := FALSE;
         mod.data := p;  (*data*)
         Files.ReadInt(R, n);
@@ -219,13 +220,18 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
           END ;
           SYSTEM.PUT(adr, inst); adr := adr - disp*4
         END ;
-        body   (*initialize module*)
+        M := curmod; curmod := mod; body; curmod := M    (*initialize module*)
       ELSIF res >= badkey THEN importing := name;
         WHILE nofimps > 0 DO DEC(nofimps); DEC(import[nofimps].refcnt) END
       END
     END ;
     newmod := mod
   END Load;
+
+  PROCEDURE SetClose*(cmd: Command); (*set module finalization sequence*)
+  BEGIN
+    IF (curmod # NIL) & (curmod.code <= ORD(cmd)) & (ORD(cmd) < curmod.imp) THEN curmod.close := cmd END
+  END SetClose;
 
   PROCEDURE ThisCommand*(mod: Module; name: ARRAY OF CHAR): Command;
     (*return the command named 'name' from module 'mod'.
@@ -432,6 +438,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
   PROCEDURE Unload(mod: Module); (*module from memory*)
     VAR imp: Module; p, q: INTEGER;
   BEGIN (*mod.refcnt = 0 & mod.name[0] # 0X*)
+    IF mod.close # NIL THEN mod.close END ; (*module finalization sequence*)
     mod.name[0] := 0X; p := mod.imp; q := mod.cmd;
     WHILE p < q DO (*imports*) SYSTEM.GET(p, imp); DEC(imp.refcnt); INC(p, 4) END ;
     IF mod.hidden THEN mod.hidden := FALSE; DEC(NofHidden) END ;
@@ -542,6 +549,6 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
     limit := Kernel.stackOrg - Kernel.stackSize; NofHidden := 0; Deselect
   END Init;
 
-BEGIN Init; Load("Oberon", M);
+BEGIN Init; Load("Oberon", M); M := NIL; curmod := NIL;
   LED(res); REPEAT UNTIL FALSE  (*only if load fails*)
 END Modules.

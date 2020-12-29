@@ -6,7 +6,7 @@ Note: In this repository, the term "Project Oberon 2013" refers to a re-implemen
 Features
 
 * Programming language Oberon-2 (2020 Edition), implementing a superset of Oberon-07
-* Safe module unloading
+* Safe module unloading and module finalization
 * System building and maintenance tools
 * Smooth line scrolling with variable line spaces
 * Multiple logical displays

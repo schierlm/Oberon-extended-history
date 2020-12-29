@@ -1,6 +1,6 @@
-MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 1.12.20 Extended Oberon*)
+MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 12.12.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, Files, Modules, Texts, Oberon;
-  CONST versionkey = 1X; versionkey0 = 0X; DescSize = 92; MnLength = 32; BootSec = 2; FPrint = 12345678H;
+  CONST versionkey = 1X; versionkey0 = 0X; DescSize = 96; MnLength = 32; BootSec = 2; FPrint = 12345678H;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5;
     TrapAdr = 4; DestAdr = 8; MemAdr = 12; AllocAdr = 16; RootAdr = 20; StackAdr = 24; FPrintAdr = 28; ModAdr = 32;
     U = 20000000H; V = 10000000H; B = 100000H;  (*modifier bits*)
@@ -17,7 +17,8 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 1.12.20 Extended Oberon*)
       next*: Module;
       key*, num*, size*, refcnt*: INTEGER;
       data*, str*, tdx*, code*, imp*, cmd*, ent*, ptr*, pvr*: INTEGER;  (*addresses*)
-      selected*, marked, hidden, sel: BOOLEAN
+      selected*, marked, hidden, sel: BOOLEAN;
+      close: Command  (*module finalization sequence*)
     END ;
 
   VAR root: Module;
@@ -109,7 +110,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 1.12.20 Extended Oberon*)
       IF res = noerr THEN (*read file*)
         INC(p, DescSize); (*allocate descriptor*)
         FOR i := 0 TO MnLength-1 DO mod.name[i] := 0X END ;
-        mod.name := name; mod.key := key; mod.refcnt := 0;
+        mod.name := name; mod.key := key; mod.refcnt := 0; mod.close := NIL;
         mod.selected := FALSE; mod.hidden := FALSE; mod.marked := FALSE; mod.sel := FALSE;
         mod.data := p;  (*data*)
         Files.ReadInt(R, n);
@@ -430,6 +431,6 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 1.12.20 Extended Oberon*)
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END Execute;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 1.12.20");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 12.12.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); limit := Kernel.stackOrg - Kernel.stackSize
 END ORL.
