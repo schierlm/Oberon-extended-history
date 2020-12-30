@@ -233,8 +233,8 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
     VAR u, v: INTEGER; mod: Module;
   BEGIN u := SYSTEM.REG(LNK); mod := root;
     WHILE (mod # NIL) & ((u < mod.code) OR (u >= mod.imp)) DO mod := mod.next END ; (*search for caller*)
-    IF mod # NIL THEN SYSTEM.GET(mod.ent, v); v := mod.code + v; (*body*)
-      IF (v <= u) & (u < mod.imp) THEN mod.close := close ELSE res := badclose END
+    IF mod # NIL THEN SYSTEM.GET(mod.ent, v); (*offset to body*)
+      IF (mod.code + v <= u) & (u < mod.imp) THEN mod.close := close ELSE res := badclose END
     END
   END SetClose;
 
