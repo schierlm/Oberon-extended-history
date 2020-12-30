@@ -25,7 +25,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
     ClientHandler* = PROCEDURE(mod, imp: Module; VAR continue: BOOLEAN): INTEGER;
     RefHandler* = PROCEDURE(src, dst: LONGINT; s: ARRAY OF CHAR; VAR continue: BOOLEAN): INTEGER;
 
-  VAR root*, M, curmod: Module;
+  VAR root*, M: Module;
     AllocPtr*, res*, NofSelected*, NofHidden*, limit: INTEGER;
     importing*, imported*: ModuleName;
 
@@ -221,7 +221,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
           END ;
           SYSTEM.PUT(adr, inst); adr := adr - disp*4
         END ;
-        impmod := curmod; curmod := mod; body; curmod := impmod  (*initialize module*)
+        body   (*initialize module*)
       ELSIF res >= badkey THEN importing := name;
         WHILE nofimps > 0 DO DEC(nofimps); DEC(import[nofimps].refcnt) END
       END
@@ -229,14 +229,12 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
     newmod := mod
   END Load;
 
-  PROCEDURE SetClose*(cmd: Command); (*set module finalization sequence*)
-    VAR u: INTEGER; mod: Module;
+  PROCEDURE SetClose*(close: Command); (*set module finalization sequence*)
+    VAR u, v: INTEGER; mod: Module;
   BEGIN u := SYSTEM.REG(LNK); mod := root;
     WHILE (mod # NIL) & ((u < mod.code) OR (u >= mod.imp)) DO mod := mod.next END ; (*search for caller*)
-    IF mod # NIL THEN u := SYSTEM.VAL(INTEGER, cmd);
-      IF (mod = curmod) & (mod.code <= u) & (u < mod.imp) THEN mod.close := cmd
-      ELSE res := badclose; imported := mod.name
-      END
+    IF mod # NIL THEN SYSTEM.GET(mod.ent, v); v := mod.code + v; (*body*)
+      IF (v <= u) & (u < mod.imp) THEN mod.close := close ELSE res := badclose END
     END
   END SetClose;
 
