@@ -32,4 +32,4 @@
 2020-12-01 ORL - Don't provide a hint to the bootloader for Kernel.MemLim and Kernel.stackOrg anymore
 2020-12-02 Disk - Enlarge the boot area from sectors 2-63 (62KB) to sectors 2-159 (158KB)
 2020-12-12 Modules - Add procudure Modules.SetClose to set a module finalization sequence executed on unload
-
+2020-12-31 TextFrames - Copy produces an exact copy of the original text frame, including the vertical offset from the baseline
