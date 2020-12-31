@@ -440,7 +440,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
 
   (*--------------------------- unloading ---------------------------*)
 
-  PROCEDURE Unload(mod: Module); (*module from memory*)
+  PROCEDURE Unload(mod: Module); (*from memory*)
     VAR imp: Module; p, q: INTEGER;
   BEGIN (*mod.refcnt = 0 & mod.name[0] # 0X*)
     IF mod.close # NIL THEN mod.close END ; (*module finalization sequence*)
@@ -455,7 +455,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
     END
   END Unload;
 
-  PROCEDURE Hide(mod: Module); (*module from module list*)
+  PROCEDURE Hide(mod: Module); (*from module list*)
     VAR i: INTEGER;
   BEGIN (*~mod.hidden & mod.name[0] # 0X*) i := 0;
     WHILE mod.name[i] # 0X DO INC(i) END ;
