@@ -230,11 +230,12 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
   END Load;
 
   PROCEDURE Close*(close: Command); (*set module finalization sequence*)
-    VAR u, v: INTEGER; mod: Module;
+    VAR u, v, w: INTEGER; mod: Module;
   BEGIN u := SYSTEM.REG(LNK); mod := root;
     WHILE (mod # NIL) & ((u < mod.code) OR (u >= mod.imp)) DO mod := mod.next END ; (*search for caller*)
-    IF mod # NIL THEN SYSTEM.GET(mod.ent, v); (*offset to module initialization body*)
-      IF mod.code + v <= u THEN mod.close := close ELSE res := badclose END
+    IF mod # NIL THEN v := SYSTEM.VAL(INTEGER, close);
+      SYSTEM.GET(mod.ent, w); w := mod.code + w; (*module initialization body*)
+      IF (v >= mod.code) & (v < w) & (w <= u) THEN mod.close := close ELSE res := badclose END
     END
   END Close;
 
