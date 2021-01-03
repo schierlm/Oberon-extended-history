@@ -1,4 +1,4 @@
-MODULE ORX;  (*Oberon boot converter for RISC / AP 13.6.20 Extended Oberon*)
+MODULE ORX;  (*Oberon boot converter for RISC / AP 31.12.20 Extended Oberon*)
   IMPORT Files, Texts, Oberon;
   CONST CR = 0DX; noerr = 0; badfile = 4;  (*copied from Modules for use as cross development tool*)
 
@@ -41,7 +41,7 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 13.6.20 Extended Oberon*)
     WHILE ~R.eof & (data >= 0) DO Files.ReadInt(R, data) END ; (*procedure variable references*)
     Files.ReadInt(R, data); (*fixorgP*) Files.ReadInt(R, data); (*fixorgD*)
     Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, data); (*fixorgM*)
-    Files.ReadInt(R, entry);
+    Files.ReadInt(R, entry); (*entry*) Files.ReadInt(R, data); (*close*)
     Files.Read(R, ch);
     IF ch # "O" THEN res := badfile ELSE res := noerr END
   END OutCode;
@@ -152,6 +152,6 @@ MODULE ORX;  (*Oberon boot converter for RISC / AP 13.6.20 Extended Oberon*)
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); Oberon.Return(res)
   END WriteStream;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR boot converter  AP 13.6.20");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR boot converter  AP 31.12.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
 END ORX.

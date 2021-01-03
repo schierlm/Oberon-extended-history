@@ -1,4 +1,4 @@
-MODULE ORS; (* NW 19.9.93 / 20.3.2017  Scanner in Oberon-07*)
+MODULE ORS; (* NW 19.9.93 / 20.3.2017  Scanner in Oberon-07 / AP 31.12.20 Extended Oberon*)
   IMPORT SYSTEM, Texts, Oberon;
 
 (* Oberon Scanner does lexical analysis. Input is Oberon-Text, output is
@@ -11,7 +11,7 @@ MODULE ORS; (* NW 19.9.93 / 20.3.2017  Scanner in Oberon-07*)
   in ival, if real in rval, and if string in str (and slen) *)
   
   CONST IdLen* = 32;
-    NKW = 34;  (*nof keywords*)
+    NKW = 35;  (*nof keywords*)
     maxExp = 38; stringBufSize = 256;
   
     (*lexical symbols*)
@@ -28,7 +28,7 @@ MODULE ORS; (* NW 19.9.93 / 20.3.2017  Scanner in Oberon-07*)
     to* = 50; by* = 51; semicolon* = 52; end* = 53; bar* = 54;
     else* = 55; elsif* = 56; until* = 57; return* = 58;
     array* = 60; record* = 61; pointer* = 62; const* = 63; type* = 64;
-    var* = 65; procedure* = 66; begin* = 67; import* = 68; module* = 69; eot = 70;
+    var* = 65; procedure* = 66; begin* = 67; import* = 68; module* = 69; close* = 70; eot = 71;
 
   TYPE Ident* = ARRAY IdLen OF CHAR;
 
@@ -46,7 +46,7 @@ MODULE ORS; (* NW 19.9.93 / 20.3.2017  Scanner in Oberon-07*)
     KWX: ARRAY 10 OF INTEGER;
     keyTab: ARRAY NKW OF
         RECORD sym: INTEGER; id: ARRAY 12 OF CHAR END;
-  
+
   PROCEDURE CopyId*(VAR ident: Ident);
   BEGIN ident := id
   END CopyId;
@@ -160,7 +160,7 @@ MODULE ORS; (* NW 19.9.93 / 20.3.2017  Scanner in Oberon-07*)
           x := x * 10.0 + FLT(ORD(ch) - 30H); DEC(e); Texts.Read(R, ch)
         END ;
         IF (ch = "E") OR (ch = "D") THEN  (*scale factor*)
-          Texts.Read(R, ch); s := 0; 
+          Texts.Read(R, ch); s := 0;
           IF ch = "-" THEN negE := TRUE; Texts.Read(R, ch)
           ELSE negE := FALSE;
             IF ch = "+" THEN Texts.Read(R, ch) END
@@ -216,7 +216,7 @@ MODULE ORS; (* NW 19.9.93 / 20.3.2017  Scanner in Oberon-07*)
           ELSIF ch = "#" THEN Texts.Read(R, ch); sym := neq
           ELSIF ch = "$" THEN HexString; sym := string
           ELSIF ch = "&" THEN Texts.Read(R, ch); sym := and
-          ELSIF ch = "(" THEN Texts.Read(R, ch); 
+          ELSIF ch = "(" THEN Texts.Read(R, ch);
             IF ch = "*" THEN sym := null; comment ELSE sym := lparen END
           ELSIF ch = ")" THEN Texts.Read(R, ch); sym := rparen
           ELSIF ch = "*" THEN Texts.Read(R, ch); sym := times
@@ -298,6 +298,7 @@ BEGIN Texts.OpenWriter(W); k := 0; KWX[0] := 0; KWX[1] := 0;
   EnterKW(const, "CONST");
   EnterKW(until, "UNTIL");
   EnterKW(while, "WHILE");
+  EnterKW(close, "CLOSE");
   KWX[5] := k;
   EnterKW(record, "RECORD");
   EnterKW(repeat, "REPEAT");

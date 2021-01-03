@@ -33,3 +33,4 @@
 2020-12-02 Disk - Enlarge the boot area from sectors 2-63 (62KB) to sectors 2-159 (158KB)
 2020-12-12 Modules - Add procudure Modules.SetClose to set a module finalization sequence executed on unload
 2020-12-30 TextFrames - TextFrames.Copy now produces an exact copy of the text frame, including the vertical offset from the baseline
+2020-12-31 Modules, ORL, ORS, ORG, ORP, ORX, ORTool, Oberon0, System - Add module finalization via the CLOSE language construct
