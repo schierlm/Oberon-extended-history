@@ -1,4 +1,4 @@
-MODULE ORS; (* NW 19.9.93 / 20.3.2017  Scanner in Oberon-07 / AP 31.12.20 Extended Oberon*)
+MODULE ORS; (* NW 19.9.93 / 20.3.2017  Scanner in Oberon-07*)
   IMPORT SYSTEM, Texts, Oberon;
 
 (* Oberon Scanner does lexical analysis. Input is Oberon-Text, output is
@@ -11,7 +11,7 @@ MODULE ORS; (* NW 19.9.93 / 20.3.2017  Scanner in Oberon-07 / AP 31.12.20 Extend
   in ival, if real in rval, and if string in str (and slen) *)
   
   CONST IdLen* = 32;
-    NKW = 35;  (*nof keywords*)
+    NKW = 34;  (*nof keywords*)
     maxExp = 38; stringBufSize = 256;
   
     (*lexical symbols*)
@@ -28,7 +28,7 @@ MODULE ORS; (* NW 19.9.93 / 20.3.2017  Scanner in Oberon-07 / AP 31.12.20 Extend
     to* = 50; by* = 51; semicolon* = 52; end* = 53; bar* = 54;
     else* = 55; elsif* = 56; until* = 57; return* = 58;
     array* = 60; record* = 61; pointer* = 62; const* = 63; type* = 64;
-    var* = 65; procedure* = 66; begin* = 67; import* = 68; module* = 69; close* = 70; eot = 71;
+    var* = 65; procedure* = 66; begin* = 67; import* = 68; module* = 69; eot = 70;
 
   TYPE Ident* = ARRAY IdLen OF CHAR;
 
@@ -298,7 +298,6 @@ BEGIN Texts.OpenWriter(W); k := 0; KWX[0] := 0; KWX[1] := 0;
   EnterKW(const, "CONST");
   EnterKW(until, "UNTIL");
   EnterKW(while, "WHILE");
-  EnterKW(close, "CLOSE");
   KWX[5] := k;
   EnterKW(record, "RECORD");
   EnterKW(repeat, "REPEAT");
