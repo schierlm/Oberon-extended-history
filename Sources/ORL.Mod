@@ -151,7 +151,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 31.12.20 Extended Oberon*
         Files.ReadInt(R, fixorgT); Files.ReadInt(R, fixorgM);
         Files.ReadInt(R, w); body := SYSTEM.VAL(Command, mod.code + w - Start);
         Files.ReadInt(R, w);
-        IF w > 0 THEN mod.finalize := SYSTEM.VAL(Command, mod.code + w - Start) ELSE mod.finalize := NIL END ;
+        IF w >= 0 THEN mod.finalize := SYSTEM.VAL(Command, mod.code + w - Start) ELSE mod.finalize := NIL END ;
         Files.Read(R, ch);
         IF ch # "O" THEN mod := NIL; error(badfile, name) END
       END ;

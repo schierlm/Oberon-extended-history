@@ -152,7 +152,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 31.12.20
         Files.ReadInt(R, fixorgT); Files.ReadInt(R, fixorgM);
         Files.ReadInt(R, w); body := SYSTEM.VAL(Command, mod.code + w);
         Files.ReadInt(R, w);
-        IF w > 0 THEN mod.finalize := SYSTEM.VAL(Command, mod.code + w) ELSE mod.finalize := NIL END ;
+        IF w >= 0 THEN mod.finalize := SYSTEM.VAL(Command, mod.code + w) ELSE mod.finalize := NIL END ;
         Files.Read(R, ch);
         IF ch # "O" THEN mod := NIL; error(badfile, name) END
       END ;
