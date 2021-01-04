@@ -42,7 +42,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
 
   VAR pc*: LONGINT;    (*program counter*)
     varx, strx, tdw: LONGINT;  (*varx and strx in bytes, tdw in words*)
-    entry, final: LONGINT;   (*main entry point, module finalization sequence*)
+    entry, final: LONGINT;   (*main entry point, finalization sequence*)
     RH: LONGINT;  (*available registers R[0] ... R[H-1]*)
     frame: LONGINT;  (*frame offset changed in SaveRegs and RestoreRegs*)
     fixorgP, fixorgD, fixorgT, fixorgM: LONGINT;   (*origins of lists of locations to be fixed up by loader*)
