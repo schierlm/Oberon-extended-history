@@ -1,4 +1,4 @@
-MODULE Run;  (*Run standalone programs M.rsc or prelinked binaries M.bin / AP 14.3.20 Extended Oberon*)
+MODULE Run;  (*Run standalone programs M.rsc or prelinked binaries M.bin / AP 31.12.20 Extended Oberon*)
   IMPORT SYSTEM, Files, Texts, Oberon, ORL;
   CONST maxCode = 8000;
 
@@ -42,7 +42,7 @@ MODULE Run;  (*Run standalone programs M.rsc or prelinked binaries M.bin / AP 14
       WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*procedure variable references*)
       Files.ReadInt(R, data); (*fixorgP*) Files.ReadInt(R, data); (*fixorgD*)
       Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, data); (*fixorgM*)
-      Files.ReadInt(R, entry);
+      Files.ReadInt(R, entry); (*body*) Files.ReadInt(R, data); (*close*)
       Files.Read(R, ch);
       IF ch # "O" THEN res := ORL.badfile ELSE res := ORL.noerr END
     END

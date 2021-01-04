@@ -1,4 +1,4 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20 Extended Oberon*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 31.12.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files;
   CONST versionkey = 1X; TR = 13; LNK = 15; DescSize = 96; MnLength = 32;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4;
@@ -111,7 +111,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
       END ;
       IF res = noerr THEN (*read file*)
         INC(p, DescSize); (*allocate descriptor*)
-        mod.name := name; mod.key := key; mod.refcnt := 0; mod.close := NIL;
+        mod.name := name; mod.key := key; mod.refcnt := 0;
         mod.selected := FALSE; mod.hidden := FALSE; mod.marked := FALSE; mod.sel := FALSE;
         mod.data := p;  (*data*)
         Files.ReadInt(R, n);
@@ -151,6 +151,8 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
         Files.ReadInt(R, fixorgP); Files.ReadInt(R, fixorgD);
         Files.ReadInt(R, fixorgT); Files.ReadInt(R, fixorgM);
         Files.ReadInt(R, w); body := SYSTEM.VAL(Command, mod.code + w);
+        Files.ReadInt(R, w);
+        IF w > 0 THEN mod.close := SYSTEM.VAL(Command, mod.code + w) ELSE mod.close := NIL END ;
         Files.Read(R, ch);
         IF ch # "O" THEN mod := NIL; error(badfile, name) END
       END ;
@@ -437,7 +439,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
     WHILE (mod # NIL) & ((u < mod.code) OR (u >= mod.imp)) DO mod := mod.next END ; (*search for caller*)
     IF mod # NIL THEN v := SYSTEM.VAL(INTEGER, close);
       SYSTEM.GET(mod.ent, w); w := mod.code + w; (*module initialization body*)
-      IF (v >= mod.code) & (v < w) & (u >= w) THEN mod.close := close ELSE res := badclose END
+      IF (v >= mod.code) & (v < w) & (u >= w) & (mod.close = NIL) THEN mod.close := close ELSE res := badclose END
     END
   END Close;
 
