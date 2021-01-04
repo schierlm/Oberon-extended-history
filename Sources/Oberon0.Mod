@@ -1,4 +1,4 @@
-MODULE Oberon0; (*Oberon-0 command interpreter / AP 31.12.20 Extended Oberon*)
+MODULE Oberon0; (*Oberon-0 command interpreter / AP 12.12.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, FileDir, Files, Modules, RS232, PCLink0;
   CONST swi = -60; (*switches*)
     stat = -52; (*RS-232*)
@@ -278,7 +278,7 @@ MODULE Oberon0; (*Oberon-0 command interpreter / AP 31.12.20 Extended Oberon*)
       WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*procedure variable references*)
       Files.ReadInt(R, data); (*fixorgP*) Files.ReadInt(R, data); (*fixorgD*)
       Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, data); (*fixorgM*)
-      Files.ReadInt(R, entry); (*entry*) Files.ReadInt(R, data); (*close*)
+      Files.ReadInt(R, entry);
       Files.Read(R, ch);
       IF ch # "O" THEN res := Modules.badfile ELSE res := Modules.noerr END
     END
