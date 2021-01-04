@@ -180,7 +180,7 @@ MODULE Oberon0; (*Oberon-0 command interpreter / AP 12.12.20 Extended Oberon*)
       ELSIF res = Modules.nospace THEN RS232.SendStr(" insufficient space")
       ELSIF res = Modules.nocmd THEN RS232.SendStr(" command not found")
       ELSIF res = Modules.badcmd THEN RS232.SendStr(" invalid command")
-      ELSIF res = Modules.badclose THEN RS232.SendStr(" invalid finalization")
+      ELSIF res = Modules.badfin THEN RS232.SendStr(" invalid finalization")
       END
     ELSE RS232.SendStr(" done")
     END
@@ -278,7 +278,7 @@ MODULE Oberon0; (*Oberon-0 command interpreter / AP 12.12.20 Extended Oberon*)
       WHILE data >= 0 DO Files.ReadInt(R, data) END ; (*procedure variable references*)
       Files.ReadInt(R, data); (*fixorgP*) Files.ReadInt(R, data); (*fixorgD*)
       Files.ReadInt(R, data); (*fixorgT*) Files.ReadInt(R, data); (*fixorgM*)
-      Files.ReadInt(R, entry);
+      Files.ReadInt(R, entry); (*body*) Files.ReadInt(R, data); (*final*)
       Files.Read(R, ch);
       IF ch # "O" THEN res := Modules.badfile ELSE res := Modules.noerr END
     END

@@ -1,8 +1,8 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20 Extended Oberon*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 31.12.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files;
   CONST versionkey = 1X; TR = 13; LNK = 15; DescSize = 96; MnLength = 32;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4;
-    nospace* = 5; nocmd* = 6; badcmd* = 7; nomod* = 8; badclose* = 9;
+    nospace* = 5; nocmd* = 6; badcmd* = 7; nomod* = 8; badfin* = 9;
     noref* = 0; clients* = 10; dyntypes* = 11; dynptrs* = 12; dynpvrs* = 13; statptrs* = 14; statpvrs* = 15;
     U = 20000000H; V = 10000000H; B = 100000H;  (*modifier bits*)
     MOV = 40000000H; IOR = 40060000H; BCT = 0E7000000H; BLT = 0F7000000H; F2 = -2;  (*instructions*)
@@ -19,7 +19,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
       key*, num*, size*, refcnt*: INTEGER;
       data*, str*, tdx*, code*, imp*, cmd*, ent*, ptr*, pvr*: INTEGER;  (*addresses*)
       selected*, marked, hidden, sel: BOOLEAN;
-      close: Command  (*module finalization sequence*)
+      finalize: Command
     END ;
 
     ClientHandler* = PROCEDURE(mod, imp: Module; VAR continue: BOOLEAN): INTEGER;
@@ -111,7 +111,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
       END ;
       IF res = noerr THEN (*read file*)
         INC(p, DescSize); (*allocate descriptor*)
-        mod.name := name; mod.key := key; mod.refcnt := 0; mod.close := NIL;
+        mod.name := name; mod.key := key; mod.refcnt := 0;
         mod.selected := FALSE; mod.hidden := FALSE; mod.marked := FALSE; mod.sel := FALSE;
         mod.data := p;  (*data*)
         Files.ReadInt(R, n);
@@ -151,6 +151,8 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
         Files.ReadInt(R, fixorgP); Files.ReadInt(R, fixorgD);
         Files.ReadInt(R, fixorgT); Files.ReadInt(R, fixorgM);
         Files.ReadInt(R, w); body := SYSTEM.VAL(Command, mod.code + w);
+        Files.ReadInt(R, w);
+        IF w > 0 THEN mod.finalize := SYSTEM.VAL(Command, mod.code + w) ELSE mod.finalize := NIL END ;
         Files.Read(R, ch);
         IF ch # "O" THEN mod := NIL; error(badfile, name) END
       END ;
@@ -431,20 +433,20 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 12.12.20
 
   (*--------------------------- unloading ---------------------------*)
 
-  PROCEDURE Close*(close: Command); (*set module finalization sequence*)
+  PROCEDURE SetFinalizer*(finalize: Command);
     VAR u, v, w: INTEGER; mod: Module;
   BEGIN u := SYSTEM.REG(LNK); mod := root;
     WHILE (mod # NIL) & ((u < mod.code) OR (u >= mod.imp)) DO mod := mod.next END ; (*search for caller*)
-    IF mod # NIL THEN v := SYSTEM.VAL(INTEGER, close);
+    IF mod # NIL THEN v := SYSTEM.VAL(INTEGER, finalize);
       SYSTEM.GET(mod.ent, w); w := mod.code + w; (*module initialization body*)
-      IF (v >= mod.code) & (v < w) & (u >= w) THEN mod.close := close ELSE res := badclose END
+      IF (v >= mod.code) & (v < w) & (u >= w) & (mod.finalize = NIL) THEN mod.finalize := finalize ELSE res := badfin END
     END
-  END Close;
+  END SetFinalizer;
 
   PROCEDURE Unload(mod: Module); (*from memory*)
     VAR imp: Module; p, q: INTEGER;
   BEGIN (*mod.refcnt = 0 & mod.name[0] # 0X*)
-    IF mod.close # NIL THEN mod.close END ; (*finalize module*)
+    IF mod.finalize # NIL THEN mod.finalize END ;
     mod.name[0] := 0X; p := mod.imp; q := mod.cmd;
     WHILE p < q DO (*imports*) SYSTEM.GET(p, imp); DEC(imp.refcnt); INC(p, 4) END ;
     IF mod.hidden THEN mod.hidden := FALSE; DEC(NofHidden) END ;

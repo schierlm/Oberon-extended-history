@@ -407,7 +407,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
          | Modules.nocmd: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " command not found")
          | Modules.badcmd: Texts.WriteString(W, S.s); Texts.WriteString(W, " invalid command")
          | Modules.nomod: Texts.WriteString(W, Modules.importing); Texts.WriteString(W, " module not found")
-         | Modules.badclose: Texts.WriteString(W, S.s); Texts.WriteString(W, " invalid finalization")
+         | Modules.badfin: Texts.WriteString(W, S.s); Texts.WriteString(W, " invalid finalization")
         END ;
         Par.res := res; Texts.WriteLn(W); Texts.Append(Log, W.buf)
       END
