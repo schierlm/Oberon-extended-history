@@ -1,4 +1,4 @@
-MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 31.12.20 Extended Oberon*)
+MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 1.12.20 Extended Oberon*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser ORP; result in array "code".
@@ -42,7 +42,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
 
   VAR pc*: LONGINT;    (*program counter*)
     varx, strx, tdw: LONGINT;  (*varx and strx in bytes, tdw in words*)
-    entry, close: LONGINT;   (*main entry point, module finalization sequence*)
+    entry: LONGINT;   (*main entry point*)
     RH: LONGINT;  (*available registers R[0] ... R[H-1]*)
     frame: LONGINT;  (*frame offset changed in SaveRegs and RestoreRegs*)
     fixorgP, fixorgD, fixorgT, fixorgM: LONGINT;   (*origins of lists of locations to be fixed up by loader*)
@@ -1131,26 +1131,11 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   END SetDataSize;
 
   PROCEDURE Header*;
-  BEGIN entry := pc*4; close := -1;
+  BEGIN entry := pc*4;
     IF version = 0 THEN code[0] := BCT - 1 + pc;  Put1a(Mov, SP, 0, StkOrg0)  (*RISC-0*)
     ELSE Put1(Sub, SP, SP, 4); Put2(Str, LNK, SP, 0)
     END
   END Header;
-
-  PROCEDURE Exit*;
-  BEGIN (*exit code*)
-    IF version = 0 THEN Put1(Mov, 0, 0, 0); Put3(BR, 7, 0)  (*RISC-0*)
-    ELSE Put2(Ldr, LNK, SP, 0); Put1(Add, SP, SP, 4); Put3(BR, 7, LNK)
-    END
-  END Exit;
-
-  PROCEDURE EnterClose*;
-  BEGIN (*version # 0*) close := pc*4;  Put1(Sub, SP, SP, 4); Put2(Str, LNK, SP, 0)
-  END EnterClose;
-
-  PROCEDURE ExitClose*;
-  BEGIN (*version # 0*) Put2(Ldr, LNK, SP, 0); Put1(Add, SP, SP, 4); Put3(BR, 7, LNK)
-  END ExitClose;
 
   PROCEDURE NofRefs(ftyp: SET; typ: ORB.Type): LONGINT;
     VAR fld: ORB.Object; n: LONGINT;
@@ -1180,7 +1165,11 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
       i, comsize, nofimps, nofrefs, size, tdx, base: LONGINT;
       name: ORS.Ident;
       F: Files.File; R: Files.Rider;
-  BEGIN obj := ORB.topScope.next; nofimps := 0; comsize := 4; nofrefs := 0; tdx := varx + strx;
+  BEGIN  (*exit code*)
+    IF version = 0 THEN Put1(Mov, 0, 0, 0); Put3(BR, 7, 0)  (*RISC-0*)
+    ELSE Put2(Ldr, LNK, SP, 0); Put1(Add, SP, SP, 4); Put3(BR, 7, LNK)
+    END ;
+    obj := ORB.topScope.next; nofimps := 0; comsize := 4; nofrefs := 0; tdx := varx + strx;
     WHILE obj # NIL DO
       IF (obj.class = ORB.Mod) & (obj.dsc # ORB.system) THEN INC(nofimps)  (*count imports*)
       ELSIF (obj.exno # 0) & (obj.class = ORB.Const) & (obj.type.form = ORB.Proc)
@@ -1253,7 +1242,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     END ;
     Files.WriteInt(R, -1);
     Files.WriteInt(R, fixorgP); Files.WriteInt(R, fixorgD); Files.WriteInt(R, fixorgT); Files.WriteInt(R, fixorgM);
-    Files.WriteInt(R, entry); Files.WriteInt(R, close);
+    Files.WriteInt(R, entry);
     Files.Write(R, "O"); Files.Register(F)
   END Close;
 
