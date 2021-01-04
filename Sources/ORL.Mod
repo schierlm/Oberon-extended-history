@@ -1,4 +1,4 @@
-MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 31.12.20 Extended Oberon*)
+MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 12.12.20 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, Files, Modules, Texts, Oberon;
   CONST versionkey = 1X; versionkey0 = 0X; DescSize = 96; MnLength = 32; BootSec = 2; FPrint = 12345678H;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5;
@@ -110,7 +110,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 31.12.20 Extended Oberon*
       IF res = noerr THEN (*read file*)
         INC(p, DescSize); (*allocate descriptor*)
         FOR i := 0 TO MnLength-1 DO mod.name[i] := 0X END ;
-        mod.name := name; mod.key := key; mod.refcnt := 0;
+        mod.name := name; mod.key := key; mod.refcnt := 0; mod.close := NIL;
         mod.selected := FALSE; mod.hidden := FALSE; mod.marked := FALSE; mod.sel := FALSE;
         mod.data := p;  (*data*)
         Files.ReadInt(R, n);
@@ -150,8 +150,6 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 31.12.20 Extended Oberon*
         Files.ReadInt(R, fixorgP); Files.ReadInt(R, fixorgD);
         Files.ReadInt(R, fixorgT); Files.ReadInt(R, fixorgM);
         Files.ReadInt(R, w); body := SYSTEM.VAL(Command, mod.code + w - Start);
-        Files.ReadInt(R, w);
-        IF w > 0 THEN mod.close := SYSTEM.VAL(Command, mod.code + w - Start) ELSE mod.close := NIL END ;
         Files.Read(R, ch);
         IF ch # "O" THEN mod := NIL; error(badfile, name) END
       END ;
@@ -357,8 +355,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 31.12.20 Extended Oberon*
       M.cmd := M.cmd + dst;
       M.ent := M.ent + dst;
       M.ptr := M.ptr + dst;
-      M.pvr := M.pvr + dst;
-      M.close := SYSTEM.VAL(Command, SYSTEM.VAL(INTEGER, M.close) + dst)
+      M.pvr := M.pvr + dst
     END
   END RelocateLoaded;
 
@@ -434,6 +431,6 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 31.12.20 Extended Oberon*
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END Execute;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 31.12.20");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 12.12.20");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); limit := Kernel.stackOrg - Kernel.stackSize
 END ORL.
