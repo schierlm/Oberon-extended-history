@@ -1101,7 +1101,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
       ORG.Header;
       IF sym = ORS.begin THEN ORS.Get(sym); StatSequence END ;
       ORG.Exit;
-      IF (sym = ORS.final) & (version # 0) THEN ORG.EnterFinal; ORS.Get(sym); StatSequence; ORG.ExitFinal END ;
+      IF (sym = ORS.final) & (version # 0) THEN ORG.Final; ORS.Get(sym); StatSequence; ORG.Exit END ;
       Check(ORS.end, "no END");
       IF sym = ORS.ident THEN
         IF ORS.id # modid THEN ORS.Mark("no match") END ;

@@ -1144,13 +1144,9 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     END
   END Exit;
 
-  PROCEDURE EnterFinal*;
+  PROCEDURE Final*;
   BEGIN (*version # 0*) final := pc*4;  Put1(Sub, SP, SP, 4); Put2(Str, LNK, SP, 0)
-  END EnterFinal;
-
-  PROCEDURE ExitFinal*;
-  BEGIN (*version # 0*) Put2(Ldr, LNK, SP, 0); Put1(Add, SP, SP, 4); Put3(BR, 7, LNK)
-  END ExitFinal;
+  END Final;
 
   PROCEDURE NofRefs(ftyp: SET; typ: ORB.Type): LONGINT;
     VAR fld: ORB.Object; n: LONGINT;
