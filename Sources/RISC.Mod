@@ -22,7 +22,7 @@ MODULE RISC;     (*NW 22.9.07 / 1.11.2013 / AP 31.12.20 Extended Oberon*)
       b := IR DIV 100000H MOD 10H;
       op := IR DIV 10000H MOD 10H;
       im := IR MOD 10000H;
-      IF IR DIV 40000000H < 0 THEN  (*~p:  register instruction*)
+      IF IR DIV 40000000H MOD 4 < 2 THEN  (*~p:  register instruction*)
         B := R[b];
         IF ~ODD(IR DIV 40000000H) THEN (*~q*) C := R[IR MOD 10H]
         ELSIF ~ODD(IR DIV 10000000H) THEN (*q&~v*) C := im
