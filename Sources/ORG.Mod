@@ -177,12 +177,12 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   END FixLink;
 
   PROCEDURE FixLinkPair(L, adr: LONGINT);
-    VAR L1: LONGINT;
-  BEGIN (*fix chain of instruction pairs with an address that is spread among both instructions, 0 <= adr < C24*)
-    WHILE L # 0 DO
-      L1 := code[L] MOD C16 + code[L-1] DIV C12 MOD C8;
-      code[L-1] := code[L-1] DIV C20 * C20 + (adr DIV C16 MOD C8) * C12 + code[L-1] MOD C12;
-      code[L] := code[L] DIV C16 * C16 + adr MOD C16;
+    VAR L1: LONGINT; p, q: INTEGER;
+  BEGIN (*fix chain of instruction pairs with an address that is spread across both instructions, 0 <= adr < C24*)
+    WHILE L # 0 DO p := code[L-1]; q := code[L];
+      L1 := q MOD C16 + p DIV C12 MOD C8;
+      code[L-1] := p DIV C20 * C20 + (adr DIV C16 MOD C8) * C12 + p MOD C12;
+      code[L] := q DIV C16 * C16 + adr MOD C16;
       L := L1
     END
   END FixLinkPair;
