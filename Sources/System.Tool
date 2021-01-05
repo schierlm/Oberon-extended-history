@@ -85,4 +85,12 @@ Oberon.Batch
   ORP.Compile Hilbert.Mod/s Stars.Mod/s ~
   ORP.Compile Rectangles.Mod/s Checkers.Mod/s ~
   ORP.Compile Math.Mod/s PIO.Mod/s Blink.Mod/s ~
+
+  ORP.Compile BootLoad.Mod/s BootLoadDisk.Mod/s BootLoadLine.Mod/s ~
+
+  ORP.Compile ORC.Mod Oberon0.Mod Oberon0Tool.Mod ~
+  ORL.Link Oberon0 ~
+
+  ORP.Compile System1.Mod/s ~
+  ORL.Link System1 ~
 ~
