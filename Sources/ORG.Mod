@@ -180,7 +180,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     VAR L1: LONGINT; p, q: INTEGER;
   BEGIN (*fix chain of instruction pairs with an address that is spread across both instructions, 0 <= adr < C24*)
     WHILE L # 0 DO p := code[L-1]; q := code[L];
-      L1 := q MOD C16 + p DIV C12 MOD C8;
+      L1 := p DIV C12 MOD C8 + q MOD C16;
       code[L-1] := p DIV C20 * C20 + (adr DIV C16 MOD C8) * C12 + p MOD C12;
       code[L] := q DIV C16 * C16 + adr MOD C16;
       L := L1
