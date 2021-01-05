@@ -160,10 +160,10 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   END fix1;
 
   PROCEDURE FixLinkWith(L, x: LONGINT); (*fixup with offset to x*)
-    VAR L1, format: LONGINT;
+    VAR L1, format: LONGINT; p: INTEGER;
   BEGIN (*fix chain of format-1 or format-3 instructions*)
-    WHILE L # 0 DO
-      format := code[L] DIV C30 MOD 4; L1 := code[L] MOD C16;
+    WHILE L # 0 DO p := code[L];
+      format := p DIV C30 MOD 4; L1 := p MOD C16;
       IF format = 1 THEN fix1(L, (x-L)*4)
       ELSIF format = 3 THEN fix(L, x-L-1)
       ELSE ORS.Mark("fixup impossible"); L1 := 0
