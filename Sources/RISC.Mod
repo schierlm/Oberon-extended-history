@@ -1,8 +1,8 @@
 MODULE RISC;     (*NW 22.9.07 / 1.11.2013 / AP 31.12.20 Extended Oberon*)
   IMPORT SYSTEM, Texts, Oberon;
   CONST
-    MOV = 0; LSL0 = 1; ASR0 = 2; ROR0 = 3; AND = 4; ANN = 5; IOR = 6; XOR = 7;
-    ADD = 8; SUB = 9;  MUL = 10; Div = 11;
+    Mov = 0; Lsl = 1; Asr = 2; Ror= 3; And = 4; Ann = 5; Ior = 6; Xor = 7;
+    Add = 8; Sub = 9; Cmp = 9; Mul = 10; Div = 11;
 
   VAR IR: LONGINT;   (*instruction register*)
     PC: LONGINT;   (*program counter*)
@@ -29,17 +29,17 @@ MODULE RISC;     (*NW 22.9.07 / 1.11.2013 / AP 31.12.20 Extended Oberon*)
         ELSE (*q&v*) C := im + 0FFFF0000H
         END ;
         CASE op OF
-            MOV: IF ~ODD(IR DIV 20000000H) THEN A := C ELSE A := H END |
-            LSL0: A := LSL(B, C) |
-            ASR0: A := ASR(B, -C) |
-            ROR0: A := ROR(B, -C) |
-            AND: A := SYSTEM.VAL(LONGINT, SYSTEM.VAL(SET, B) * SYSTEM.VAL(SET, C)) |
-            ANN: A := SYSTEM.VAL(LONGINT, SYSTEM.VAL(SET, B) - SYSTEM.VAL(SET, C)) |
-            IOR: A := SYSTEM.VAL(LONGINT, SYSTEM.VAL(SET, B) + SYSTEM.VAL(SET, C)) |
-            XOR: A := SYSTEM.VAL(LONGINT, SYSTEM.VAL(SET, B) / SYSTEM.VAL(SET, C)) |
-            ADD: A := B + C |
-            SUB: A := B - C |
-            MUL: A := B * C |
+            Mov: IF ~ODD(IR DIV 20000000H) THEN A := C ELSE A := H END |
+            Lsl: A := LSL(B, C) |
+            Asr: A := ASR(B, -C) |
+            Ror: A := ROR(B, -C) |
+            And: A := SYSTEM.VAL(LONGINT, SYSTEM.VAL(SET, B) * SYSTEM.VAL(SET, C)) |
+            Ann: A := SYSTEM.VAL(LONGINT, SYSTEM.VAL(SET, B) - SYSTEM.VAL(SET, C)) |
+            Ior: A := SYSTEM.VAL(LONGINT, SYSTEM.VAL(SET, B) + SYSTEM.VAL(SET, C)) |
+            Xor: A := SYSTEM.VAL(LONGINT, SYSTEM.VAL(SET, B) / SYSTEM.VAL(SET, C)) |
+            Add: A := B + C |
+            Sub: A := B - C |
+            Mul: A := B * C |
             Div: A := B DIV C; H := B MOD C
          END ;
          R[a] := A; N := A < 0; Z := A = 0
