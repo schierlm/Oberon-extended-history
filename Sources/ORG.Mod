@@ -1145,7 +1145,8 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   END Exit;
 
   PROCEDURE Final*;
-  BEGIN (*version # 0*) final := pc*4;  Put1(Sub, SP, SP, 4); Put2(Str, LNK, SP, 0)
+  BEGIN final := pc*4;
+    IF version # 0 THEN Put1(Sub, SP, SP, 4); Put2(Str, LNK, SP, 0) END
   END Final;
 
   PROCEDURE NofRefs(ftyp: SET; typ: ORB.Type): LONGINT;
