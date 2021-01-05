@@ -84,7 +84,8 @@ Oberon.Batch
   ORP.Compile Curves.Mod/s Sierpinski.Mod/s ~
   ORP.Compile Hilbert.Mod/s Stars.Mod/s ~
   ORP.Compile Rectangles.Mod/s Checkers.Mod/s ~
-  ORP.Compile Math.Mod/s PIO.Mod/s Blink.Mod/s EBNF.Mod/s ~
+  ORP.Compile Math.Mod/s PIO.Mod/s Blink.Mod/s ~
+  ORP.Compile EBNF.Mod/s RISC.Mod/s ~
 
   ORP.Compile BootLoad.Mod/s BootLoadDisk.Mod/s BootLoadLine.Mod/s ~
 
