@@ -31,8 +31,8 @@ MODULE RISC;     (*NW 22.9.07 / 1.11.2013 / AP 31.12.20 Extended Oberon*)
         CASE op OF
             Mov: IF ~ODD(IR DIV 20000000H) THEN A := C ELSE A := H END |
             Lsl: A := LSL(B, C) |
-            Asr: A := ASR(B, -C) |
-            Ror: A := ROR(B, -C) |
+            Asr: A := ASR(B, C) |
+            Ror: A := ROR(B, C) |
             And: A := SYSTEM.VAL(LONGINT, SYSTEM.VAL(SET, B) * SYSTEM.VAL(SET, C)) |
             Ann: A := SYSTEM.VAL(LONGINT, SYSTEM.VAL(SET, B) - SYSTEM.VAL(SET, C)) |
             Ior: A := SYSTEM.VAL(LONGINT, SYSTEM.VAL(SET, B) + SYSTEM.VAL(SET, C)) |
