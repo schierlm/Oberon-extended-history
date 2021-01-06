@@ -1120,7 +1120,8 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   END Condition;
 
   PROCEDURE Open*(v: INTEGER);
-  BEGIN pc := 0; strx := 0; tdw := 0; RH := 0; fixorgP := 0; fixorgD := 0; fixorgT := 0; fixorgM := 0; check := v # 0; version := v;
+  BEGIN pc := 0; final := -1; strx := 0; tdw := 0; RH := 0; check := v # 0; version := v;
+    fixorgP := 0; fixorgD := 0; fixorgT := 0; fixorgM := 0;
     IF v = 0 THEN pc := 1;
       REPEAT code[pc] := 0; INC(pc) UNTIL pc = 8
     END
@@ -1131,7 +1132,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   END SetDataSize;
 
   PROCEDURE Header*;
-  BEGIN entry := pc*4; final := -1;
+  BEGIN entry := pc*4;
     IF version = 0 THEN code[0] := BCT - 1 + pc;  Put1a(Mov, SP, 0, StkOrg0)  (*RISC-0*)
     ELSE Put1(Sub, SP, SP, 4); Put2(Str, LNK, SP, 0)
     END
