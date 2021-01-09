@@ -247,7 +247,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 31.12.20
         SYSTEM.GET(adr, k); INC(adr, 4);
         IF s = name THEN res := noerr; w := mod.code + k ELSE SYSTEM.GET(adr, ch) END
       END
-    END
+    END ;
     RETURN SYSTEM.VAL(Command, w)
   END ThisCommand;
 
