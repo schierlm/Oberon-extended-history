@@ -166,7 +166,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 31.12.20
           SYSTEM.GET(mod.imp + (mno-1)*4, impmod);
           SYSTEM.GET(impmod.ent + pno*4, dest); dest := dest + impmod.code;
           offset := (dest - adr - 4) DIV 4;
-          SYSTEM.PUT(adr, (offset MOD C24) + BLT);
+          SYSTEM.PUT(adr, BLT + offset MOD C24);
           adr := adr - disp*4
         END ;
         (*fixup of MOV/LDR/STR/ADD*)

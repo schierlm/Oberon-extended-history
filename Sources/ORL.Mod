@@ -165,7 +165,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 31.12.20 Extended Oberon*
           SYSTEM.GET(mod.imp + (mno-1)*4, impmod);
           SYSTEM.GET(impmod.ent + pno*4, dest); dest := dest + impmod.code;
           offset := (dest - adr - 4) DIV 4;
-          SYSTEM.PUT(adr, (offset MOD C24) + BLT);
+          SYSTEM.PUT(adr, BLT + offset MOD C24);
           adr := adr - disp*4
         END ;
         (*fixup of MOV/LDR/STR/ADD*)
