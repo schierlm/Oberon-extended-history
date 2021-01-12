@@ -26,7 +26,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
       mode*: INTEGER;
       type*: ORB.Type;
       a*, b*, r: LONGINT;
-      rdo*: BOOLEAN  (*read only*)
+      rdo*, sel*, deref*, super*: BOOLEAN  (*read only, dereferenced, selected, super call*)
     END ;
     LabelRange* = RECORD low*, high*, label*: INTEGER END ;
 
@@ -293,7 +293,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   END MakeStringItem;
 
   PROCEDURE MakeItem*(VAR x: Item; y: ORB.Object);
-  BEGIN x.mode := y.class; x.type := y.type; x.a := y.val; x.rdo := y.rdo;
+  BEGIN x.mode := y.class; x.type := y.type; x.a := y.val; x.rdo := y.rdo; x.sel := FALSE; x.deref := FALSE; x.super := FALSE;
     IF y.class = ORB.Par THEN x.b := 0
     ELSIF (y.class = ORB.Const) & (y.type.form = ORB.String) THEN x.r := y.lev;
       x.a := y.val MOD C20; (*strx/exno*) x.b := y.val DIV C20 (*len*)
@@ -304,7 +304,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   (* Code generation for Selectors, Variables, Constants *)
 
   PROCEDURE Field*(VAR x: Item; y: ORB.Object);   (* x := x.y *)
-  BEGIN
+  BEGIN x.deref := FALSE;
     IF x.mode = ORB.Var THEN
       IF x.r >= 0 THEN x.a := x.a + y.val
       ELSE loadAdr(x); x.mode := RegI; x.a := y.val
@@ -316,7 +316,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
 
   PROCEDURE Index*(VAR x, y: Item);   (* x := x[y] *)
     VAR s, lim: LONGINT;
-  BEGIN s := x.type.base.size; lim := x.type.len;
+  BEGIN s := x.type.base.size; lim := x.type.len; x.deref := FALSE;
     IF (y.mode = ORB.Const) & (y.a < 0) THEN ORS.Mark("bad index") END ;
     IF (y.mode = ORB.Const) & (lim >= 0) THEN
       IF y.a >= lim THEN ORS.Mark("bad index") END ;
@@ -360,14 +360,14 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     ELSIF x.mode # Reg THEN ORS.Mark("bad mode in DeRef")
     END ;
     IF x.type.base.form = ORB.Array THEN Put1(Add, x.r, x.r, 16) END ; (*pointer to array*)
-    x.mode := RegI; x.a := 0; x.b := 0
+    x.mode := RegI; x.a := 0; x.b := 0; x.deref := TRUE
   END DeRef;
 
-  PROCEDURE Method*(VAR x: Item; y: ORB.Object; wasderef, super: BOOLEAN);
-  BEGIN loadAdr(x);  (*receiver*)
-    IF super THEN x.a := y.val; (*mthadr/exno*) x.b := -y.type.mno (*global/imported, x.b <= 0*)
-    ELSE x.a := y.lev; (*mthno*)
-      IF wasderef THEN x.b := ORB.Var (*pointer*) ELSE x.b := ORB.Par (*record*) END (*x.b > 0*)
+  PROCEDURE Method*(VAR x: Item; y: ORB.Object; super: BOOLEAN);
+  BEGIN loadAdr(x); (*receiver*)
+    IF super THEN x.a := y.val; (*mthadr/exno*) x.b := -y.type.mno; (*global/imported*) x.super := TRUE
+    ELSE x.a := y.lev; (*mthno*) x.super := FALSE;
+      IF x.deref THEN x.b := ORB.Var (*pointer*) ELSE x.b := ORB.Par (*record*) END
     END
   END Method;
 
@@ -839,13 +839,13 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   PROCEDURE Call*(VAR x: Item; r: LONGINT);
   BEGIN (*x.type.form IN {ORB.Proc, ORB.TProc}*)
     IF x.type.form = ORB.TProc THEN  (*type-bound procedure*)
-      IF x.b > 0 THEN (*method call*)
-        IF x.b = ORB.Var THEN Put2(Ldr, RH, 0, -8) ELSE Put0(Mov, RH, 0, 1) END ;
-        Put2(Ldr, RH, RH, -4-x.a*4); Put3(BLR, 7, RH)
-      ELSE (*super call*)
+      IF x.super THEN (*super call*)
         IF x.b = 0 THEN Put3(BL, 7, (x.a DIV 4)-pc-1)
         ELSE (*imported*) Put3a(BL, -x.b, x.a, pc-fixorgP); fixorgP := pc-1
         END
+      ELSE (*method call*)
+        IF x.b = ORB.Var THEN Put2(Ldr, RH, 0, -8) ELSE Put0(Mov, RH, 0, 1) END ;
+        Put2(Ldr, RH, RH, -4-x.a*4); Put3(BLR, 7, RH)
       END
     ELSIF x.mode = ORB.Const THEN  (*regular procedure*)
       IF x.a < 0 THEN (*forward*) Put3(BL, 7, x.type.len); x.type.len := pc-1  (*fixed up in ORP.Body*)
