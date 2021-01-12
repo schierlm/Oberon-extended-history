@@ -747,7 +747,9 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
       END ;
       incR
     ELSIF ftype.form = ORB.Record THEN
-      IF xmd = ORB.Par THEN Put2(Ldr, RH, SP, x.a+4+frame); incR ELSE loadTypTagAdr(x.type) END
+      IF x.deref THEN Put2(Ldr, RH, 0, -8); incR
+      ELSIF xmd = ORB.Par THEN Put2(Ldr, RH, SP, x.a+4+frame); incR
+      ELSE loadTypTagAdr(x.type) END
     END
   END VarParam;
 
