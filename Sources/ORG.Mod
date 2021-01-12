@@ -26,7 +26,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
       mode*: INTEGER;
       type*: ORB.Type;
       a*, b*, r: LONGINT;
-      rdo*, sel*, deref*, super*: BOOLEAN  (*read only, dereferenced, selected, super call*)
+      rdo*, sel*, deref*, super*: BOOLEAN  (*read only, selected, dereferenced, super call*)
     END ;
     LabelRange* = RECORD low*, high*, label*: INTEGER END ;
 
@@ -365,9 +365,9 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
 
   PROCEDURE Method*(VAR x: Item; y: ORB.Object; super: BOOLEAN);
   BEGIN loadAdr(x); (*receiver*)
-    IF super THEN x.a := y.val; (*mthadr/exno*) x.b := -y.type.mno; (*global/imported*) x.super := TRUE
+    IF super THEN x.a := y.val; (*mthadr/exno*) x.b := -y.type.mno; x.super := TRUE
     ELSE x.a := y.lev; (*mthno*) x.super := FALSE;
-      IF x.deref THEN x.b := ORB.Var (*pointer*) ELSE x.b := ORB.Par (*record*) END
+      IF x.deref THEN x.b := ORB.Var ELSE x.b := ORB.Par END
     END
   END Method;
 
@@ -839,11 +839,11 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   PROCEDURE Call*(VAR x: Item; r: LONGINT);
   BEGIN (*x.type.form IN {ORB.Proc, ORB.TProc}*)
     IF x.type.form = ORB.TProc THEN  (*type-bound procedure*)
-      IF x.super THEN (*super call*)
+      IF x.super THEN  (*super call*)
         IF x.b = 0 THEN Put3(BL, 7, (x.a DIV 4)-pc-1)
         ELSE (*imported*) Put3a(BL, -x.b, x.a, pc-fixorgP); fixorgP := pc-1
         END
-      ELSE (*method call*)
+      ELSE  (*method call*)
         IF x.b = ORB.Var THEN Put2(Ldr, RH, 0, -8) ELSE Put0(Mov, RH, 0, 1) END ;
         Put2(Ldr, RH, RH, -4-x.a*4); Put3(BLR, 7, RH)
       END
@@ -860,7 +860,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
       Put3(BLR, 7, RH)
     END ;
     IF x.type.base.form = ORB.NoTyp THEN (*procedure*) RH := 0
-    ELSE (*function*)
+    ELSE  (*function*)
       IF r > 0 THEN Put0(Mov, r, 0, 0); RestoreRegs(r) END ;
       x.mode := Reg; x.r := r; RH := r+1
     END
