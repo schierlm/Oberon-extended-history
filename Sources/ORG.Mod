@@ -26,7 +26,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
       mode*: INTEGER;
       type*: ORB.Type;
       a*, b*, r: LONGINT;
-      rdo*, sel*, deref*, super*: BOOLEAN  (*read only, selected, dereferenced, super call*)
+      rdo*, sel*, deref*, super: BOOLEAN  (*read only, selected, dereferenced, super call*)
     END ;
     LabelRange* = RECORD low*, high*, label*: INTEGER END ;
 
@@ -293,7 +293,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   END MakeStringItem;
 
   PROCEDURE MakeItem*(VAR x: Item; y: ORB.Object);
-  BEGIN x.mode := y.class; x.type := y.type; x.a := y.val; x.rdo := y.rdo; x.sel := FALSE; x.deref := FALSE; x.super := FALSE;
+  BEGIN x.mode := y.class; x.type := y.type; x.a := y.val; x.rdo := y.rdo; x.sel := FALSE; x.deref := FALSE;
     IF y.class = ORB.Par THEN x.b := 0
     ELSIF (y.class = ORB.Const) & (y.type.form = ORB.String) THEN x.r := y.lev;
       x.a := y.val MOD C20; (*strx/exno*) x.b := y.val DIV C20 (*len*)
@@ -365,10 +365,11 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
 
   PROCEDURE Method*(VAR x: Item; y: ORB.Object; super: BOOLEAN);
   BEGIN loadAdr(x); (*receiver*)
-    IF super THEN x.a := y.val; (*mthadr/exno*) x.b := -y.type.mno; x.super := TRUE
-    ELSE x.a := y.lev; (*mthno*) x.super := FALSE;
+    IF super THEN x.a := y.val; (*mthadr/exno*) x.b := -y.type.mno (*global/imported*)
+    ELSE x.a := y.lev; (*mthno*)
       IF x.deref THEN x.b := ORB.Var ELSE x.b := ORB.Par END
-    END
+    END ;
+    x.deref := FALSE; x.super := super
   END Method;
 
   PROCEDURE Q(T: ORB.Type; VAR tdw: LONGINT);
