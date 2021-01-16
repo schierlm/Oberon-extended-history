@@ -147,11 +147,6 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     RETURN cond
   END negated;
 
-  PROCEDURE fix(at, with: LONGINT);
-  BEGIN (*fix format-3 branch instruction*)
-    code[at] := code[at] DIV C24 * C24 + with MOD C24
-  END fix;
-
   PROCEDURE fix1(at, with: LONGINT);
     VAR v: LONGINT;
   BEGIN (*fix format-1 register instruction*)
@@ -159,13 +154,18 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     code[at] := code[at] DIV C16 * C16 + with MOD C16 + v
   END fix1;
 
+  PROCEDURE fix3(at, with: LONGINT);
+  BEGIN (*fix format-3 branch instruction*)
+    code[at] := code[at] DIV C24 * C24 + with MOD C24
+  END fix3;
+
   PROCEDURE FixLinkWith(L, x: LONGINT); (*fixup with offset to x*)
     VAR L1, format: LONGINT; p: INTEGER;
   BEGIN (*fix chain of format-1 or format-3 instructions*)
     WHILE L # 0 DO p := code[L];
       format := p DIV C30 MOD 4; L1 := p MOD C16;
       IF format = 1 THEN fix1(L, (x-L)*4)
-      ELSIF format = 3 THEN fix(L, x-L-1)
+      ELSIF format = 3 THEN fix3(L, x-L-1)
       ELSE ORS.Mark("fixup impossible"); L1 := 0
       END ;
       L := L1
@@ -262,7 +262,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     VAR x: Item;
   BEGIN
     IF T.mno > 0 THEN (*imported*) x.mode := ORB.Var; x.a := T.len; x.r := -T.mno; loadAdr(x)
-    ELSE PutPair(0, Add, RH, RH, T.len, 1); incR; T.len := pc-1  (*fixed up in Close and again by loader*)
+    ELSE PutPair(0, Add, RH, RH, T.len, 1); incR; T.len := pc-1  (*second instruction of instruction pair fixed up in Close*)
     END
   END loadTypTagAdr;
 
@@ -365,7 +365,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
 
   PROCEDURE Method*(VAR x: Item; y: ORB.Object; super: BOOLEAN);
   BEGIN loadAdr(x); (*receiver*)
-    IF super THEN x.a := y.val; (*mthadr/exno*) x.b := -y.type.mno (*global/imported*)
+    IF super THEN x.a := y.val; (*mthadr/exno*) x.b := -y.type.mno
     ELSE x.a := y.lev; (*mthno*)
       IF x.deref THEN x.b := ORB.Var ELSE x.b := ORB.Par END
     END ;
@@ -414,7 +414,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     IF s <= 24 THEN s := 32 ELSIF s <= 56 THEN s := 64 ELSIF s <= 120 THEN s := 128
     ELSE s := (s+263) DIV 256 * 256
     END ;
-    T.len := tdw*4; td[tdw] := s; INC(tdw);  (*len used as type descriptor offset in bytes relative to tdx = varx + strx*)
+    T.len := tdw*4; td[tdw] := s; INC(tdw);  (*len used as type descriptor offset in bytes relative to tdx*)
     k := T.nofpar;  (*extension level!*)
     IF k > 3 THEN ORS.Mark("ext level too large")
     ELSE Q(T, tdw);
@@ -440,7 +440,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
       Put2(Ldr, RH, RH, T.nofpar*4); incR;
       loadTypTagAdr(T);  (*tag of T*)
       Put0(Cmp, RH-1, RH-1, RH-2); DEC(RH, 2);
-      IF ~varpar THEN fix(pc0, pc - pc0 - 1) END ;
+      IF ~varpar THEN fix3(pc0, pc - pc0 - 1) END ;
       IF isguard THEN
         IF check THEN Trap(NE, 2) END
       ELSE SetCC(x, EQ);
@@ -702,7 +702,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
         IF check THEN (*check array lengths*)
           Put1a(Mov, RH+1, 0, (x.type.size+3) DIV 4); Put0(Cmp, RH+1, RH, RH+1); Trap(GT, 3)
         END ;
-        fix(pc0, pc + 5 - pc0)
+        fix3(pc0, pc + 5 - pc0)
       END
     ELSIF x.type.form = ORB.Record THEN Put1a(Mov, RH, 0, x.type.size DIV 4)
     ELSE ORS.Mark("inadmissible assignment")
@@ -844,7 +844,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   BEGIN (*x.type.form IN {ORB.Proc, ORB.TProc}*)
     IF x.type.form = ORB.TProc THEN  (*type-bound procedure*)
       IF x.super THEN  (*super call*)
-        IF x.b = 0 THEN Put3(BL, 7, (x.a DIV 4)-pc-1)
+        IF x.b >= 0 THEN Put3(BL, 7, (x.a DIV 4)-pc-1)
         ELSE (*imported*) Put3a(BL, -x.b, x.a, pc-fixorgP); fixorgP := pc-1
         END
       ELSE  (*method call*)
@@ -913,7 +913,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   BEGIN
     IF n > 0 THEN fix1(L0, tab[n-1].high + 1) (*higher bound*) ELSIF L1 = 0 THEN ORS.Mark("empty case") END ;
     IF L1 = 0 THEN L1 := pc; Trap(7, 1) END ;  (*create else*)
-    fix(L0+1, L1-L0-2);  (*branch to else*)
+    fix3(L0+1, L1-L0-2);  (*branch to else*)
     fix1(L0+2, pc-L0-5);  (*nof words between BL instruction at L0+4 and jump table*)
     j := 0;
     FOR i := 0 TO n-1 DO  (*construct jump table*)
@@ -964,9 +964,9 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   BEGIN loadAdr(x);
     IF y.type = ORB.noType THEN (*record*) loadTypTagAdr(x.type.base)
     ELSE (*array*) xt:= x.type.base.base; xf := xt.form;
-      IF xf = ORB.Record THEN loadTypTagAdr(xt); Put1(Add, RH-1, RH-1, 1)  (*array of record => blktyp = 1*)
-      ELSIF xf = ORB.Pointer THEN Put1(Mov, RH, 0, 2); incR  (*array of pointer => blktyp = 2*)
-      ELSIF xf = ORB.Proc THEN Put1(Mov, RH, 0, 7); incR  (*array of procedure => blktyp = 3, tag = 7*)
+      IF xf = ORB.Record THEN loadTypTagAdr(xt); Put1(Add, RH-1, RH-1, 1)  (*array of record, blktyp = 1*)
+      ELSIF xf = ORB.Pointer THEN Put1(Mov, RH, 0, 2); incR  (*array of pointer, blktyp = 2*)
+      ELSIF xf = ORB.Proc THEN Put1(Mov, RH, 0, 7); incR  (*array of procedure, blktyp = 3, tag = 7*)
       ELSIF xf < ORB.Pointer THEN Put1(Mov, RH, 0, 3); incR  (*array of basic type, blktyp = 3, tag = 3*)
       ELSE ORS.Mark("no valid ptr base type")
       END ;
@@ -1192,7 +1192,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
       ELSIF obj.class = ORB.Var THEN INC(nofrefs, NofRefs(ORB.Ptrs + ORB.Procs, obj.type))  (*count ptrs and pvrs*)
       ELSIF (obj.class = ORB.Typ) & (obj.type.form = ORB.Record) & (obj.lev = 0) THEN  (*build type descriptors*)
         i := obj.type.len;  (*heading of fixup chain of instruction pairs generated in loadTypTagAdr*)
-        BuildTD(obj.type, tdw);  (*obj.type.len now used as type descriptor offset in bytes relative to tdx = varx + strx*)
+        BuildTD(obj.type, tdw);  (*obj.type.len now used as type descriptor offset in bytes relative to tdx*)
         IF i > 0 THEN FixLinkPair(i, tdx + obj.type.len) END  (*fix chain of instruction pairs with type descriptor adr*)
       END ;
       obj := obj.next
