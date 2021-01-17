@@ -995,7 +995,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     BEGIN Check(ORS.semicolon, "no ;"); locblksize := parblksize;
       Declarations(locblksize); proc.type.dsc := ORB.topScope.next;
       WHILE sym = ORS.procedure DO ProcedureDecl; Check(ORS.semicolon, "no ;") END ;
-      ORG.FixLink(proc.type.len);  (*fix forward references generated in ORG.Call*)
+      ORG.FixLink(proc.type.len);  (*fix forward references generated in ORG*)
       proc.val := ORG.Here() * 4; proc.type.dsc := ORB.topScope.next;
       ORG.Enter(parblksize, locblksize, int);
       IF sym = ORS.begin THEN ORS.Get(sym); StatSequence END ;

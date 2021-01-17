@@ -262,7 +262,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     VAR x: Item;
   BEGIN
     IF T.mno > 0 THEN (*imported*) x.mode := ORB.Var; x.a := T.len; x.r := -T.mno; loadAdr(x)
-    ELSE PutPair(0, Add, RH, RH, T.len, 1); incR; T.len := pc-1  (*second instruction of instruction pair fixed up in Close*)
+    ELSE PutPair(0, Add, RH, RH, T.len, 1); incR; T.len := pc-1  (*fixed up in Close and again by loader*)
     END
   END loadTypTagAdr;
 
