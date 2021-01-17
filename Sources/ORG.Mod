@@ -262,7 +262,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     VAR x: Item;
   BEGIN
     IF T.mno > 0 THEN (*imported*) x.mode := ORB.Var; x.a := T.len; x.r := -T.mno; loadAdr(x)
-    ELSE PutPair(0, Add, RH, RH, T.len, 1); incR; T.len := pc-1  (*fixed up in Close and again by loader*)
+    ELSE PutPair(0, Add, RH, RH, T.len, 1); incR; T.len := pc-1  (*insert into fixorgD chain, fixed up in Close*)
     END
   END loadTypTagAdr;
 
@@ -1191,9 +1191,9 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
         i := (i+4) DIV 4 * 4; INC(comsize, i+4)
       ELSIF obj.class = ORB.Var THEN INC(nofrefs, NofRefs(ORB.Ptrs + ORB.Procs, obj.type))  (*count ptrs and pvrs*)
       ELSIF (obj.class = ORB.Typ) & (obj.type.form = ORB.Record) & (obj.lev = 0) THEN  (*build type descriptors*)
-        i := obj.type.len;  (*heading of fixup chain of instruction pairs generated in loadTypTagAdr*)
+        i := obj.type.len;  (*heading of fixup chain of instruction pairs inserted into fixorgD chain in loadTypTagAdr*)
         BuildTD(obj.type, tdw);  (*obj.type.len now used as type descriptor offset in bytes relative to tdx*)
-        IF i > 0 THEN FixLinkPair(i, tdx + obj.type.len) END  (*fix chain of instruction pairs with type descriptor adr*)
+        IF i > 0 THEN FixLinkPair(i, tdx + obj.type.len) END  (*fix chain of instruction pairs with type descriptor address*)
       END ;
       obj := obj.next
     END ;
