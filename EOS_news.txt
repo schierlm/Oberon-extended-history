@@ -34,3 +34,4 @@
 2020-12-12 Modules - Add procedure Modules.SetFinalizer to set a module finalization sequence to be executed prior to unloading
 2020-12-30 TextFrames - TextFrames.Copy now produces an exact copy of the text frame, including vertical offset from baseline
 2020-12-31 Modules, ORS, ORG, ORP, ORL, ORX, ORTool, Oberon0 - Add module finalization as a language construct (symbol FINAL)
+2021-01-24 ORTool - Decode FLR, FLT, RTI, STI, CLI instructions
