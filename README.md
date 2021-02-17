@@ -16,7 +16,7 @@ Features
 
 **Last release:** 31.12.2020
 
-**Last update:** 24.1.2021
+**Last update:** 1.2.2021
 
 The file [**S3RISCinstall.tar.gz**](Documentation/S3RISCinstall.tar.gz) always reflects the *latest* version of Extended Oberon, as described in the file [**EOS_news.txt**](EOS_news.txt).
 
