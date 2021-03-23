@@ -1,4 +1,4 @@
-MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.20 Extended Oberon*)
+MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.3.21 Extended Oberon*)
   IMPORT SYSTEM;
   CONST TrapAdr* = 04H; timer = -64;
 
@@ -62,7 +62,7 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.20 Extended Ober
     (*called by NEW via TR; ptr is a pointer; tag (or tag-1) is a pointer or blktyp; len and elemsize describe arrays*)
     VAR p, size, lim: LONGINT;
   BEGIN
-    IF tag MOD 4 = 0 THEN (*record block*)
+    IF tag MOD 4 = 0 THEN (*record*)
       SYSTEM.GET(tag, size);  (*size already converted for heap allocation with 8 byte prefix*)
       IF size = 32 THEN GetBlock32(p)
       ELSIF size = 64 THEN GetBlock64(p)
@@ -73,7 +73,7 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.20 Extended Ober
       ELSE ptr := p+8; SYSTEM.PUT(p, tag); lim := p + size; INC(p, 4); INC(allocated, size);
         WHILE p < lim DO SYSTEM.PUT(p, 0); INC(p, 4) END
       END
-    ELSE (*array block*)
+    ELSE (*array*)
       size := len*elemsize;  (*convert size for heap allocation with 24 byte prefix*)
       IF size <= 8 THEN size := 32; GetBlock32(p)
       ELSIF size <= 40 THEN size := 64; GetBlock64(p)
@@ -101,9 +101,12 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.20 Extended Ober
               IF offadr = 0 THEN offadr := tag + 16 ELSE INC(offadr, 4) END ;
               SYSTEM.PUT(p-4, offadr); SYSTEM.GET(offadr, offset)
             ELSIF blktyp = 1 THEN (*array of record*)
-              IF offadr = 0 THEN offadr := tag + 15; pos := p + 16; SYSTEM.PUT(p+12, pos) ELSE INC(offadr, 4); SYSTEM.GET(p+12, pos) END ;
+              IF offadr = 0 THEN offadr := tag + 15; pos := p + 16; SYSTEM.PUT(p+12, pos)
+              ELSE INC(offadr, 4); SYSTEM.GET(p+12, pos)
+              END ;
               SYSTEM.GET(offadr, offset);
-              IF offset = -1 THEN SYSTEM.GET(p, len); SYSTEM.GET(p+4, elemsize); INC(pos, elemsize);
+              IF offset = -1 THEN
+                SYSTEM.GET(p, len); SYSTEM.GET(p+4, elemsize); INC(pos, elemsize);
                 IF pos < p + 16 + len*elemsize THEN offadr := tag + 15; SYSTEM.GET(offadr, offset); SYSTEM.PUT(p+12, pos) END
               END ;
               SYSTEM.PUT(p-4, offadr)
@@ -121,7 +124,8 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.20 Extended Ober
               IF r >= heapOrg THEN SYSTEM.GET(r-4, offadr);
                 IF offadr = 0 THEN SYSTEM.PUT(pos+offset, q); q := p; p := r END
               END
-            ELSE (*up*) SYSTEM.GET(q-4, offadr); SYSTEM.GET(offadr, offset);
+            ELSE (*up*)
+              SYSTEM.GET(q-4, offadr); SYSTEM.GET(offadr, offset);
               IF p # q THEN SYSTEM.GET(q-8, tag); blktyp := tag MOD 4;
                 IF blktyp = 0 THEN pos := q ELSIF blktyp = 1 THEN SYSTEM.GET(q+12, pos) ELSE pos := q + 16 END ;
                 SYSTEM.GET(pos+offset, r); SYSTEM.PUT(pos+offset, p); p := q; q := r
@@ -179,12 +183,14 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.20 Extended Ober
           IF continue THEN
             IF blktyp = 0 THEN (*record*)
               IF typ # NIL THEN INC(resTyp, typ(p, tag, s, continue)) END ;
-              IF continue & ((ptr # NIL) OR (pvr # NIL)) THEN offadr := tag + 16; SYSTEM.GET(offadr, offset);
+              IF continue & ((ptr # NIL) OR (pvr # NIL)) THEN
+                offadr := tag + 16; SYSTEM.GET(offadr, offset);
                 WHILE continue & (offset # -1) DO (*pointers*)
                   IF ptr # NIL THEN SYSTEM.GET(p+8+offset, r); INC(resPtr, ptr(p+8+offset, r, s, continue)) END ;
                   INC(offadr, 4); SYSTEM.GET(offadr, offset)
                 END ;
-                IF continue & (pvr # NIL) THEN INC(offadr, 4); SYSTEM.GET(offadr, offset);
+                IF continue & (pvr # NIL) THEN
+                  INC(offadr, 4); SYSTEM.GET(offadr, offset);
                   WHILE continue & (offset # -1) DO (*procedures*) SYSTEM.GET(p+8+offset, r);
                     INC(resPvr, pvr(p+8+offset, r, s, continue));
                     INC(offadr, 4); SYSTEM.GET(offadr, offset)
@@ -193,7 +199,8 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.20 Extended Ober
               END
             ELSIF blktyp = 1 THEN (*array of record*)
               IF typ # NIL THEN INC(resTyp, typ(p, tag-1, s, continue)) END ;
-              IF continue & ((ptr # NIL) OR (pvr # NIL)) THEN offadr := tag + 15; SYSTEM.GET(offadr, offset);
+              IF continue & ((ptr # NIL) OR (pvr # NIL)) THEN
+                offadr := tag + 15; SYSTEM.GET(offadr, offset);
                 SYSTEM.GET(p+8, len); SYSTEM.GET(p+12, elemsize); len := p + 24 + len*elemsize;
                 WHILE continue & (offset # -1) DO (*pointers*)
                   IF ptr # NIL THEN pos := p + 24;
@@ -203,7 +210,8 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.20 Extended Ober
                   END ;
                   INC(offadr, 4); SYSTEM.GET(offadr, offset)
                 END ;
-                IF continue & (pvr # NIL) THEN INC(offadr, 4); SYSTEM.GET(offadr, offset);
+                IF continue & (pvr # NIL) THEN
+                  INC(offadr, 4); SYSTEM.GET(offadr, offset);
                   WHILE continue & (offset # -1) DO (*procedures*) pos := p + 24;
                     WHILE continue & (pos < len) DO SYSTEM.GET(pos+offset, r);
                       INC(resPvr, pvr(pos+offset, r, s, continue)); INC(pos, elemsize)
@@ -213,7 +221,8 @@ MODULE Kernel;  (*NW/PR  11.4.86 / 27.12.95 / 4.2.2014 / AP 1.9.20 Extended Ober
                 END
               END
             ELSIF blktyp = 2 THEN (*array of pointer*)
-              IF ptr # NIL THEN SYSTEM.GET(p+8, len); pos := p + 24; len := pos + len*4;
+              IF ptr # NIL THEN
+                SYSTEM.GET(p+8, len); pos := p + 24; len := pos + len*4;
                 WHILE continue & (pos < len) DO SYSTEM.GET(pos, r);
                   INC(resPtr, ptr(pos, r, s, continue)); INC(pos, 4)
                 END

@@ -1,4 +1,4 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 31.12.20 Extended Oberon*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.3.21 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files;
   CONST versionkey = 1X; TR = 13; LNK = 15; DescSize = 96; MnLength = 32;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4;
@@ -349,7 +349,8 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 31.12.20
     WHILE continue & (m # NIL) DO
       IF (m.name[0] # 0X) & m.selected & (m.refcnt > 0) THEN mod := root;
         WHILE continue & (mod # NIL) DO
-          IF (mod.name[0] # 0X) & ~mod.selected THEN p := mod.imp; q := mod.cmd;
+          IF (mod.name[0] # 0X) & ~mod.selected THEN
+            p := mod.imp; q := mod.cmd;
             WHILE p < q DO (*imports*) SYSTEM.GET(p, imp);
               IF imp = m THEN INC(res, client(mod, imp, continue)); p := q ELSE INC(p, 4) END
             END
@@ -365,7 +366,8 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 31.12.20
     VAR mod: Module;
   BEGIN mod := root;
     WHILE mod # NIL DO
-      IF (mod.name[0] # 0X) & ~mod.selected THEN Kernel.Mark(mod.ptr);
+      IF (mod.name[0] # 0X) & ~mod.selected THEN
+        Kernel.Mark(mod.ptr);
         IF ~all THEN Kernel.Scan(typ, ptr, pvr, mod.name, resTyp, resPtr, resPvr) END
       END ;
       mod := mod.next
@@ -378,13 +380,15 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 31.12.20
   BEGIN resPtr := noref; resPvr := noref; mod := root; continue := (ptr # NIL) OR (pvr # NIL);
     WHILE continue & (mod # NIL) DO
       IF (mod.name[0] # 0X) & ~mod.selected THEN
-        IF ptr # NIL THEN pref := mod.ptr; SYSTEM.GET(pref, pvadr);
+        IF ptr # NIL THEN
+          pref := mod.ptr; SYSTEM.GET(pref, pvadr);
           WHILE continue & (pvadr # 0) DO (*pointers*) SYSTEM.GET(pvadr, r);
             INC(resPtr, ptr(pvadr, r, mod.name, continue));
             INC(pref, 4); SYSTEM.GET(pref, pvadr)
           END
         END ;
-        IF pvr # NIL THEN pref := mod.pvr; SYSTEM.GET(pref, pvadr);
+        IF pvr # NIL THEN
+          pref := mod.pvr; SYSTEM.GET(pref, pvadr);
           WHILE continue & (pvadr # 0) DO (*procedures*) SYSTEM.GET(pvadr, r);
             INC(resPvr, pvr(pvadr, r, mod.name, continue));
             INC(pref, 4); SYSTEM.GET(pref, pvadr)
