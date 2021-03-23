@@ -349,8 +349,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.3.21 E
     WHILE continue & (m # NIL) DO
       IF (m.name[0] # 0X) & m.selected & (m.refcnt > 0) THEN mod := root;
         WHILE continue & (mod # NIL) DO
-          IF (mod.name[0] # 0X) & ~mod.selected THEN
-            p := mod.imp; q := mod.cmd;
+          IF (mod.name[0] # 0X) & ~mod.selected THEN p := mod.imp; q := mod.cmd;
             WHILE p < q DO (*imports*) SYSTEM.GET(p, imp);
               IF imp = m THEN INC(res, client(mod, imp, continue)); p := q ELSE INC(p, 4) END
             END
