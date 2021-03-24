@@ -14,7 +14,7 @@ Features
 * Import any number of modules
 * Simple batch execution facility
 
-**Last release:** 1.3.2020
+**Last release:** 1.3.2021
 
 **Last update:** 1.3.2021
 
