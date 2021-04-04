@@ -1,4 +1,4 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.3.21 Extended Oberon*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.4.21 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files;
   CONST versionkey = 1X; TR = 13; LNK = 15; DescSize = 96; MnLength = 32;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4;
@@ -80,7 +80,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.3.21 E
         Files.Set(R, F, 0); Files.ReadString(R, name1); Files.ReadInt(R, key); Files.Read(R, ch);
         Files.ReadInt(R, size); importing := name1;
         IF ch = versionkey THEN
-          Files.ReadString(R, impname);   (*imports*)
+          Files.ReadString(R, impname);  (*imports*)
           WHILE (impname[0] # 0X) & (res = noerr) DO
             Files.ReadInt(R, impkey);
             Load(impname, impmod); import[nofimps] := impmod; importing := name1;
@@ -188,7 +188,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.3.21 E
           END ;
           SYSTEM.PUT(adr, MOV+U+B + pno*C24 + offset DIV C16);  (*mark as fixed up by setting the B bit*)
           IF inst DIV C30 = F2 THEN inst := inst DIV C20 * C20
-          ELSE inst := IOR + (inst DIV C24 MOD C4) * C24 + (inst DIV C20 MOD C4) * C20
+          ELSE inst := IOR + inst DIV C24 MOD C4 * C24 + inst DIV C20 MOD C4 * C20
           END ;
           SYSTEM.PUT(adr+4, inst + offset MOD C16);
           adr := adr - disp*4

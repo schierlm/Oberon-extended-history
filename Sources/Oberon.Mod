@@ -1,18 +1,18 @@
-MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 12.12.20 Extended Oberon*)
+MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 1.4.21 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files, Modules, Input, Display, Viewers, Fonts, Texts;
 
   CONST (*message ids*)
     consume* = 0; track* = 1; defocus* = 0; neutralize* = 1; mark* = 2;
-    off = 0; idle = 1; active = 2;   (*task states*)
+    off = 0; idle = 1; active = 2;  (*task states*)
     BasicCycle = 20;
     TAB = Input.TAB; CR = Input.CR; ESC = Input.ESC; SETSTAR = 1AX;
 
   TYPE Painter* = PROCEDURE (x, y: INTEGER);
-    Marker* = RECORD Fade*, Draw*: Painter END;
-    
+    Marker* = RECORD Fade*, Draw*: Painter END ;
+
     Cursor* = RECORD
        marker*: Marker; on*: BOOLEAN; X*, Y*: INTEGER
-    END;
+    END ;
 
     InputMsg* = RECORD (Display.FrameMsg)
       id*: INTEGER;                      (*consume, track*)
@@ -21,21 +21,21 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
       ch*: CHAR;
       fnt*: Fonts.Font;
       col*, voff*: INTEGER
-    END;
+    END ;
 
     SelectionMsg* = RECORD (Display.FrameMsg)
       time*: LONGINT;
       text*: Texts.Text;
       beg*, end*: LONGINT
-    END;
+    END ;
 
     ControlMsg* = RECORD (Display.FrameMsg)
       id*, X*, Y*: INTEGER               (*defocus, neutralize, mark*)
-    END;
+    END ;
 
     CopyMsg* = RECORD (Display.FrameMsg)
-        F*: Display.Frame
-      END;
+      F*: Display.Frame
+    END ;
 
     Task* = POINTER TO TaskDesc;
 
@@ -45,7 +45,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
       state, nextTime, period*: INTEGER;
       next: Task;
       handle: Handler
-    END;
+    END ;
 
   VAR User*: ARRAY 8 OF CHAR; Password*: LONGINT;
     Arrow*, Star*: Marker; (*predefined markers representing an arrow pointing to the NW and a star symbol*)
@@ -58,7 +58,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
       text*: Texts.Text;
       cmd*, pos*: LONGINT;
       res*: INTEGER
-    END;
+    END ;
 
     CurFnt*: Fonts.Font;
     CurCol*, CurOff*: INTEGER;
@@ -66,7 +66,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
 
     CurTask: Task;
     DW, DH, CL: INTEGER;
-    ActCnt: INTEGER; (*action count for GC*)
+    ActCnt: INTEGER; (*action count for garbage collector*)
     Mod: Modules.Module;
 
     W: Texts.Writer;
@@ -80,8 +80,8 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
     WHILE s[i] # 0X DO
       c := b; b := a; a := (c MOD 509 + 1) * 127 + ORD(s[i]);
       INC(i)
-    END;
-    IF b >= 32768 THEN b := b - 65536 END;
+    END ;
+    IF b >= 32768 THEN b := b - 65536 END ;
     RETURN b * 65536 + a
   END Code;
 
@@ -113,7 +113,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
     IF Y < 14 THEN Y := 14 ELSIF Y > DH THEN Y := DH END ;
     Display.CopyPattern(Display.white, Display.arrow, X, Y - 14, Display.invert)
   END FlipArrow;
-     
+
   PROCEDURE FlipStar (X, Y: INTEGER);
   BEGIN
     IF X < CL THEN
@@ -128,7 +128,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
   PROCEDURE OpenCursor(VAR c: Cursor);
   BEGIN c.on := FALSE; c.X := 0; c.Y := 0
   END OpenCursor;
- 
+
   PROCEDURE FadeCursor(VAR c: Cursor);
   BEGIN IF c.on THEN c.marker.Fade(c.X, c.Y); c.on := FALSE END
   END FadeCursor;
@@ -137,7 +137,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
   BEGIN
     IF c.on & ((x # c.X) OR (y # c.Y) OR (m.Draw # c.marker.Draw)) THEN
       c.marker.Fade(c.X, c.Y); c.on := FALSE
-    END;
+    END ;
     IF ~c.on THEN
       m.Draw(x, y); c.marker := m; c.X := x; c.Y := y; c.on := TRUE
     END
@@ -339,7 +339,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
 
   (*garbage collection*)
 
-  PROCEDURE GC;
+  PROCEDURE CollectGarbage;
     VAR mod: Modules.Module;
   BEGIN
     IF (ActCnt <= 0) OR (Kernel.allocated >= Kernel.heapLim - Kernel.heapOrg - 10000H) THEN
@@ -354,7 +354,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
       Modules.Collect;
       ActCnt := BasicCycle
     END
-  END GC;
+  END CollectGarbage;
 
   (*command interpretation*)
 
@@ -370,7 +370,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
   BEGIN Par.res := n
   END Return;
 
-  PROCEDURE Skip(VAR S: Texts.Scanner; VAR len: INTEGER);  (*count and skip white spaces*)
+  PROCEDURE Skip(VAR S: Texts.Scanner; VAR len: INTEGER);  (*skip and count white spaces*)
     VAR ch: CHAR; i: INTEGER;
   BEGIN Texts.Read(S, ch); i := 0;
     WHILE (ch = " ") OR (ch = TAB) OR (ch = CR) DO
@@ -414,14 +414,14 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
     END
   END Call;
 
-  PROCEDURE Execute(F: Display.Frame; T: Texts.Text; pos: LONGINT; gc: BOOLEAN);  (*execute multiple commands separated by ~*)
+  PROCEDURE Execute(F: Display.Frame; T: Texts.Text; pos: LONGINT; collect: BOOLEAN);  (*execute multiple commands separated by ~*)
     VAR S: Texts.Scanner; len: LONGINT; continue: BOOLEAN;
   BEGIN continue := pos >= 0;
     WHILE continue DO
       Texts.OpenScanner(S, T, pos); Skip(S, len); Scan(S); continue := FALSE;
       IF (S.class = Texts.Name) & (S.s # "Oberon.Batch") THEN S.line := 0;
         Call(F, T, pos + len, FALSE);
-        IF gc THEN ActCnt := 0; GC END ;
+        IF collect THEN ActCnt := 0; CollectGarbage END ;
         IF Par.res = 0 THEN
           REPEAT Texts.Scan(S) UNTIL S.eot OR (S.class = Texts.Char) & (S.c = "~");
           IF ~S.eot THEN pos := Texts.Pos(S); continue := TRUE END
@@ -430,14 +430,14 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
     END
   END Execute;
 
-  PROCEDURE Run*(F: Display.Frame; T: Texts.Text; pos: LONGINT);
-  BEGIN Execute(F, T, pos, FALSE)  (*without GC*)
+  PROCEDURE Run*(F: Display.Frame; T: Texts.Text; pos: LONGINT);  (*does not invoke garbage collector*)
+  BEGIN Execute(F, T, pos, FALSE)
   END Run;
 
-  PROCEDURE Batch*;
+  PROCEDURE Batch*;  (*invokes garbage collector after each executed command*)
     VAR S: Texts.Scanner;
   BEGIN Texts.OpenScanner(S, Par.text, Par.cmd); Texts.Scan(S);
-    Execute(Par.frame, Par.text, Par.pos, (S.class = Texts.Name) & (S.s = "Oberon.Batch"))  (*with GC*)
+    Execute(Par.frame, Par.text, Par.pos, (S.class = Texts.Name) & (S.s = "Oberon.Batch"))
   END Batch;
 
   (*task management*)
@@ -446,7 +446,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
     VAR t: Task;
   BEGIN NEW(t); t.state := off; t.next := t; t.handle := h; t.period := period; RETURN t
   END NewTask;
-  
+
   PROCEDURE Install* (T: Task);
   BEGIN
     IF T.state = off THEN
@@ -514,7 +514,7 @@ BEGIN User[0] := 0X;
   DW := Display.Width; DH := Display.Height; CL := DW;
   CurFnt := Fonts.Default; CurCol := Display.white; CurOff := 0;
 
-  ActCnt := 0; CurTask := NewTask(GC, 1000); Install(CurTask);
+  ActCnt := 0; CurTask := NewTask(CollectGarbage, 1000); Install(CurTask);
   Texts.OpenWriter(W); Log := NIL;
 
   IF Modules.importing = "Oberon" THEN (*loaded by the regular loader*)

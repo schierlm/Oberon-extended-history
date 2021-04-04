@@ -1,4 +1,4 @@
-MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 / AP 31.12.20 Extended Oberon*)
+MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 / AP 1.4.21 Extended Oberon*)
   IMPORT Texts, Oberon, ORS, ORB, ORG;
   (*Author: Niklaus Wirth, 2014. Oberon-2 extensions by Andreas Pirklbauer, 2020.
     Parser of Oberon-RISC compiler. Uses Scanner ORS to obtain symbols (tokens),
@@ -93,7 +93,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
 
   PROCEDURE CheckCase(VAR x: ORG.Item; obj: ORB.Object);
   BEGIN
-    IF ~x.sel & (obj.lev > 0) & (obj.exno > 0) & (obj.type.form = ORB.Pointer) THEN x.rdo := TRUE END
+    IF ~x.selected & (obj.lev > 0) & (obj.exno > 0) & (obj.type.form = ORB.Pointer) THEN x.rdo := TRUE END
   END CheckCase;
 
   PROCEDURE CheckReceiver(VAR x: ORG.Item; proc: ORB.Object);
@@ -140,7 +140,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     VAR y: ORG.Item; obj, fld: ORB.Object; xt: ORB.Type;
   BEGIN
     WHILE (sym = ORS.lbrak) OR (sym = ORS.period) OR (sym = ORS.arrow)
-        OR (sym = ORS.lparen) & (x.type.form IN {ORB.Record, ORB.Pointer}) DO x.sel := TRUE;
+        OR (sym = ORS.lparen) & (x.type.form IN {ORB.Record, ORB.Pointer}) DO x.selected := TRUE;
       IF sym = ORS.lbrak THEN
         IF x.type.form = ORB.Pointer THEN ORG.DeRef(x); x.type := x.type.base END ;
         REPEAT ORS.Get(sym); expression(y);
@@ -677,8 +677,8 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
       ELSIF sym = ORS.case THEN
         ORS.Get(sym);
         IF sym = ORS.ident THEN obj := ORB.thisObj() END ;
-        x.sel := FALSE; expression(x);
-        IF ~x.sel & (obj # NIL) & (obj.class # ORB.Mod) & (obj.lev > 0) &
+        x.selected := FALSE; expression(x);
+        IF ~x.selected & (obj # NIL) & (obj.class # ORB.Mod) & (obj.lev > 0) &
           ((x.type.form = ORB.Pointer) & (x.mode = ORB.Var) & (x.type.base.form = ORB.Record) OR
           (x.type.form = ORB.Record) & (x.mode = ORB.Par)) THEN TypeCasePart(obj)
         ELSE

@@ -1,4 +1,4 @@
-MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 31.12.20 Extended Oberon*)
+MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 1.4.21 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, Files, Modules, Texts, Oberon;
   CONST versionkey = 1X; versionkey0 = 0X; DescSize = 96; MnLength = 32; BootSec = 2; FPrint = 12345678H;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5;
@@ -44,7 +44,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 31.12.20 Extended Oberon*
   BEGIN res := n; importing := name
   END error;
 
-  PROCEDURE Check(s: ARRAY OF CHAR);
+  PROCEDURE check(s: ARRAY OF CHAR);
     VAR i: INTEGER; ch: CHAR;
   BEGIN ch := s[0]; res := 1; i := 1;
     IF (ch >= "A") & (ch <= "Z") OR (ch >= "a") & (ch <= "z") THEN
@@ -53,7 +53,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 31.12.20 Extended Oberon*
         OR (ch >= "a") & (ch <= "z") OR (ch = ".")) OR (i = MnLength);
       IF (i < MnLength) & (ch = 0X) THEN res := 0 END
     END
-  END Check;
+  END check;
 
   PROCEDURE LinkOne(name: ARRAY OF CHAR; VAR newmod: Module);
     (*search module in list; if not found, link module.
@@ -76,13 +76,13 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 31.12.20 Extended Oberon*
   BEGIN mod := root; error(noerr, name); nofimps := 0;
     WHILE (mod # NIL) & (name # mod.name) DO mod := mod.next END ;
     IF mod = NIL THEN (*link*)
-      Check(name);
+      check(name);
       IF res = noerr THEN F := ThisFile(name) ELSE F := NIL END ;
       IF F # NIL THEN
         Files.Set(R, F, 0); Files.ReadString(R, name1); Files.ReadInt(R, key); Files.Read(R, ch);
         Files.ReadInt(R, size); importing := name1;
         IF (ch = versionkey) (*regular module*) OR (ch = versionkey0) (*standalone program*) THEN
-          Files.ReadString(R, impname);   (*imports*)
+          Files.ReadString(R, impname);  (*imports*)
           WHILE (impname[0] # 0X) & (res = noerr) DO
             Files.ReadInt(R, impkey);
             LinkOne(impname, impmod); import[nofimps] := impmod; importing := name1;
@@ -187,7 +187,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 31.12.20 Extended Oberon*
           END ;
           SYSTEM.PUT(adr, MOV+U+B + pno*C24 + (offset - Start) DIV C16);  (*mark as fixed up by setting the B bit*)
           IF inst DIV C30 = F2 THEN inst := inst DIV C20 * C20
-          ELSE inst := IOR + (inst DIV C24 MOD C4) * C24 + (inst DIV C20 MOD C4) * C20
+          ELSE inst := IOR + inst DIV C24 MOD C4 * C24 + inst DIV C20 MOD C4 * C20
           END ;
           SYSTEM.PUT(adr+4, inst + (offset - Start) MOD C16);
           adr := adr - disp*4
@@ -434,6 +434,6 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 31.12.20 Extended Oberon*
     Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
   END Execute;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 31.12.20");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 1.4.21");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); limit := Kernel.stackOrg - Kernel.stackSize
 END ORL.
