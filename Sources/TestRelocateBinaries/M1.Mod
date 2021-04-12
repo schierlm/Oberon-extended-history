@@ -1,4 +1,4 @@
-MODULE M1;
+MODULE M1;  (*AP 1.5.21 Extended Oberon*)
   IMPORT SYSTEM, M0;
   CONST C1* = 11;  (*11 decimal = B hexadecimal*)
 BEGIN SYSTEM.PUT(8, M0.C0)   (*10 decimal = A hexadecimal*)

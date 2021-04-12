@@ -1,4 +1,4 @@
-MODULE Run;  (*Run standalone programs M.rsc or prelinked binaries M.bin / AP 14.3.20 Extended Oberon*)
+MODULE Run;  (*Run standalone programs M.rsc or prelinked binaries M.bin / AP 1.5.21 Extended Oberon*)
   IMPORT SYSTEM, Files, Texts, Oberon, ORL;
   CONST maxCode = 8000;
 

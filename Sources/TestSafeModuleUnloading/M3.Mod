@@ -1,104 +1,104 @@
-MODULE M3;  (*test safe module unloading / AP 1.9.20 Extended Oberon*)
+MODULE M3;  (*test safe module unloading / AP 1.5.21 Extended Oberon*)
   IMPORT SYSTEM, M0, M1, M2, Out;
 
   PROCEDURE SetGlobalProc1*;
-  BEGIN M1.SetGlobalProc(M2.P); Out.Str("  creating a global procedure variable reference to M2 from a global procedure variable in M1"); Out.Ln
+  BEGIN M1.SetGlobalProc(M2.P); Out.String("  creating a global procedure variable reference to M2 from a global procedure variable in M1"); Out.Ln
   END SetGlobalProc1;
 
   PROCEDURE UnSetGlobalProc1*;
-  BEGIN M1.SetGlobalProc(M1.P); Out.Str("  removing the global procedure variable reference to M2 from a global procedure variable in M1"); Out.Ln
+  BEGIN M1.SetGlobalProc(M1.P); Out.String("  removing the global procedure variable reference to M2 from a global procedure variable in M1"); Out.Ln
   END UnSetGlobalProc1;
 
   PROCEDURE SetGlobalProc2*;
-  BEGIN M2.SetGlobalProc(M1.P); Out.Str("  creating a global procedure variable reference to M1 from a global procedure variable in M2"); Out.Ln
+  BEGIN M2.SetGlobalProc(M1.P); Out.String("  creating a global procedure variable reference to M1 from a global procedure variable in M2"); Out.Ln
   END SetGlobalProc2;
 
   PROCEDURE UnSetGlobalProc2*;
-  BEGIN M2.SetGlobalProc(M2.P); Out.Str("  removing the global procedure variable reference to M1 from a global procedure variable in M2"); Out.Ln
+  BEGIN M2.SetGlobalProc(M2.P); Out.String("  removing the global procedure variable reference to M1 from a global procedure variable in M2"); Out.Ln
   END UnSetGlobalProc2;
 
   PROCEDURE SetDynamicProc1*;
-  BEGIN M1.SetDynamicProc(M2.P); Out.Str("  creating a dynamic procedure variable reference to M2 from a dynamic record allocated by M1 in the heap"); Out.Ln
+  BEGIN M1.SetDynamicProc(M2.P); Out.String("  creating a dynamic procedure variable reference to M2 from a dynamic record allocated by M1 in the heap"); Out.Ln
   END SetDynamicProc1;
 
   PROCEDURE UnSetDynamicProc1*;
-  BEGIN M1.SetDynamicProc(M1.P); Out.Str("  removing the dynamic procedure variable reference to M2 from a dynamic record allocated by M1 in the heap"); Out.Ln
+  BEGIN M1.SetDynamicProc(M1.P); Out.String("  removing the dynamic procedure variable reference to M2 from a dynamic record allocated by M1 in the heap"); Out.Ln
   END UnSetDynamicProc1;
 
   PROCEDURE SetDynamicProc2*;
-  BEGIN M2.SetDynamicProc(M1.P); Out.Str("  creating a dynamic procedure variable reference to M1 from a dynamic record allocated by M2 in the heap"); Out.Ln
+  BEGIN M2.SetDynamicProc(M1.P); Out.String("  creating a dynamic procedure variable reference to M1 from a dynamic record allocated by M2 in the heap"); Out.Ln
   END SetDynamicProc2;
 
   PROCEDURE UnSetDynamicProc2*;
-  BEGIN M2.SetDynamicProc(M2.P); Out.Str("  removing the dynamic procedure variable reference to M1 from a dynamic record allocated by M2 in the heap"); Out.Ln
+  BEGIN M2.SetDynamicProc(M2.P); Out.String("  removing the dynamic procedure variable reference to M1 from a dynamic record allocated by M2 in the heap"); Out.Ln
   END UnSetDynamicProc2;
 
   PROCEDURE SetDynamicArrRec1*;
-  BEGIN M1.SetDynamicArrRec(M2.P); Out.Str("  creating a dynamic procedure variable reference to M2 from a dynamic array of record allocated by M1 in the heap"); Out.Ln
+  BEGIN M1.SetDynamicArrRec(M2.P); Out.String("  creating a dynamic procedure variable reference to M2 from a dynamic array of record allocated by M1 in the heap"); Out.Ln
   END SetDynamicArrRec1;
 
   PROCEDURE UnSetDynamicArrRec1*;
-  BEGIN M1.SetDynamicArrRec(M1.P); Out.Str("  removing the dynamic procedure variable reference to M2 from a dynamic array of record allocated by M1 in the heap"); Out.Ln
+  BEGIN M1.SetDynamicArrRec(M1.P); Out.String("  removing the dynamic procedure variable reference to M2 from a dynamic array of record allocated by M1 in the heap"); Out.Ln
   END UnSetDynamicArrRec1;
 
   PROCEDURE SetDynamicArrRec2*;
-  BEGIN M2.SetDynamicArrRec(M1.P); Out.Str("  creating a dynamic procedure variable reference to M1 from a dynamic array of record allocated by M2 in the heap"); Out.Ln
+  BEGIN M2.SetDynamicArrRec(M1.P); Out.String("  creating a dynamic procedure variable reference to M1 from a dynamic array of record allocated by M2 in the heap"); Out.Ln
    END SetDynamicArrRec2;
 
   PROCEDURE UnSetDynamicArrRec2*;
-  BEGIN M2.SetDynamicArrRec(M2.P); Out.Str("  removing the dynamic procedure variable reference to M1 from a dynamic array of record allocated by M2 in the heap"); Out.Ln
+  BEGIN M2.SetDynamicArrRec(M2.P); Out.String("  removing the dynamic procedure variable reference to M1 from a dynamic array of record allocated by M2 in the heap"); Out.Ln
   END UnSetDynamicArrRec2;
 
   PROCEDURE SetDynamicArrProc1*;
-  BEGIN M1.SetDynamicArrProc(M2.P); Out.Str("  creating a dynamic procedure variable reference to M2 from a dynamic array of procedure allocated by M1 in the heap"); Out.Ln
+  BEGIN M1.SetDynamicArrProc(M2.P); Out.String("  creating a dynamic procedure variable reference to M2 from a dynamic array of procedure allocated by M1 in the heap"); Out.Ln
   END SetDynamicArrProc1;
 
   PROCEDURE UnSetDynamicArrProc1*;
-  BEGIN M1.SetDynamicArrProc(M1.P); Out.Str("  removing the dynamic procedure variable reference to M2 from a dynamic array of procedure allocated by M1 in the heap"); Out.Ln
+  BEGIN M1.SetDynamicArrProc(M1.P); Out.String("  removing the dynamic procedure variable reference to M2 from a dynamic array of procedure allocated by M1 in the heap"); Out.Ln
   END UnSetDynamicArrProc1;
 
   PROCEDURE SetDynamicArrProc2*;
-  BEGIN M2.SetDynamicArrProc(M1.P); Out.Str("  creating a dynamic procedure variable reference to M1 from a dynamic array of procedure allocated by M2 in the heap"); Out.Ln
+  BEGIN M2.SetDynamicArrProc(M1.P); Out.String("  creating a dynamic procedure variable reference to M1 from a dynamic array of procedure allocated by M2 in the heap"); Out.Ln
   END SetDynamicArrProc2;
 
   PROCEDURE UnSetDynamicArrProc2*;
-  BEGIN M2.SetDynamicArrProc(M2.P); Out.Str("  removing the dynamic procedure variable reference to M1 from a dynamic array of procedure allocated by M2 in the heap"); Out.Ln
+  BEGIN M2.SetDynamicArrProc(M2.P); Out.String("  removing the dynamic procedure variable reference to M1 from a dynamic array of procedure allocated by M2 in the heap"); Out.Ln
   END UnSetDynamicArrProc2;
 
   PROCEDURE SetPtr1*;
     VAR p1: M1.Ptr; (*extension declared in M1 of a base type declared in M0*)
   BEGIN  (*insert p1 into a structure rooted in a variable of a base type declared in M0*)
-    NEW(p1); M0.InsertPtr(p1); Out.Str("  creating a dynamic type reference to M1 from a dynamic record allocated by M0 in the heap"); Out.Ln
+    NEW(p1); M0.InsertPtr(p1); Out.String("  creating a dynamic type reference to M1 from a dynamic record allocated by M0 in the heap"); Out.Ln
   END SetPtr1;
 
   PROCEDURE SetPtr2*;
     VAR p2: M2.Ptr; (*extension declared in M2 of a base type declared in M0*)
   BEGIN  (*insert p2 into a structure rooted in a variable of a base type declared in M0*)
-    NEW(p2); M0.InsertPtr(p2); Out.Str("  creating a dynamic type reference to M2 from a dynamic record allocated by M0 in the heap"); Out.Ln
+    NEW(p2); M0.InsertPtr(p2); Out.String("  creating a dynamic type reference to M2 from a dynamic record allocated by M0 in the heap"); Out.Ln
   END SetPtr2;
 
   PROCEDURE UnSetPtr1*;
-  BEGIN M0.InitPtr; Out.Str("  removing the dynamic type reference to M1 from a dynamic record allocated by M0 in the heap"); Out.Ln
+  BEGIN M0.InitPtr; Out.String("  removing the dynamic type reference to M1 from a dynamic record allocated by M0 in the heap"); Out.Ln
   END UnSetPtr1;
 
   PROCEDURE UnSetPtr2*;
-  BEGIN M0.InitPtr; Out.Str("  removing the dynamic type reference to M2 from a dynamic record allocated by M0 in the heap"); Out.Ln
+  BEGIN M0.InitPtr; Out.String("  removing the dynamic type reference to M2 from a dynamic record allocated by M0 in the heap"); Out.Ln
   END UnSetPtr2;
 
   PROCEDURE SetPtrArr1*;
     VAR p1: M1.PtrArr; (*extension declared in M1 of a base type declared in M0*)
   BEGIN  (*insert p1 into a structure rooted in a variable of a base type declared in M0*)
-    NEW(p1, 20); M0.InsertArr(p1); Out.Str("  creating a dynamic type reference to M1 from a dynamic array allocated by M0 in the heap"); Out.Ln
+    NEW(p1, 20); M0.InsertArr(p1); Out.String("  creating a dynamic type reference to M1 from a dynamic array allocated by M0 in the heap"); Out.Ln
   END SetPtrArr1;
 
   PROCEDURE SetPtrArr2*;
     VAR p2: M2.PtrArr; (*extension declared in M2 of a base type declared in M0*)
   BEGIN  (*insert p2 into a structure rooted in a variable of a base type declared in M0*)
-    NEW(p2, 40); M0.InsertArr(p2); Out.Str("  creating a dynamic type reference to M2 from a dynamic array allocated by M0 in the heap"); Out.Ln
+    NEW(p2, 40); M0.InsertArr(p2); Out.String("  creating a dynamic type reference to M2 from a dynamic array allocated by M0 in the heap"); Out.Ln
   END SetPtrArr2;
 
   PROCEDURE Init*;
-  BEGIN Out.Str("  loading modules M0, M1, M2, M3"); Out.Ln
+  BEGIN Out.String("  loading modules M0, M1, M2, M3"); Out.Ln
   END Init;
 
 END M3.

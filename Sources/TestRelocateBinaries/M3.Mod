@@ -1,4 +1,4 @@
-MODULE M3;  (*no asterisk after the keyword MODULE*)
+MODULE M3;  (*no asterisk after the keyword MODULE / AP 1.5.21 Extended Oberon*)
   IMPORT SYSTEM, M0, M1, M2;  (*import constants only for RunRsc*)
   TYPE Ptr3* = POINTER TO Rec3;
     Rec3* = RECORD (M2.Rec2) x: INTEGER END ;

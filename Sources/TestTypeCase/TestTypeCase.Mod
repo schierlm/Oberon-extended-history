@@ -1,4 +1,4 @@
-MODULE TestTypeCase;  (*test type case statements / AP 1.11.20 Extended Oberon*)
+MODULE TestTypeCase;  (*test type case statements / AP 1.5.21 Extended Oberon*)
   IMPORT Texts, Oberon;
   TYPE R0 = RECORD fld0: INTEGER END ;
     R1 = RECORD (R0) fld1: INTEGER END ;

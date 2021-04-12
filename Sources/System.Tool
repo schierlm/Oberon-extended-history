@@ -45,7 +45,7 @@ ORP.Compile TextFrames.Mod/s ~                Edit.Open TextFrames.Mod
 ORP.Compile System.Mod/s Edit.Mod/s ~          Edit.Open System.Mod
 ORP.Compile Tools.Mod/s FontTool.Mod/s ~      Edit.Open Edit.Mod
 
-ORP.Compile PCLink1.Mod/s Clipboard.Mod/s Out.Mod/s ~
+ORP.Compile PCLink1.Mod/s Clipboard.Mod/s In.Mod/s Out.Mod/s ~
 ORP.Compile RS232.Mod/s SCC.Mod/s Net.Mod/s ~
 
 ORP.Compile Graphics.Mod/s GraphicFrames.Mod/s ~
@@ -75,7 +75,7 @@ Oberon.Batch
   ORP.Compile ORG.Mod/s ORP.Mod/s ~
   ORP.Compile ORL.Mod/s ORX.Mod/s ORTool.Mod/s ~
 
-  ORP.Compile PCLink1.Mod/s Clipboard.Mod/s Out.Mod/s ~
+  ORP.Compile PCLink1.Mod/s Clipboard.Mod/s In.Mod/s Out.Mod/s ~
   ORP.Compile RS232.Mod/s SCC.Mod/s Net.Mod/s ~
 
   ORP.Compile Graphics.Mod/s GraphicFrames.Mod/s ~
