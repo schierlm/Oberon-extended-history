@@ -24,10 +24,6 @@ MODULE Out; (*AP 12.4.21 / Extended Oberon*)
   BEGIN Texts.Write(W, ch); Texts.Append(T, W.buf)
   END Char;
 
-  PROCEDURE String*(str: ARRAY OF CHAR);
-  BEGIN Texts.WriteString(W, str); Texts.Append(T, W.buf)
-  END String;
-
   PROCEDURE Int*(x, n: INTEGER);
   BEGIN Texts.WriteInt(W, x, n); Texts.Append(T, W.buf)
   END Int;
@@ -43,6 +39,10 @@ MODULE Out; (*AP 12.4.21 / Extended Oberon*)
   PROCEDURE RealFix*(x: REAL; n, k: INTEGER);
   BEGIN Texts.WriteRealFix(W, x, n, k); Texts.Append(T, W.buf)
   END RealFix;
+
+  PROCEDURE String*(x: ARRAY OF CHAR);
+  BEGIN Texts.WriteString(W, x); Texts.Append(T, W.buf)
+  END String;
 
   PROCEDURE Ln*;
   BEGIN Texts.WriteLn(W); Texts.Append(T, W.buf)

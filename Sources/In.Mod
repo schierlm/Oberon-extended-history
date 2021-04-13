@@ -5,7 +5,8 @@ MODULE In; (*AP 12.4.21 / Extended Oberon*)
     S: Texts.Scanner;
 
   PROCEDURE Open*;
-    VAR beg, end, time: LONGINT; T: Texts.Text; V: Viewers.Viewer;
+    VAR T: Texts.Text; V: Viewers.Viewer;
+      beg, end, time: LONGINT;
   BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
     IF (S.class = Texts.Char) & (S.c = "^") THEN
       Oberon.GetSelection(T, beg, end, time);
@@ -25,10 +26,10 @@ MODULE In; (*AP 12.4.21 / Extended Oberon*)
     IF Done THEN ch := S.nextCh; Done := ~S.eot; Texts.Read(S, S.nextCh) END
   END Char;
 
-  PROCEDURE Int*(VAR i: LONGINT);
+  PROCEDURE Int*(VAR x: LONGINT);
   BEGIN
     IF Done THEN Texts.Scan(S);
-      IF S.class = Texts.Int THEN i := S.i ELSE Done := FALSE END
+      IF S.class = Texts.Int THEN x := S.i ELSE Done := FALSE END
     END
   END Int;
 
@@ -42,27 +43,27 @@ MODULE In; (*AP 12.4.21 / Extended Oberon*)
     END
   END Real;
 
-  PROCEDURE Name* (VAR name: ARRAY OF CHAR);
-    VAR i: INTEGER;
-  BEGIN
-    IF Done THEN Texts.Scan(S);
-      IF S.class = Texts.Name THEN i := 0;
-        WHILE (S.s[i] # 0X) & (i < LEN(name)-1) DO name[i] := S.s[i]; INC(i) END ;
-        name[i] := 0X
-      END
-    END
-  END Name;
-
-  PROCEDURE String*(VAR str: ARRAY OF CHAR);
+  PROCEDURE String*(VAR x: ARRAY OF CHAR);
     VAR i: INTEGER;
   BEGIN
     IF Done THEN Texts.Scan(S);
       IF (S.class = Texts.String) OR (S.class = Texts.Name) THEN i := 0;
-        WHILE (S.s[i] # 0X) & (i < LEN(str)-1) DO str[i] := S.s[i]; INC(i) END ;
-        str[i] := 0X
+        WHILE (S.s[i] # 0X) & (i < LEN(x)-1) DO x[i] := S.s[i]; INC(i) END ;
+        x[i] := 0X
       END
     END
   END String;
+
+  PROCEDURE Name*(VAR x: ARRAY OF CHAR);
+    VAR i: INTEGER;
+  BEGIN
+    IF Done THEN Texts.Scan(S);
+      IF S.class = Texts.Name THEN i := 0;
+        WHILE (S.s[i] # 0X) & (i < LEN(x)-1) DO x[i] := S.s[i]; INC(i) END ;
+        x[i] := 0X
+      END
+    END
+  END Name;
 
 BEGIN Done := FALSE
 END In.
