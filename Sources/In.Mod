@@ -16,7 +16,7 @@ MODULE In; (*AP 12.4.21 / Extended Oberon*)
         Texts.OpenScanner(S, V.dsc.next(TextFrames.Frame).text, 0); Done := TRUE
       ELSE Done := FALSE
       END
-    ELSE T := Oberon.Par.text; Texts.OpenScanner(S, T, Oberon.Par.pos); Done := TRUE
+    ELSE Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Done := TRUE
     END
   END Open;
 
