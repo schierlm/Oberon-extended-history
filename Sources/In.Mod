@@ -6,7 +6,7 @@ MODULE In; (*AP 12.4.21 / Extended Oberon*)
 
   PROCEDURE Open*;
     VAR beg, end, time: LONGINT; T: Texts.Text; V: Viewers.Viewer;
-  BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos);  Texts.Scan(S);
+  BEGIN Texts.OpenScanner(S, Oberon.Par.text, Oberon.Par.pos); Texts.Scan(S);
     IF (S.class = Texts.Char) & (S.c = "^") THEN
       Oberon.GetSelection(T, beg, end, time);
       IF time >= 0 THEN Texts.OpenScanner(S, T, beg); Done := TRUE ELSE Done := FALSE END
