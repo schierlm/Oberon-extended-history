@@ -93,12 +93,9 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 1.5.20
   PROCEDURE thisimport*(mod: Object): Object;
     VAR obj: Object;
   BEGIN
-    IF mod.rdo THEN
-      IF mod.name[0] # 0X THEN
-        obj := mod.dsc;
-        WHILE (obj # NIL) & (obj.name # ORS.id) DO obj := obj.next END
-      ELSE obj := NIL
-      END
+    IF mod.rdo & (mod.name[0] # 0X) THEN
+      obj := mod.dsc;
+      WHILE (obj # NIL) & (obj.name # ORS.id) DO obj := obj.next END
     ELSE obj := NIL
     END ;
     RETURN obj
