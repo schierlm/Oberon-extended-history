@@ -195,8 +195,7 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 1.5.20
         mod.name := name; mod.orgname := orgname; mod.val := key;
         mod.lev := nofmod; INC(nofmod); mod.type := noType; mod.dsc := NIL; mod.next := NIL;
         obj1.next := mod; obj := mod
-      ELSIF decl THEN
-        IF obj.rdo THEN ORS.Mark("mult def") ELSE ORS.Mark("conflict with re-import") END
+      ELSIF decl & obj.rdo THEN ORS.Mark("mult def")
       END
     ELSIF decl THEN (*module already present, explicit import by declaration*)
       IF obj.rdo THEN ORS.Mark("mult def") ELSE ORS.Mark("invalid import order") END
