@@ -123,7 +123,7 @@ MODULE B4; IMPORT M0, M1; END B4.  (*no error message (M0 explicitly imported an
 MODULE B5; IMPORT M := M0, M1; END B5.  (*no error message (M0 explicitly imported and re-imported)*)
 
 MODULE B6; IMPORT M1, M0 := M; END B6.  (*no error message (M0 is re-imported via M1 and then used as an alias name)*)
-MODULE B7; IMPORT M0 := M, M1; END B6.  (*no error message (M0 is used as an alias and then re-imported via M1)*)
+MODULE B7; IMPORT M0 := M, M1; END B7.  (*no error message (M0 is used as an alias and then re-imported via M1)*)
 
 --------------------------- Test suite #5 (with errors) ------------------------------------
 
