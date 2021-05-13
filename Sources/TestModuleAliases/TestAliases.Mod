@@ -68,13 +68,13 @@ END M6.
 
 ORP.Compile @/s ~
 
-MODULE M7;                      (*conflict with re-import*)
+MODULE M7;                      (*illegal assignment*)
   IMPORT M1, M0 := M;           (*M0 is re-imported via M1 and then used as an alias name*)
   VAR a: M0.T0; b: M1.T1;
 BEGIN a := b
 END M7.
 
-MODULE M8;                      (*conflict with alias*)
+MODULE M8;                      (*illegal assignment*)
   IMPORT M0 := M, M1;           (*M0 is used as an alias and then re-imported via M1*)
   VAR a: M0.T0; b: M1.T1;
 BEGIN a := b
@@ -122,6 +122,9 @@ MODULE B3; IMPORT M0 := M, X := M0; END B3.  (*no error message*)
 MODULE B4; IMPORT M0, M1; END B4.  (*no error message (M0 explicitly imported and re-imported)*)
 MODULE B5; IMPORT M := M0, M1; END B5.  (*no error message (M0 explicitly imported and re-imported)*)
 
+MODULE B6; IMPORT M1, M0 := M; END B6.  (*no error message (M0 is re-imported via M1 and then used as an alias name)*)
+MODULE B7; IMPORT M0 := M, M1; END B7.  (*no error message (M0 is used as an alias and then re-imported via M1)*)
+
 --------------------------- Test suite #5 (with errors) ------------------------------------
 
 ORP.Compile @/s ~
@@ -138,6 +141,3 @@ MODULE C8; IMPORT M, X := M, Y := M; END C8.  (*mult def*)
 MODULE C9; IMPORT X := M, Y := M; END C9.  (*mult def*)
 
 MODULE C10; IMPORT M1, M0; END C10.  (*invalid import order*)
-
-MODULE C11; IMPORT M1, M0 := M; END C11.  (*conflict with re-import*)
-MODULE C12; IMPORT M0 := M, M1; END C12.  (*conflict with alias*)
