@@ -1,4 +1,4 @@
-MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 13.5.20 Extended Oberon*)
+MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 1.5.20 Extended Oberon*)
   IMPORT Files, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
@@ -79,14 +79,6 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 13.5.2
     ELSE obj := x.next; ORS.Mark("mult def")
     END
   END NewObj;
-
-  PROCEDURE NewMod(VAR mod: Object; name, orgname: ORS.Ident; key: LONGINT; prev, next: Object);
-    VAR new: Module;
-  BEGIN NEW(new); new.class := Mod; new.rdo := FALSE;
-    new.name := name; new.orgname := orgname; new.val := key;
-    new.lev := nofmod; INC(nofmod); new.type := noType; new.dsc := NIL;
-    prev.next := new; new.next := next; mod := new
-  END NewMod;
 
   PROCEDURE thisObj*(): Object;
     VAR s, x: Object;
@@ -189,15 +181,20 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 13.5.2
   END MakeFileName;
 
   PROCEDURE ThisModule(name, orgname: ORS.Ident; decl: BOOLEAN; key: LONGINT): Object;
-    VAR obj, obj1, obj2: Object;
+    VAR mod: Module; obj, obj1: Object;
   BEGIN obj1 := topScope; obj := obj1.next;  (*search for module*)
     WHILE (obj # NIL) & (obj(Module).orgname # orgname) DO obj1 := obj; obj := obj1.next END ;
     IF obj = NIL THEN  (*new module, search for alias*)
-      obj2 := topScope; obj := obj2.next;
-      WHILE (obj # NIL) & (obj.name # name) DO obj2 := obj; obj := obj2.next  END ;
-      IF (obj = NIL) OR ~decl THEN NewMod(obj, name, orgname, key, obj1, NIL) (*insert new module or re-import*)
-      ELSIF obj.rdo THEN ORS.Mark("mult def")
-      ELSE NewMod(obj, name, orgname, key, obj2, obj) (*insert new explicit import before re-import*)
+      obj := topScope.next;
+      WHILE (obj # NIL) & (obj.name # name) DO obj := obj.next END ;
+      IF obj = NIL THEN (*insert new module*)
+        NEW(mod); mod.class := Mod; mod.rdo := FALSE;
+        mod.name := name; mod.orgname := orgname; mod.val := key;
+        mod.lev := nofmod; INC(nofmod); mod.type := noType; mod.dsc := NIL; mod.next := NIL;
+        obj1.next := mod; obj := mod
+      ELSIF decl THEN
+        IF obj.rdo THEN ORS.Mark("mult def") ELSE ORS.Mark("conflict with re-import") END
+      ELSE ORS.Mark("conflict with alias")
       END
     ELSIF decl THEN (*module already present, explicit import by declaration*)
       IF obj.rdo THEN ORS.Mark("mult def") ELSE ORS.Mark("invalid import order") END
