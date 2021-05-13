@@ -186,15 +186,13 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 13.5.2
     WHILE (obj # NIL) & (obj(Module).orgname # orgname) DO obj1 := obj; obj := obj1.next END ;
     IF obj = NIL THEN  (*new module, search for alias*)
       obj := topScope.next;
-      WHILE (obj # NIL) & (obj.name # name) DO obj := obj.next END ;
-      IF obj = NIL THEN (*insert new module*)
+      WHILE (obj # NIL) & ((obj.name # name) OR decl & ~obj.rdo) DO obj := obj.next END ;
+      IF (obj # NIL) & obj.rdo & decl THEN ORS.Mark("mult def")
+      ELSE (*insert new module*)
         NEW(mod); mod.class := Mod; mod.rdo := FALSE;
         mod.name := name; mod.orgname := orgname; mod.val := key;
         mod.lev := nofmod; INC(nofmod); mod.type := noType; mod.dsc := NIL; mod.next := NIL;
         obj1.next := mod; obj := mod
-      ELSIF decl THEN
-        IF obj.rdo THEN ORS.Mark("mult def") ELSE ORS.Mark("conflict with re-import") END
-      ELSE ORS.Mark("conflict with alias")
       END
     ELSIF decl THEN (*module already present, explicit import by declaration*)
       IF obj.rdo THEN ORS.Mark("mult def") ELSE ORS.Mark("invalid import order") END
