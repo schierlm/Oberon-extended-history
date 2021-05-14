@@ -2,7 +2,7 @@
 TestAliases.Mod
 --------------------------------------------------------------
 
---------------------------- Test suite #1 (no errors) --------------------------------------
+--------------------------- Preparation for subsequent test suites (no errors) ----------
 
 ORP.Compile @/s ~
 
@@ -21,39 +21,53 @@ MODULE M1;      (*no error message*)
 BEGIN a := b
 END M1.
 
-MODULE M2;      (*no error message*)
-  IMPORT M1;
-  TYPE T2* = RECORD (M1.T1) k: INTEGER END ;  (*re-imports M0.T0*)
-  VAR a: M1.T1; b: T2;
-BEGIN a := b
-END M2.
-
---------------------------- Test suite #2 (no errors) --------------------------------------
+--------------------------- Test suite A (no errors) ------------------------------------
 
 ORP.Compile @/s ~
 
-MODULE M3;                     (*no error message*)
+MODULE A0; IMPORT M0, X := M1; END A0.      (*no error message*)
+MODULE A1; IMPORT M1 := M, M := M0; END A1. (*no error message (M imported under alias M1, M then reused as alias for M0)*)
+MODULE A2; IMPORT M0 := M; M := M0; END A2. (*no error message (M imported under alias M0, M then reused as alias for M0)*)
+MODULE A3; IMPORT M0 := M, X := M0; END A3. (*no error message (M imported under alias M0, M0 then imported under alias X)*)
+
+MODULE A4; IMPORT M0, M1; END A4.           (*no error message (M0 explicitly imported and re-imported)*)
+MODULE A5; IMPORT M := M0, M1; END A5.      (*no error message (M0 explicitly imported and re-imported)*)
+
+MODULE A6; IMPORT M1, M0 := M; END A6.      (*no error message (M0 is re-imported via M1 and then used as an alias name)*)
+MODULE A7; IMPORT M0 := M, M1; END A7.      (*no error message (M0 is used as an alias and then re-imported via M1)*)
+
+--------------------------- Test suite B (no errors) --------------------------------------
+
+ORP.Compile @/s ~
+
+MODULE B1;                                  (*no error message*)
+  IMPORT M1;
+  TYPE T2* = RECORD (M1.T1) ch: CHAR END ;  (*re-imports the type M0.T0*)
+  VAR a: M1.T1; b: T2;
+    M0: INTEGER;                            (*this is allowed, because M0 is a hidden (!) import*)
+BEGIN a := b
+END B1.
+
+MODULE B2;                                  (*no error message*)
   IMPORT M := M0, M1;
   VAR a: M.T0; b: M1.T1;
 BEGIN a := b
-END M3.
+END B2.
 
-MODULE M4;                     (*no error message*)
+MODULE B3;                                  (*no error message*)
   IMPORT M := M0, M0 := M1;
-  VAR a: M.T0;
-    b: M0.T1;
-BEGIN
-  a := b
-END M4.
+  VAR a: M.T0; b: M0.T1;
+BEGIN a := b
+END B3.
 
-MODULE M5;                     (*no error message*)
+MODULE B4;                                  (*no error message*)
   IMPORT Y1 := M0, M1;
   VAR a: Y1.T0; b: M1.T1;
 BEGIN a := b
-END M5.
+END B4.
 
-MODULE M6;                     (*no error message*)
-  IMPORT D := Display, Oberon; (*Oberon re-imports module Display*)
+MODULE B5;                                  (*no error message*)
+  IMPORT D := Display, Oberon;              (*module Oberon re-imports module Display*)
   VAR m1: D.FrameMsg; m2: Oberon.InputMsg;
   PROCEDURE Handle(V: D.Frame; VAR M: D.FrameMsg);
   BEGIN
@@ -62,82 +76,68 @@ MODULE M6;                     (*no error message*)
       D.FrameMsg: m1 := M
     END
   END Handle;
-END M6.
+END B5.
 
---------------------------- Test suite #3 (with errors) ------------------------------------
+MODULE B6;                                  (*no error message*)
+  IMPORT M1, M0 := M;                       (*M0 is re-imported via M1 and then used as an alias name*)
+  VAR a: M0.T0; b: M1.T1;
+BEGIN (*a := b*)                            (*this WOULD be an illegal assignment, because M0.T0 is in fact M.T0*)
+END B6.
+
+MODULE B7;                                  (*no error message*)
+  IMPORT M0 := M, M1;                       (*M0 is used as an alias and then re-imported via M1*)
+  VAR a: M0.T0; b: M1.T1;
+BEGIN (*a := b*)                            (*this WOULD be an illegal assignment, because M0.T0 is in fact M.T0*)
+END B7.
+
+--------------------------- Test suite C (with errors) ------------------------------------
 
 ORP.Compile @/s ~
 
-MODULE M7;                      (*illegal assignment*)
-  IMPORT M1, M0 := M;           (*M0 is re-imported via M1 and then used as an alias name*)
-  VAR a: M0.T0; b: M1.T1;
-BEGIN a := b
-END M7.
+MODULE C1; IMPORT M, M; END C1.              (*mult def*)
+MODULE C2; IMPORT M, M := M0; END C2.        (*mult def*)
+MODULE C3; IMPORT M := M0, M; END C3.        (*mult def*)
+MODULE C4; IMPORT M := M0, M := M0; END C4.  (*mult def*)
+MODULE C5; IMPORT X := M, X := M0; END C5.   (*mult def*)
 
-MODULE M8;                      (*illegal assignment*)
-  IMPORT M0 := M, M1;           (*M0 is used as an alias and then re-imported via M1*)
-  VAR a: M0.T0; b: M1.T1;
-BEGIN a := b
-END M8.
+MODULE C6; IMPORT M, X := M; END C6.         (*mult def*)
+MODULE C7; IMPORT X := M, M; END C7.         (*mult def*)
+MODULE C8; IMPORT X := M, Y := M; END C8.    (*mult def*)
+MODULE C9; IMPORT M, X := M, Y := M; END C9. (*mult def 2x*)
 
-MODULE M9;                      (*mult def*)
-  IMPORT M := M0, M0;           (*because a module M0 is imported under *two* different names M and M0*)
+MODULE C10; IMPORT M1, M0; END C10.          (*invalid import order*)
+
+--------------------------- Test suite D (with errors) ------------------------------------
+
+ORP.Compile @/s ~
+
+MODULE D1;                                  (*mult def*)
+  IMPORT M := M0, M0;                       (*because a module M0 is imported under *two* different names M and M0*)
   VAR a: M.T0; b: M0.T0;
 BEGIN a := b
-END M9.
+END D1.
 
-MODULE M10;                     (*mult def*)
-  IMPORT M := M0, M2, M;        (*because the name M is used twice, once as an alias, once as a module name*)
-  TYPE T3* = RECORD (M2.T2) k: INTEGER END ;
+MODULE D2;                                  (*mult def*)
+  IMPORT M := M0, M2, M;                    (*because the name M is used twice, once as an alias, once as a module name*)
+  TYPE T3* = RECORD (M2.T2) ch: CHAR END ;
   VAR a: M2.T2; b: T3; c: M.T0;
 BEGIN a := b; c := b
-END M10.
+END D2.
 
-MODULE M11;                     (*mult def*)
-  IMPORT M := M0, M := M2;      (*because the name M is used twice as an alias*)
-END M11.
+MODULE D3;                                  (*mult def*)
+  IMPORT M := M0, M := M2;                  (*because the name M is used twice as an alias*)
+END D3.
 
-MODULE M12;                     (*mult def*)
-  IMPORT M, M := M0, M2;        (*because the name M is used twice, once as an alias, once as a module name*)
-  TYPE T3* = RECORD (M2.T2) k: INTEGER END ;
+MODULE D4;                                  (*mult def*)
+  IMPORT M, M := M0, M2;                    (*because the name M is used twice, once as an alias, once as a module name*)
+  TYPE T3* = RECORD (M2.T2) ch: CHAR END ;
   VAR a: M2.T2; b: T3; c: M.T0;
 BEGIN a := b; c := b
-END M12.
+END D4.
 
-MODULE M13;                     (*invalid import order*)
-  IMPORT M1, M0;                (*because M1.T1 re-imports M0.T0 *before* M0 is imported directly*)
+MODULE D5;                                  (*invalid import order*)
+  IMPORT M1, M0;                            (*because M1.T1 re-imports M0.T0 before (!) M0 is imported directly*)
   VAR a: M0.T0; b: M1.T1;
 BEGIN a := b
-END M13.
+END D5.
 
---------------------------- Test suite #4 (no errors) ------------------------------------
-
-ORP.Compile @/s ~
-
-MODULE B0; IMPORT M0, X := M1; END B0.  (*no error message*)
-MODULE B1; IMPORT X := M, M := M0; END B1.  (*no error message*)
-MODULE B2; IMPORT M := M0, M0 := M; END B2.  (*no error message*)
-MODULE B3; IMPORT M0 := M, X := M0; END B3.  (*no error message*)
-
-MODULE B4; IMPORT M0, M1; END B4.  (*no error message (M0 explicitly imported and re-imported)*)
-MODULE B5; IMPORT M := M0, M1; END B5.  (*no error message (M0 explicitly imported and re-imported)*)
-
-MODULE B6; IMPORT M1, M0 := M; END B6.  (*no error message (M0 is re-imported via M1 and then used as an alias name)*)
-MODULE B7; IMPORT M0 := M, M1; END B7.  (*no error message (M0 is used as an alias and then re-imported via M1)*)
-
---------------------------- Test suite #5 (with errors) ------------------------------------
-
-ORP.Compile @/s ~
-
-MODULE C1; IMPORT M, M; END C1.  (*mult def*)
-MODULE C2; IMPORT M, M := M0; END C2.  (*mult def*)
-MODULE C3; IMPORT M := M0, M; END C3.  (*mult def*)
-MODULE C4; IMPORT M := M0, M := M0; END C4.  (*mult def*)
-MODULE C5; IMPORT X := M, X := M0; END C5.  (*mult def*)
-
-MODULE C6; IMPORT M, X := M; END C6.  (*mult def*)
-MODULE C7; IMPORT X := M, M; END C7.  (*mult def*)
-MODULE C8; IMPORT M, X := M, Y := M; END C8.  (*mult def*)
-MODULE C9; IMPORT X := M, Y := M; END C9.  (*mult def*)
-
-MODULE C10; IMPORT M1, M0; END C10.  (*invalid import order*)

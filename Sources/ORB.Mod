@@ -184,11 +184,12 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 13.5.2
     VAR mod: Module; obj, obj1: Object;
   BEGIN obj1 := topScope; obj := obj1.next;  (*search for module*)
     WHILE (obj # NIL) & (obj(Module).orgname # orgname) DO obj1 := obj; obj := obj1.next END ;
-    IF obj = NIL THEN  (*new module, search for alias*)
-      obj := topScope.next;
-      WHILE (obj # NIL) & ((obj.name # name) OR decl & ~obj.rdo) DO obj := obj.next END ;
-      IF (obj # NIL) & obj.rdo & decl THEN ORS.Mark("mult def")
-      ELSE (*insert new module*)
+    IF obj = NIL THEN (*new module*)
+      IF decl THEN obj := topScope.next;  (*search for alias*)
+        WHILE (obj # NIL) & ((obj.name # name) OR ~obj.rdo) DO obj := obj.next END ;
+        IF obj # NIL THEN ORS.Mark("mult def") END
+      END ;
+      IF obj = NIL THEN (*insert new module*)
         NEW(mod); mod.class := Mod; mod.rdo := FALSE;
         mod.name := name; mod.orgname := orgname; mod.val := key;
         mod.lev := nofmod; INC(nofmod); mod.type := noType; mod.dsc := NIL; mod.next := NIL;
