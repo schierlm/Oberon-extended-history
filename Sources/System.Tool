@@ -89,7 +89,7 @@ Oberon.Batch
 
   ORP.Compile BootLoad.Mod/s BootLoadDisk.Mod/s BootLoadLine.Mod/s ~
 
-  ORP.Compile ORC.Mod PCLink0.Mod Oberon0.Mod Oberon0Tool.Mod ~
+  ORP.Compile ORC.Mod/s PCLink0.Mod/s Oberon0.Mod/s Oberon0Tool.Mod/s ~
   ORL.Link Oberon0 ~
 
   ORP.Compile System1.Mod/s ~
