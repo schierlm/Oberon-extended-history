@@ -116,6 +116,10 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 13.5.21 Extended O
     Viewers.Close(V)
   END Close;
 
+  PROCEDURE CloseSelf*;
+  BEGIN Viewers.Close(Oberon.Par.vwr)
+  END CloseSelf;
+
   PROCEDURE CloseTrack*;
     VAR D: Viewers.DisplayArea; V: Viewers.Viewer;
   BEGIN V := Oberon.MarkedViewer(); D := Viewers.ThisDisplay(V); Viewers.CloseTrack(D, V.X)
