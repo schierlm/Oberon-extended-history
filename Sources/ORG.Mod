@@ -1,4 +1,4 @@
-MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 1.4.21 Extended Oberon*)
+MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 19.5.21 Extended Oberon*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser ORP; result in array "code".
@@ -1190,7 +1190,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
         WHILE obj.name[i] # 0X DO INC(i) END ;
         i := (i+4) DIV 4 * 4; INC(comsize, i+4)
       ELSIF obj.class = ORB.Var THEN INC(nofrefs, NofRefs(ORB.Ptrs + ORB.Procs, obj.type))  (*count ptrs and pvrs*)
-      ELSIF (obj.class = ORB.Typ) & (obj.type.form = ORB.Record) & (obj.lev = 0) THEN  (*build type descriptors*)
+      ELSIF (obj.class = ORB.Typ) & (obj.type.form = ORB.Record) & (obj.type.mno = 0) THEN  (*build type descriptors*)
         i := obj.type.len;  (*heading of fixup chain of instruction pairs inserted into fixorgD chain in loadTypTagAdr*)
         BuildTD(obj.type, tdw);  (*obj.type.len now used as type descriptor offset in bytes relative to tdx*)
         IF i > 0 THEN FixLinkPair(i, tdx + obj.type.len) END  (*fix chain of instruction pairs with type descriptor address*)
