@@ -1,8 +1,9 @@
-MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 19.5.21 Extended Oberon*)
+MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 1.10.21 Extended Oberon*)
   IMPORT SYSTEM, Files, Modules, Texts, Oberon, ORB;
   CONST TAB = 09X;  (*copied from Input for use as cross development tool*)
   VAR W: Texts.Writer;
     mnemo0, mnemo1: ARRAY 16, 4 OF CHAR;  (*mnemonics*)
+    typlev: INTEGER;
 
   PROCEDURE Read(VAR R: Files.Rider; VAR x: INTEGER);
     VAR b: BYTE;
@@ -14,7 +15,9 @@ MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 19.5.21 Extended Oberon*)
     VAR key, len, size, off: INTEGER;
       ref, class, form, readonly: INTEGER;
       name, modname: ARRAY 32 OF CHAR;
-  BEGIN Read(R, ref); Texts.Write(W, " "); Texts.Write(W, "[");
+  BEGIN INC(typlev); Read(R, ref); Texts.Write(W, " "); Texts.WriteLn(W);
+    FOR off := 0 TO typlev DO Texts.Write(W, 09X) END ;
+    Texts.Write(W, "[");
     IF ref < 0 THEN Texts.Write(W, "^"); Texts.WriteInt(W, -ref, 1)
     ELSE Texts.WriteInt(W, ref, 1);
       Read(R, form); Texts.WriteString(W, "  form = "); Texts.WriteInt(W, form, 1);
@@ -55,7 +58,7 @@ MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 19.5.21 Extended Oberon*)
         Texts.WriteHex(W, key)
       END
     END ;
-    Texts.Write(W, "]")
+    Texts.Write(W, "]"); DEC(typlev)
   END ReadType;
 
   PROCEDURE DecSym*;  (*decode symbol file*)
@@ -73,7 +76,7 @@ MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 19.5.21 Extended Oberon*)
         Files.ReadString(R, name); Texts.WriteString(W, name); Texts.WriteHex(W, k);
         Read(R, class); Texts.WriteInt(W, class, 3);  (*sym file version*)
         IF class = ORB.versionkey THEN
-          Texts.WriteLn(W); Read(R, class);
+          Texts.WriteLn(W); Read(R, class); typlev := 0;
           WHILE class # 0 DO
             Texts.WriteInt(W, class, 4); Files.ReadString(R, name); Texts.Write(W, " "); Texts.WriteString(W, name);
             ReadType(R);
@@ -294,7 +297,7 @@ MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 19.5.21 Extended Oberon*)
      END
   END DecMod;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "ORTool 18.2.2013 / AP 19.5.21");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "ORTool 18.2.2013 / AP 1.10.21");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
   mnemo0[0] := "MOV";
   mnemo0[1] := "LSL";
