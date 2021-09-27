@@ -14,9 +14,9 @@ Features
 * Import any number of modules
 * Simple batch execution facility
 
-**Last release:** 11.6.2021
+**Last release:** 1.10.2021 / Extended-Oberon-1.7
 
-**Last update:** 11.6.2021
+**Last update:** 1.10.2021
 
 The file [**S3RISCinstall.tar.gz**](Documentation/S3RISCinstall.tar.gz) always reflects the *latest* version of Extended Oberon, as described in the file [**EOS_news.txt**](EOS_news.txt).
 
@@ -37,7 +37,7 @@ Documentation: [**Documentation**](Documentation)
 Edit the file *ORG.Mod* on your original system and set the following constants to the indicated new values:
 
      CONST ...
-       maxCode = 8800; maxStrx = 3200; ...
+       maxCode = 9000; maxStrx = 3500; ...
 
 Then recompile your Project Oberon 2013 compiler (and unload the old one):
 
