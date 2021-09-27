@@ -1,4 +1,4 @@
-MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 19.5.21 Extended Oberon*)
+MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC / AP 1.10.21 Extended Oberon*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser ORP; result in array "code".
@@ -7,7 +7,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   CONST WordSize* = 4;
     StkOrg0 = -64; VarOrg0 = 0;  (*for RISC-0 only*)
     TR = 13; SP = 14; LNK = 15;  (*dedicated registers*)
-    maxCode = 8800; maxStrx = 3200; maxTD = 160; maxSet = WordSize*8;
+    maxCode = 9000; maxStrx = 3500; maxTD = 160; maxSet = WordSize*8;
     Reg = 10; RegI = 11; Cond = 12;  (*internal item modes*)
     ZeroD = 4B00H;  (*denormalized zero used for FLOOR/FLT conversions*)
     BCT = 0E7000000H; RTI = 10H; STI = 20H; F2 = -2;  (*instructions*)
@@ -25,8 +25,9 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     TYPE Item* = RECORD
       mode*: INTEGER;
       type*: ORB.Type;
+      obj*: ORB.Object;
       a*, b*, r: LONGINT;
-      rdo*, selected*, deref*, super: BOOLEAN  (*read only, selected in record or array, dereferenced, super call*)
+      rdo*, deref*, super: BOOLEAN  (*read only, dereferenced, super call*)
     END ;
     LabelRange* = RECORD low*, high*, label*: INTEGER END ;
 
@@ -293,7 +294,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   END MakeStringItem;
 
   PROCEDURE MakeItem*(VAR x: Item; y: ORB.Object);
-  BEGIN x.mode := y.class; x.type := y.type; x.a := y.val; x.rdo := y.rdo; x.selected := FALSE; x.deref := FALSE;
+  BEGIN x.obj := y; x.mode := y.class; x.type := y.type; x.a := y.val; x.rdo := y.rdo; x.deref := FALSE;
     IF y.class = ORB.Par THEN x.b := 0
     ELSIF (y.class = ORB.Const) & (y.type.form = ORB.String) THEN x.r := y.lev;
       x.a := y.val MOD C20; (*strx/exno*) x.b := y.val DIV C20 (*len*)
