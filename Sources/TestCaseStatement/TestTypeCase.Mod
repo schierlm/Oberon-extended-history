@@ -41,7 +41,7 @@ MODULE TestTypeCase;  (*test type case statements / AP 1.10.21*)
         Proc1(p);
         Proc2(p);
         Proc5(p.fld1);
-        (*p := p2;*)       (*this would bean illegal assignment, as the dynamic type of p is P1 here*)
+        (*p := p2;*)       (*this be an illegal assignment, as the dynamic type of p is P1 here*)
         p.fld1 := 123;
         CASE p OF
           P1:
@@ -78,7 +78,7 @@ MODULE TestTypeCase;  (*test type case statements / AP 1.10.21*)
     VAR r: R1;
   BEGIN r := r1;
     (*
-    CASE r OF             (*would lead to an "invalid case expression" error, as a record must be a variable parameter*)
+    CASE r OF             (*would be an invalid case expression, as a record must be a variable parameter*)
       R1: r.fld1 := 345
     END
     *)
@@ -111,7 +111,7 @@ MODULE TestTypeCase;  (*test type case statements / AP 1.10.21*)
     VAR p: P0;
   BEGIN p := p1; p.ptr0 := p1;
     (*
-    CASE p.ptr0 OF         (*selecting a field is NOT allowed for the type case statement*)
+    CASE p.ptr0 OF         (*would be an invalid case expression, as selecting a field is NOT allowed for the type case statement*)
       P1: p.fld0 := 35
     END
     *)
