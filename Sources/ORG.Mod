@@ -276,16 +276,16 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   (* Items: Conversion from constants or from Objects on the Heap to Items on the Stack*)
 
   PROCEDURE MakeConstItem*(VAR x: Item; typ: ORB.Type; val: LONGINT);
-  BEGIN x.mode := ORB.Const; x.type := typ; x.a := val
+  BEGIN x.mode := ORB.Const; x.type := typ; x.a := val; x.obj := NIL
   END MakeConstItem;
 
   PROCEDURE MakeRealItem*(VAR x: Item; val: REAL);
-  BEGIN x.mode := ORB.Const; x.type := ORB.realType; x.a := SYSTEM.VAL(LONGINT, val)
+  BEGIN x.mode := ORB.Const; x.type := ORB.realType; x.a := SYSTEM.VAL(LONGINT, val); x.obj := NIL
   END MakeRealItem;
 
   PROCEDURE MakeStringItem*(VAR x: Item; len: LONGINT);  (*copies string from ORS-buffer to ORG-string array*)
     VAR i: LONGINT;
-  BEGIN x.mode := ORB.Const; x.type := ORB.strType; x.a := strx; x.b := len; x.r := 0; i := 0;
+  BEGIN x.mode := ORB.Const; x.type := ORB.strType; x.a := strx; x.b := len; x.r := 0; x.obj := NIL; i := 0;
     IF strx + len + 4 < maxStrx THEN
       WHILE len > 0 DO str[strx] := ORS.str[i]; INC(strx); INC(i); DEC(len) END ;
       WHILE strx MOD 4 # 0 DO str[strx] := 0X; INC(strx) END
@@ -305,7 +305,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
   (* Code generation for Selectors, Variables, Constants *)
 
   PROCEDURE Field*(VAR x: Item; y: ORB.Object);   (* x := x.y *)
-  BEGIN x.deref := FALSE;
+  BEGIN x.deref := FALSE; x.obj := NIL;
     IF x.mode = ORB.Var THEN
       IF x.r >= 0 THEN x.a := x.a + y.val
       ELSE loadAdr(x); x.mode := RegI; x.a := y.val
@@ -317,7 +317,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
 
   PROCEDURE Index*(VAR x, y: Item);   (* x := x[y] *)
     VAR s, lim: LONGINT;
-  BEGIN s := x.type.base.size; lim := x.type.len; x.deref := FALSE;
+  BEGIN s := x.type.base.size; lim := x.type.len; x.deref := FALSE; x.obj := NIL;
     IF (y.mode = ORB.Const) & (y.a < 0) THEN ORS.Mark("bad index") END ;
     IF (y.mode = ORB.Const) & (lim >= 0) THEN
       IF y.a >= lim THEN ORS.Mark("bad index") END ;
@@ -361,7 +361,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     ELSIF x.mode # Reg THEN ORS.Mark("bad mode in DeRef")
     END ;
     IF x.type.base.form = ORB.Array THEN Put1(Add, x.r, x.r, 16) END ; (*pointer to array*)
-    x.mode := RegI; x.a := 0; x.b := 0; x.deref := TRUE
+    x.mode := RegI; x.a := 0; x.b := 0; x.deref := TRUE; x.obj := NIL
   END DeRef;
 
   PROCEDURE Method*(VAR x: Item; y: ORB.Object; super: BOOLEAN);
@@ -370,7 +370,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code 
     ELSE x.a := y.lev; (*mthno*)
       IF x.deref THEN x.b := ORB.Var ELSE x.b := ORB.Par END
     END ;
-    x.deref := FALSE; x.super := super
+    x.deref := FALSE; x.super := super; x.obj := NIL
   END Method;
 
   PROCEDURE Q(T: ORB.Type; VAR tdw: LONGINT);
