@@ -135,7 +135,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     VAR y: ORG.Item; obj, fld: ORB.Object; xt: ORB.Type;
   BEGIN
     WHILE (sym = ORS.lbrak) OR (sym = ORS.period) OR (sym = ORS.arrow)
-        OR (sym = ORS.lparen) & (x.type.form IN {ORB.Record, ORB.Pointer}) DO
+        OR (sym = ORS.lparen) & (x.type.form IN {ORB.Record, ORB.Pointer}) DO x.obj := NIL;
       IF sym = ORS.lbrak THEN
         IF x.type.form = ORB.Pointer THEN ORG.DeRef(x); x.type := x.type.base END ;
         REPEAT ORS.Get(sym); expression(y);
@@ -579,11 +579,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     PROCEDURE NumericCasePart(VAR x: ORG.Item);
       VAR L0, L1, L2: LONGINT; n, labelform: INTEGER;
         tab: ARRAY NofCases OF ORG.LabelRange;  (*ordered table of label ranges*)
-    BEGIN
-      IF ~(x.type.form IN {ORB.Int, ORB.Byte, ORB.Char}) THEN
-        ORS.Mark("invalid case expression"); x.type := ORB.intType
-      END ;
-      Check(ORS.of, "OF expected"); ORG.CaseHead(x, L0); n := 0; L2 := 0; labelform := x.type.form;
+    BEGIN Check(ORS.of, "OF expected"); ORG.CaseHead(x, L0); n := 0; L2 := 0; labelform := x.type.form;
       WHILE (sym < ORS.end) OR (sym = ORS.bar) DO
         IF sym = ORS.bar THEN ORS.Get(sym) ELSE NumericCase(labelform, n, tab); ORG.FJump(L2) END
       END ;
@@ -674,11 +670,13 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
         ELSE ORS.Mark("identifier expected")
         END
       ELSIF sym = ORS.case THEN
-        ORS.Get(sym); expression(x);
-        IF (x.obj # NIL) & (x.obj.type # NIL) &
-          ((x.type.form = ORB.Pointer) & (x.type.base.form = ORB.Record) OR
-          (x.type.form = ORB.Record) & (x.mode = ORB.Par)) THEN TypeCasePart(x.obj)
-        ELSE NumericCasePart(x)
+        ORS.Get(sym); x.obj := NIL; expression(x);
+        IF (x.obj # NIL) & (x.obj.type # NIL) THEN TypeCasePart(x.obj)
+        ELSE
+          IF ~(x.type.form IN {ORB.Int, ORB.Byte, ORB.Char}) THEN
+            ORS.Mark("invalid case expression"); x.type := ORB.intType
+          END ;
+          NumericCasePart(x)
         END ;
         Check(ORS.end, "no END")
       END ;

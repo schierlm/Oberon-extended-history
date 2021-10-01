@@ -1,4 +1,4 @@
-MODULE TestTypeCase;  (*test type case statements / AP 1.10.21*)
+MODULE TestCase2;  (*test type case statements / AP 1.10.21 Extended Oberon*)
 
   TYPE P0 = POINTER TO R0;
     P1 = POINTER TO R1;
@@ -154,19 +154,19 @@ MODULE TestTypeCase;  (*test type case statements / AP 1.10.21*)
   END Go8;
 
 BEGIN NEW(p0); NEW(p1); NEW(p2)
-END TestTypeCase.
+END TestCase2.
 
-ORP.Compile TestTypeCase.Mod/s ~
-System.Free TestTypeCase ~
+ORP.Compile TestCase2.Mod/s ~
+System.Free TestCase2 ~
 
-ORTool.DecObj TestNumericCase.rsc ~
+ORTool.DecObj TestCase2.rsc ~
 
-TestTypeCase.Go0
-TestTypeCase.Go1
-TestTypeCase.Go2
-TestTypeCase.Go3
-TestTypeCase.Go4
-TestTypeCase.Go5
-TestTypeCase.Go6
-TestTypeCase.Go7
-TestTypeCase.Go8
+TestCase2.Go0
+TestCase2.Go1
+TestCase2.Go2
+TestCase2.Go3
+TestCase2.Go4
+TestCase2.Go5
+TestCase2.Go6
+TestCase2.Go7
+TestCase2.Go8
