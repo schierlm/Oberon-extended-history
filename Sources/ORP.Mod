@@ -550,7 +550,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     END CaseLabel;
 
     PROCEDURE NumericCase(LabelForm: INTEGER; VAR n: INTEGER; VAR tab: ARRAY OF ORG.LabelRange);
-      VAR x, y: ORG.Item; i: INTEGER; continue: BOOLEAN;
+      VAR x, y: ORG.Item; i: INTEGER;
     BEGIN
       REPEAT CaseLabel(x);
         IF x.type.form # LabelForm THEN ORS.Mark("invalid label form") END ;
@@ -558,14 +558,9 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
           IF (x.type.form # y.type.form) OR (x.a >= y.a) THEN ORS.Mark("invalid label range"); y := x END
         ELSE y := x
         END ;
-        IF n < NofCases THEN  (*enter label range into ordered table*)
-          i := n; continue := TRUE;
-          WHILE continue & (i > 0) DO
-            IF tab[i-1].low > y.a THEN tab[i] := tab[i-1]; DEC(i)
-            ELSE continue := FALSE;
-              IF tab[i-1].high >= x.a THEN ORS.Mark("overlapping case labels") END
-            END
-          END ;
+        IF n < NofCases THEN (*enter label range into ordered table*) i := n;
+          WHILE (i > 0) & (tab[i-1].low > y.a) DO tab[i] := tab[i-1]; DEC(i) END ;
+          IF (i > 0) & (tab[i-1].high >= x.a) THEN ORS.Mark("overlapping case labels") END ;
           tab[i].low := x.a; tab[i].high := y.a; tab[i].label := ORG.Here(); INC(n)
         ELSE ORS.Mark("too many case labels")
         END ;
