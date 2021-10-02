@@ -587,6 +587,19 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
       ORG.CaseTail(L0, L1, n, tab); ORG.FixLink(L2)
     END NumericCasePart;
 
+    PROCEDURE SkipCase;
+      VAR obj: ORB.Object;
+    BEGIN Check(ORS.of, "OF expected");
+      WHILE (sym < ORS.end) OR (sym = ORS.bar) DO
+        IF sym = ORS.bar THEN ORS.Get(sym)
+        ELSE (*type case assumed*)
+          IF sym = ORS.ident THEN qualident(obj) END ;
+          Check(ORS.colon, ": expected"); StatSequence
+        END
+      END ;
+      IF sym = ORS.else THEN ORS.Get(sym); StatSequence END
+    END SkipCase;
+
   BEGIN (* StatSequence *)
     REPEAT (*sync*)
       IF ~((sym >= ORS.ident) & (sym <= ORS.for) OR (sym >= ORS.semicolon)) THEN
@@ -671,14 +684,11 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
         END
       ELSIF sym = ORS.case THEN
         ORS.Get(sym); x.obj := NIL; expression(x);
-        IF (x.obj # NIL) & (x.obj.type # NIL) &
+        IF x.type.form IN {ORB.Int, ORB.Byte, ORB.Char} THEN NumericCasePart(x)
+        ELSIF (x.obj # NIL) & (x.obj.type # NIL) &
           ((x.type.form = ORB.Pointer) & (x.type.base.form = ORB.Record) OR
           (x.type.form = ORB.Record) & (x.mode = ORB.Par)) THEN TypeCasePart(x.obj)
-        ELSE
-          IF ~(x.type.form IN {ORB.Int, ORB.Byte, ORB.Char}) THEN
-            ORS.Mark("invalid case expression"); x.type := ORB.intType
-          END ;
-          NumericCasePart(x)
+        ELSE ORS.Mark("invalid case variable"); SkipCase
         END ;
         Check(ORS.end, "no END")
       END ;
