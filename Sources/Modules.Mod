@@ -1,4 +1,4 @@
-MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.4.21 Extended Oberon*)
+MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.10.21 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files;
   CONST versionkey = 1X; TR = 13; LNK = 15; DescSize = 96; MnLength = 32;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4;
@@ -414,7 +414,7 @@ MODULE Modules;  (*Link and load on RISC; NW 20.10.2013 / 8.1.2019 / AP 1.4.21 E
 
   PROCEDURE Check*(VAR res: INTEGER);
     (*check whether external client, type, pointer or procedure variable references to selected modules exist.
-      res = noref: no client, type, pointer or procedure variables references;
+      res = noref: no client, type, pointer or procedure variable references;
       res = clients: clients exist;
       res = dyntypes: types in use in dynamically allocated objects;
       res = dynptrs: static module data referenced by pointer variables in dynamically allocated objects;

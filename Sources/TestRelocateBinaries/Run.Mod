@@ -77,9 +77,3 @@ BEGIN Texts.OpenWriter(W)
 END Run.
 
 ORP.Compile Run.Mod/s ~
-
-ORP.Compile M.Mod/s ~   # generate M.rsc
-ORL.Link M ~            # generate M.bin
-
-Run.RunRsc M.rsc ~      # execute code section of M.rsc
-Run.RunBin M.bin ~      # execute prelinked binary M.bin
