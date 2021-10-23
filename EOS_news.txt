@@ -29,7 +29,7 @@
 2020-10-24 Oberon, System - Oberon.Batch (but not System.Batch) invokes the garbage collector after each executed command
 2020-11-01 ORG, ORB - Restrict the type case statement such that type loopholes are no longer possible
 2020-11-12 ORP - Allow elements of a structure as numeric case expressions in all cases
-2020-12-01 ORL - Don't provide a hint to the bootloader for Kernel.MemLim and Kernel.stackOrg anymore
+2020-12-01 ORL - No longer provide a hint to the bootloader for Kernel.MemLim and Kernel.stackOrg
 2020-12-02 Disk - Enlarge boot area from sectors 2-63 (62KB) to sectors 2-159 (158KB) to accomodate entire pre-linked Oberon systems
 2020-12-12 Modules - Add procedure Modules.SetFinalizer to set a module finalization sequence to be executed prior to unloading
 2020-12-30 TextFrames - TextFrames.Copy now produces an exact copy of the text frame, including vertical offset from baseline
@@ -40,3 +40,4 @@
 2021-10-01 ORTool - Improve output of ORTool.DecSym, type hierarchy now displayed over multiple lines
 2021-10-01 ORG - Introduce a new field x.obj into ORG.Item, used to distinguish between numeric and type case statements
 2021-10-01 ORP - Eliminate a number of restrictions in the type case statement, as suggested by C. Burrows
+2021-10-23 ORG, ORP - No longer avoid forward branches in nested procedures, removal of this optimization makes the compiler simpler
