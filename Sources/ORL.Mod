@@ -1,4 +1,4 @@
-MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 1.4.21 Extended Oberon*)
+MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 1.11.21 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, Files, Modules, Texts, Oberon;
   CONST versionkey = 1X; versionkey0 = 0X; DescSize = 96; MnLength = 32; BootSec = 2; FPrint = 12345678H;
     noerr* = 0; nofile* = 1; badversion* = 2; badkey* = 3; badfile* = 4; nospace* = 5;
@@ -25,6 +25,10 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 1.4.21 Extended Oberon*)
     AllocPtr, Start, limit, res*: INTEGER;
     importing*, imported*: ModuleName;
     W: Texts.Writer;
+
+  PROCEDURE EndLine;
+  BEGIN Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
+  END EndLine;
 
   PROCEDURE MakeFileName(VAR FName: ARRAY OF CHAR; name, ext: ARRAY OF CHAR);
     VAR i, j: INTEGER;
@@ -281,7 +285,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 1.4.21 Extended Oberon*)
       END
     ELSE Texts.WriteString(W, "Usage: ORL.Link [module...] topmodule")
     END ;
-    Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); root := NIL
+    EndLine; root := NIL
   END Link;
 
   PROCEDURE Load*;  (*load prelinked boot file M.bin onto the boot area of the local disk*)
@@ -306,7 +310,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 1.4.21 Extended Oberon*)
       END
     ELSE Texts.WriteString(W, "Usage: ORL.Load M.bin")
     END ;
-    Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
+    EndLine
   END Load;
 
   PROCEDURE RelocateLoaded*(start, dst: INTEGER);  (*relocate prelinked binary loaded at Mem[start] for execution at dst*)
@@ -399,7 +403,7 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 1.4.21 Extended Oberon*)
       END
     END ;
     IF res = -1 THEN Texts.WriteString(W, "Usage: ORL.Relocate M.bin R.bin destadr") END ;
-    Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
+    EndLine
   END Relocate;
 
   PROCEDURE Execute*;  (*load and execute prelinked binary M.bin*)
@@ -431,9 +435,9 @@ MODULE ORL;  (*Oberon boot linker/loader for RISC / AP 1.4.21 Extended Oberon*)
       END
     ELSE Texts.WriteString(W, "Usage: ORL.Execute M.bin")
     END ;
-    Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
+    EndLine
   END Execute;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 1.4.21");
-  Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf); limit := Kernel.stackOrg - Kernel.stackSize
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Boot linker/loader  AP 1.11.21"); EndLine;
+  limit := Kernel.stackOrg - Kernel.stackSize
 END ORL.
