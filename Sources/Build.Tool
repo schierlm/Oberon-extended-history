@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------------------------------------------------
 #  1. Compile the modules needed for Oberon system building
 # ---------------------------------------------------------------------------------------------------------------------
-ORP.Compile Kernel.Mod Disk.Mod FileDir.Mod Files.Mod Modules.Mod ~      # modules for the "regular" boot file
+ORP.Compile Kernel.Mod/s Disk.Mod/s FileDir.Mod/s Files.Mod/s Modules.Mod/s ~      # modules for the "regular" boot file
 ORP.Compile RS232.Mod PCLink0.Mod Oberon0.Mod ~    # additional modules for the "build-up" boot file
 ORP.Compile ORC.Mod/s Oberon0Tool.Mod/s ~     # partner program ORC and Oberon0 tool module
 ORP.Compile BootLoad.Mod/s ~        # the regular Oberon boot loader

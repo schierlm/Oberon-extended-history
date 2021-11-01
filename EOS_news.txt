@@ -40,4 +40,4 @@
 2021-10-01 ORTool - Improve output of ORTool.DecSym, type hierarchy now displayed over multiple lines
 2021-10-01 ORG - Introduce a new field x.obj into ORG.Item, used to distinguish between numeric and type case statements
 2021-10-01 ORP - Eliminate a number of restrictions in the type case statement, as suggested by C. Burrows
-2021-10-23 ORG, ORP - No longer avoid forward branches in nested procedures, removal of this optimization makes the compiler simpler
+2021-11-01 ORG, ORP - No longer avoid forward branches in nested procedures, removal of this optimization makes the compiler simpler
