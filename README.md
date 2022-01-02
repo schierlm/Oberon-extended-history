@@ -14,9 +14,9 @@ Features
 * Import any number of modules
 * Simple batch execution facility
 
-**Last release:** 1.11.2021 / Extended-Oberon-1.8
+**Last release:** 1.1.2022 / Extended-Oberon-1.9
 
-**Last update:** 1.11.2021
+**Last update:** 1.1.2022
 
 The file [**S3RISCinstall.tar.gz**](Documentation/S3RISCinstall.tar.gz) always reflects the *latest* version of Extended Oberon, as described in the file [**EOS_news.txt**](EOS_news.txt).
 
@@ -123,13 +123,8 @@ Compile the *inner core* of Extended Oberon and load it onto the boot area of th
 
      ORP.Compile Kernel.Mod/s Disk.Mod/s FileDir.Mod/s Files.Mod/s Modules.Mod/s ~    # modules for the "regular" boot file for Extended Oberon
      ORL.Link Modules ~                                                    # generate a pre-linked binary file of the "regular" boot file (Modules.bin)
-     ORL.Load Modules.bin ~                                                # load the "regular" boot file onto the boot area of the local disk
 
 This step is possible, because module *ORL* is written such that it can be executed on both the Project Oberon 2013 and the Extended Oberon system. It produces output using the Extended Oberon module and object file format.
-
-Release the temporary versions of modules *ORL* and *Disk* (compiled for the "old" system), as they are no longer needed:
-
-     System.Free ORL Disk ~
 
 Compile the remaining modules of Extended Oberon:
 
@@ -150,6 +145,12 @@ This step is necessary because Extended Oberon uses a different Oberon object fi
 
 ------------------------------------------------------
 
-**STEP 8:** Restart the Oberon system
+**STEP 8:** Load the inner core of Extended Oberon onto the boot area of the local disk (still using the "old" module ORL)
+
+     ORL.Load Modules.bin ~                                                # load the "regular" boot file onto the boot area of the local disk
+
+------------------------------------------------------
+
+**STEP 9:** Restart the Oberon system
 
 You are now running Extended Oberon. Re-compile any other modules that you may have on your system.

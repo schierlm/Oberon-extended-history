@@ -1,10 +1,10 @@
-MODULE Oberon0; (*Oberon-0 command interpreter / AP 12.12.20 Extended Oberon*)
+MODULE Oberon0; (*Oberon-0 command interpreter / AP 1.1.22 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, FileDir, Files, Modules, RS232, PCLink0;
   CONST swi = -60; (*switches*)
     stat = -52; (*RS-232*)
     REQ = 20H; REC = 21H; SND = 22H; ACK = 10H;
     screenbase = 0E7F00H; screensize = 1024 * 768 DIV 8; (*1024 x 768 pixel monocolor display*)
-    BootSec = 2; maxCode = 8000; TR = 13;
+    BootSec = 2; BootSize = 192; maxCode = 8000; TR = 13;
 
   VAR pat: ARRAY 32 OF CHAR;
 
@@ -236,8 +236,10 @@ MODULE Oberon0; (*Oberon-0 command interpreter / AP 12.12.20 Extended Oberon*)
       END ;
       IF i > 0 THEN
         WHILE i < Disk.SectorLength DO buf[i] := 0; INC(i) END ;
-        Disk.PutSector(secno*29, buf)
-      END
+        Disk.PutSector(secno*29, buf); INC(secno)
+      END ;
+      FOR i := 0 TO Disk.SectorLength-1 DO buf[i] := 0 END ;
+      WHILE secno < BootSize DO Disk.PutSector(secno*29, buf); INC(secno) END
     ELSE RS232.SendInt(-1) (*file not found*)
     END
   END LoadBoot;
