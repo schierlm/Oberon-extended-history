@@ -26,12 +26,5 @@ Documentation: [**Documentation**](Documentation)
 
 # Instructions for converting an existing Project Oberon 2013 system to Extended Oberon
 
-**PREREQUISITES**: A current version of the Project Oberon 2013 system (see http://www.projectoberon.com).
+If you run Oberon in an emulator on the desktop (e.g., http://github.com/pdewacht/oberon-risc-emu), you can simply backup your existing S3RISCinstall directory, download the compressed archive [**S3RISCinstall.tar.gz**](Documentation/S3RISCinstall.tar.gz) from this repository (containing Extended Oberon) to your emulator directory, run the command *tar xvzf S3RISCinstall.tar.gz* in that directory and then restart the emulator.
 
-**NOTE**: If you run Oberon in an emulator on the desktop (e.g., http://github.com/pdewacht/oberon-risc-emu), you can simply backup your existing S3RISCinstall directory, download the compressed archive [**S3RISCinstall.tar.gz**](Documentation/S3RISCinstall.tar.gz) from this repository (containing Extended Oberon) to your emulator directory, run the command *tar xvzf S3RISCinstall.tar.gz* in that directory and then restart the emulator, instead of going through the instructions outlined below.
-
-------------------------------------------------------
-
-You can use the system building tools to build a new Extended Oberon system on a target system
-
-See the following document: [**Documentation/The-Oberon-system-building-tools.pdf**](Documentation/The-Oberon-system-building-tools.pdf)
