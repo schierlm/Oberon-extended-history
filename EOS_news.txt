@@ -43,3 +43,4 @@
 2021-11-01 ORG, ORP - No longer avoid forward branches in nested procedures, removal of this optimization makes the compiler simpler
 2022-01-01 Disk - Enlarge boot area from sectors 2-159 (158KB) to sectors 2-191 (190KB) to accommate larger pre-linked Oberon systems
 2022-01-01 ORL, Oberon0 - clear unused part of boot area during system building (identical builds will result in identical images)
+2022-01-11 Oberon, System - Move procedures Trap, Abort and Deferred from System to Oberon
