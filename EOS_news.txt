@@ -44,3 +44,4 @@
 2022-01-01 Disk - Enlarge boot area from sectors 2-159 (158KB) to sectors 2-191 (190KB) to accommate larger pre-linked Oberon systems
 2022-01-01 ORL, Oberon0 - clear unused part of boot area during system building (identical builds will result in identical images)
 2022-01-11 Oberon, System - Move procedures Trap, Abort and Deferred from System to Oberon
+2022-05-01 Modules, ORL - Renamed fields data and code to var and prg in module descriptors

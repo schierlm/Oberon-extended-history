@@ -1,4 +1,4 @@
-MODULE Oberon0; (*Oberon-0 command interpreter / AP 1.1.22 Extended Oberon*)
+MODULE Oberon0; (*Oberon-0 command interpreter / AP 1.5.22 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, FileDir, Files, Modules, RS232, PCLink0;
   CONST swi = -60; (*switches*)
     stat = -52; (*RS-232*)
@@ -79,7 +79,7 @@ MODULE Oberon0; (*Oberon-0 command interpreter / AP 1.1.22 Extended Oberon*)
     WHILE M # NIL DO RS232.Line;
       IF M.name[0] # 0X THEN
         RS232.SendStr(M.name); RS232.SendInt(M.num); RS232.SendStr("  ");
-        RS232.SendHex(ORD(M)); RS232.SendHex(M.code); RS232.SendInt(M.refcnt)
+        RS232.SendHex(ORD(M)); RS232.SendHex(M.prg); RS232.SendInt(M.refcnt)
       ELSE RS232.SendStr("---")
       END ;
       M := M.next
@@ -270,7 +270,7 @@ MODULE Oberon0; (*Oberon-0 command interpreter / AP 1.1.22 Extended Oberon*)
     Files.ReadInt(R, codelen);
     IF codelen > LEN(code) THEN res := Modules.nospace
     ELSE n := 0;
-      WHILE n < codelen DO Files.ReadInt(R, data); code[n] := data; INC(n) END ; (*code*)
+      WHILE n < codelen DO Files.ReadInt(R, data); code[n] := data; INC(n) END ; (*program code*)
       Files.ReadString(R, name);
       WHILE name[0] # 0X DO Files.ReadInt(R, data); Files.ReadString(R, name) END ; (*commands*)
       Files.ReadInt(R, n); Files.Set(R, F, Files.Pos(R) + n*4); (*entries*)

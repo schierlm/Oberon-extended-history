@@ -1,8 +1,8 @@
-MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 11.1.22 Extended Oberon*)
+MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 1.5.22 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Disk, FileDir, Files, Modules,
     Input, Display, Viewers, Fonts, Texts, Oberon, MenuViewers, TextFrames;
 
-  CONST Version* = "Extended Oberon System  AP 11.1.22";
+  CONST Version* = "Extended Oberon System  AP 1.5.22";
     StandardMenu = "System.Close System.Copy System.Grow Edit.Search Edit.Store | System.Expand System.Spread System.Clone";
     LogMenu = "Edit.Locate Edit.Search System.Copy System.Grow System.Clear | System.Expand System.Spread System.Clone";
 
@@ -367,7 +367,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 11.1.22 Extended O
     VAR mod: Modules.Module; i: INTEGER;
   BEGIN i := 0;
     IF (dst > 0) & (dst < Modules.AllocPtr) THEN mod := Modules.root;
-      WHILE (mod # NIL) & ~((mod.name[0] # 0X) & mod.selected & (mod.data <= dst) & (dst < mod.imp)) DO mod := mod.next END ;
+      WHILE (mod # NIL) & ~((mod.name[0] # 0X) & mod.selected & (mod.var <= dst) & (dst < mod.imp)) DO mod := mod.next END ;
       IF mod # NIL THEN i := 1;
         IF (M # mod) OR (pat # s) THEN M := mod; pat := s;
           IF ref = Modules.dyntypes THEN Texts.WriteString(W, "  types of "); Texts.WriteString(W, mod.name);
@@ -628,7 +628,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016 / AP 11.1.22 Extended O
     WHILE M # NIL DO
       IF M.name[0] # 0X THEN
         Texts.WriteString(W, M.name); Texts.WriteInt(W, M.num, 4); Texts.Write(W, Input.TAB);
-        Texts.WriteHex(W, ORD(M)); Texts.WriteHex(W, M.code); Texts.WriteInt(W, M.refcnt, 4)
+        Texts.WriteHex(W, ORD(M)); Texts.WriteHex(W, M.prg); Texts.WriteInt(W, M.refcnt, 4)
       ELSE Texts.WriteString(W, "---")
       END ;
       Texts.WriteLn(W); M := M.next

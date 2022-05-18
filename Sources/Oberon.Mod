@@ -1,4 +1,4 @@
-MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 11.1.22 Extended Oberon*)
+MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 1.5.22 Extended Oberon*)
   IMPORT SYSTEM, Kernel, Files, Modules, Input, Display, Viewers, Fonts, Texts;
 
   CONST (*message ids*)
@@ -521,7 +521,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
           Texts.WriteLn(W); Texts.WriteString(W, "  pos ");
           Texts.WriteInt(W, v DIV 100H MOD 10000H, 4);  (*code position*)
           Texts.WriteString(W, "  TRAP"); Texts.WriteInt(W, w, 4); mod := Modules.root;
-          WHILE (mod # NIL) & ((u < mod.code) OR (u >= mod.imp)) DO mod := mod.next END ;
+          WHILE (mod # NIL) & ((u < mod.prg) OR (u >= mod.imp)) DO mod := mod.next END ;
           IF mod # NIL THEN Texts.WriteString(W, " in "); Texts.WriteString(W, mod.name) END ;
           Texts.WriteString(W, " at"); Texts.WriteHex(W, u); Texts.WriteLn(W); Texts.Append(Log, W.buf);
           defer := FALSE
@@ -539,7 +539,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
       IF defer THEN (*defer abort handling*) last := u; Install(DeferTask)
       ELSE defer := TRUE;
         Texts.WriteLn(W); Texts.WriteString(W, "  ABORT  "); mod := Modules.root;
-        WHILE (mod # NIL) & ((u < mod.code) OR (u >= mod.imp)) DO mod := mod.next END ;
+        WHILE (mod # NIL) & ((u < mod.prg) OR (u >= mod.imp)) DO mod := mod.next END ;
         IF mod # NIL THEN Texts.WriteString(W, " in "); Texts.WriteString(W, mod.name) END ;
         Texts.WriteString(W, " at"); Texts.WriteHex(W, u); Texts.WriteLn(W); Texts.Append(Log, W.buf);
         defer := FALSE
@@ -562,7 +562,7 @@ MODULE Oberon; (*JG 6.9.90 / 23.9.93 / 13.8.94 / NW 14.4.2013 / 22.12.2015 / AP 
       ELSE Texts.WriteString(W, "  RECURSIVE ABORT  ")
       END ;
       mod := Modules.root;
-      WHILE (mod # NIL) & ((last < mod.code) OR (last >= mod.imp)) DO mod := mod.next END ;
+      WHILE (mod # NIL) & ((last < mod.prg) OR (last >= mod.imp)) DO mod := mod.next END ;
       IF mod # NIL THEN Texts.WriteString(W, " in "); Texts.WriteString(W, mod.name) END ;
       Texts.WriteString(W, " at"); Texts.WriteHex(W, last); Texts.WriteLn(W); Texts.Append(Log, W.buf);
       defer := FALSE
