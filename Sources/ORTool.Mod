@@ -80,9 +80,7 @@ MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 22.5.22 Extended Oberon*)
           WHILE class # 0 DO
             Texts.WriteInt(W, class, 4); Files.ReadString(R, name); Texts.Write(W, " "); Texts.WriteString(W, name);
             ReadType(R);
-            IF (class = ORB.Const) OR (class = ORB.Var) THEN
-	      Files.ReadNum(R, k); Texts.WriteInt(W, k, 5)  (*Reals, Strings!*)
-            END ;
+            IF (class = ORB.Const) OR (class = ORB.Var) THEN Files.ReadNum(R, k); Texts.WriteInt(W, k, 5) END ;
             Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
             Read(R, class)
           END
