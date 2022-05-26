@@ -46,4 +46,3 @@
 2022-01-11 Oberon, System - Move procedures Trap, Abort and Deferred from System to Oberon
 2022-05-01 Modules, ORL - Renamed fields data and code to var and prg in module descriptors
 2022-05-22 ORB, ORTool - Streamlined symbol files by removing unnecessary fixup code in procedures Import and Export
-2022-01-06 ORB - eliminate unnecessary code in ORB.OutType (possible because explicit imports must come before implicit ones)
