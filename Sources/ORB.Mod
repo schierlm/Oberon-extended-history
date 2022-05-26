@@ -1,4 +1,4 @@
-MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 22.5.20 Extended Oberon*)
+MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 1.6.22 Extended Oberon*)
   IMPORT Files, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
@@ -341,22 +341,16 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 22.5.2
       ELSIF t.form = Array THEN OutType(R, t.base); Files.WriteNum(R, t.len); Files.WriteNum(R, t.size)
       ELSIF t.form = Record THEN
         IF t.base # NIL THEN OutType(R, t.base); bot := t.base.dsc ELSE OutType(R, noType); bot := NIL END ;
-        IF obj # NIL THEN
-          IF t.mno > 0 THEN Files.WriteNum(R, t.len) ELSE Files.WriteNum(R, obj.exno) END
-        ELSE Write(R, 0)
-        END ;
+        IF obj # NIL THEN Files.WriteNum(R, obj.exno) ELSE Write(R, 0) END ;
         Files.WriteNum(R, t.nofpar); Files.WriteNum(R, t.size);
         fld := t.dsc;
         WHILE fld # bot DO  (*fields*)
           IF fld.class = Const THEN (*type-bound procedure*) Write(R, Const);
-            IF fld.expo THEN Files.WriteString(R, fld.name); OutType(R, fld.type);
-              IF t.mno > 0 THEN Files.WriteNum(R, fld.val) ELSE Files.WriteNum(R, fld.exno) END  (*exno*)
-            ELSE (*hidden*) Write(R, 0)
-            END ;
+            IF fld.expo THEN Files.WriteString(R, fld.name); OutType(R, fld.type); Files.WriteNum(R, fld.exno) ELSE Write(R, 0) END ;
             Files.WriteNum(R, fld.lev)  (*mthno*)
           ELSIF fld.expo THEN
             Write(R, Fld); Files.WriteString(R, fld.name); OutType(R, fld.type); Files.WriteNum(R, fld.val)  (*offset*)
-          ELSE (*hidden*) FindHiddenFields(R, fld.type, fld.val)
+          ELSE FindHiddenFields(R, fld.type, fld.val)
           END ;
           fld := fld.next
         END ;
