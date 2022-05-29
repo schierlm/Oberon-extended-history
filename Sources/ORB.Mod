@@ -1,4 +1,4 @@
-MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 22.5.20 Extended Oberon*)
+MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 29.5.22 Extended Oberon*)
   IMPORT Files, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
@@ -210,7 +210,7 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 22.5.2
   PROCEDURE InType(VAR R: Files.Rider; thismod: Object; VAR T: Type);
     VAR key: LONGINT;
       ref, class, form, np, readonly: INTEGER;
-      fld, par, obj, mod, last: Object;
+      fld, par, obj, mod: Object;
       t: Type;
       name, modname: ORS.Ident;
   BEGIN Read(R, ref);
@@ -222,15 +222,13 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 22.5.2
         InType(R, thismod, t.base); Files.ReadNum(R, t.len); Files.ReadNum(R, t.size)
       ELSIF form = Record THEN
         InType(R, thismod, t.base);
-        IF t.base.form = NoTyp THEN t.base := NIL; obj := NIL ELSE obj := t.base.dsc END ;
+        IF t.base.form = NoTyp THEN t.base := NIL; t.dsc := NIL ELSE t.dsc := t.base.dsc END ;
         Files.ReadNum(R, t.len);  (*TD adr/exno*)
         Files.ReadNum(R, t.nofpar);  (*ext level*)
         Files.ReadNum(R, t.size);
-        Read(R, class); last := NIL;
+        Read(R, class);
         WHILE class # 0 DO  (*fields*)
-          NEW(fld); fld.class := class; Files.ReadString(R, fld.name);
-          IF last = NIL THEN t.dsc := fld ELSE last.next := fld END ;
-          last := fld;
+          NEW(fld); fld.class := class; fld.next := t.dsc; t.dsc := fld; Files.ReadString(R, fld.name);
           IF fld.name[0] # 0X THEN fld.expo := TRUE; InType(R, thismod, fld.type); Files.ReadNum(R, fld.val)
           ELSE (*hidden*) fld.expo := FALSE;
             IF class = Const THEN (*type-bound procedure*) fld.type := byteType  (*method*)
@@ -242,16 +240,14 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 22.5.2
           END ;
           IF class = Const THEN Files.ReadNum(R, fld.lev) END ;  (*mthno*)
           Read(R, class)
-        END ;
-        IF last = NIL THEN t.dsc := obj ELSE last.next := obj END
+        END
       ELSIF form IN {Proc, TProc} THEN
-        InType(R, thismod, t.base);
-        obj := NIL; np := 0; Read(R, class);
+        InType(R, thismod, t.base); t.dsc := NIL; np := 0; Read(R, class);
         WHILE class # 0 DO  (*parameters*)
-          NEW(par); par.class := class; Read(R, readonly); par.rdo := readonly = 1;
-          InType(R, thismod, par.type); par.next := obj; obj := par; INC(np); Read(R, class)
+          NEW(par); par.class := class; par.next := t.dsc; t.dsc := par; Read(R, readonly); par.rdo := readonly = 1;
+          InType(R, thismod, par.type); INC(np); Read(R, class)
         END ;
-        t.dsc := obj; t.nofpar := np; t.size := 4
+        t.nofpar := np; t.size := 4
       END ;
       Files.ReadString(R, modname);
       IF modname[0] #  0X THEN  (*re-import*)
@@ -320,7 +316,7 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 22.5.2
       END
     END OutPar;
 
-    PROCEDURE FindHiddenFields(VAR R: Files.Rider; typ: Type; off: LONGINT);  (*pointers or procedures*)
+    PROCEDURE FindHiddenFields(VAR R: Files.Rider; typ: Type; off: LONGINT);
       VAR fld: Object; i, s: LONGINT;
     BEGIN
       IF typ.form IN Ptrs THEN Write(R, Fld); Write(R, 0); Files.WriteNum(R, off)  (*pointer*)
