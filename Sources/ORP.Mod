@@ -1,4 +1,4 @@
-MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 / AP 22.5.22 Extended Oberon*)
+MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 / AP 12.6.22 Extended Oberon*)
   IMPORT Texts, Oberon, ORS, ORB, ORG;
   (*Author: Niklaus Wirth, 2014. Oberon-2 extensions by Andreas Pirklbauer, 2020.
     Parser of Oberon-RISC compiler. Uses Scanner ORS to obtain symbols (tokens),
@@ -98,12 +98,12 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
 
   PROCEDURE IsExtension(t0, t1: ORB.Type): BOOLEAN;
   BEGIN (*t1 is an extension of t0*)
-    RETURN (t0 = t1) OR (t1 # NIL) & IsExtension(t0, t1.base)
+    RETURN (t0 = t1) OR (t1 # ORB.noType) & IsExtension(t0, t1.base)
   END IsExtension;
 
   PROCEDURE DisallowMethods(rec: ORB.Type);  (*disallow binding methods to rec and its base types*)
-  BEGIN
-    WHILE rec # NIL DO rec.typobj.val := 1; rec := rec.base END
+  BEGIN (*rec # NIL*)
+    WHILE rec # ORB.noType DO rec.typobj.val := 1; rec := rec.base END
   END DisallowMethods;
 
   (* expressions *)
@@ -112,7 +112,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     VAR xt: ORB.Type;
   BEGIN xt := x.type;
     IF (T.form = xt.form ) & ((T.form = ORB.Pointer) OR (T.form = ORB.Record) & (x.mode = ORB.Par)) THEN
-      WHILE (xt # T) & (xt # NIL) DO xt := xt.base END ;
+      WHILE (xt # T) & (xt # ORB.noType) DO xt := xt.base END ;
       IF xt # T THEN xt := x.type;
         IF xt.form = ORB.Pointer THEN
           IF IsExtension(xt.base, T.base) THEN ORG.TypeTest(x, T.base, FALSE, guard); x.type := T
@@ -736,7 +736,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     VAR obj, obj0, new, bot, base: ORB.Object;
       typ, tp: ORB.Type;
       offset, off, n: LONGINT; expo0: BOOLEAN;
-  BEGIN NEW(typ); typ.form := ORB.NoTyp; typ.base := NIL; typ.mno := -level; typ.nofpar := 0; typ.len := 0; offset := 0; bot := NIL;
+  BEGIN NEW(typ); typ.form := ORB.NoTyp; typ.base := ORB.noType; typ.mno := -level; typ.nofpar := 0; typ.len := 0; offset := 0; bot := NIL;
     IF sym = ORS.lparen THEN
       ORS.Get(sym); (*record extension*)
       IF level # 0 THEN ORS.Mark("extension of local types not implemented") END ;
@@ -1158,7 +1158,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     Oberon.Collect(0); Oberon.Return(res)
   END Compile;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Compiler  8.3.2020 / AP 22.5.22");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR Compiler  8.3.2020 / AP 12.6.22");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
   NEW(dummy); dummy.class := ORB.Var; dummy.type := ORB.intType;
   expression := expression0; Type := Type0; FormalType := FormalType0

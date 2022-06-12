@@ -1,4 +1,4 @@
-MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 29.5.22 Extended Oberon*)
+MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 12.6.22 Extended Oberon*)
   IMPORT Files, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
@@ -110,8 +110,7 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 29.5.2
 
   PROCEDURE FindFld*(id: ORS.Ident; rec: Type): Object;  (*search id in fields of rec proper, but not its base types*)
     VAR fld, bot: Object;
-  BEGIN fld := rec.dsc;
-    IF rec.base # NIL THEN bot := rec.base.dsc ELSE bot := NIL END ;
+  BEGIN fld := rec.dsc; bot := rec.base.dsc;
     WHILE (fld # bot) & (fld.name # id) DO fld := fld.next END ;
     IF fld = bot THEN fld := NIL END ;
     RETURN fld
@@ -145,9 +144,7 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 29.5.2
       END
     END UpdateLinks;
 
-  BEGIN (*rec.typobj # NIL*) redef := NIL;
-    IF rec.base # NIL THEN bot := rec.base.dsc ELSE bot := NIL END ;
-    fld := rec.dsc;
+  BEGIN (*rec.typobj # NIL*) fld := rec.dsc; bot := rec.base.dsc; redef := NIL;
     WHILE (fld # bot) & (fld.name # id) DO fld0 := fld; fld := fld.next END ;  (*search id in fields of rec proper*)
     IF fld = bot THEN
       WHILE (fld # NIL) & (fld.name # id) DO fld := fld.next END ;  (*search id in fields of base types of rec*)
@@ -221,8 +218,7 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 29.5.2
       ELSIF form = Array THEN
         InType(R, thismod, t.base); Files.ReadNum(R, t.len); Files.ReadNum(R, t.size)
       ELSIF form = Record THEN
-        InType(R, thismod, t.base);
-        IF t.base.form = NoTyp THEN t.base := NIL; t.dsc := NIL ELSE t.dsc := t.base.dsc END ;
+        InType(R, thismod, t.base); t.dsc := t.base.dsc;
         Files.ReadNum(R, t.len);  (*TD adr/exno*)
         Files.ReadNum(R, t.nofpar);  (*ext level*)
         Files.ReadNum(R, t.size);
@@ -335,14 +331,13 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 29.5.2
       Write(R, t.form);
       IF t.form = Pointer THEN OutType(R, t.base)
       ELSIF t.form = Array THEN OutType(R, t.base); Files.WriteNum(R, t.len); Files.WriteNum(R, t.size)
-      ELSIF t.form = Record THEN
-        IF t.base # NIL THEN OutType(R, t.base); bot := t.base.dsc ELSE OutType(R, noType); bot := NIL END ;
+      ELSIF t.form = Record THEN OutType(R, t.base);
         IF obj # NIL THEN
           IF t.mno > 0 THEN Files.WriteNum(R, t.len) ELSE Files.WriteNum(R, obj.exno) END
         ELSE Write(R, 0)
         END ;
         Files.WriteNum(R, t.nofpar); Files.WriteNum(R, t.size);
-        fld := t.dsc;
+        fld := t.dsc; bot := t.base.dsc;
         WHILE fld # bot DO  (*fields*)
           IF fld.class = Const THEN (*type-bound procedure*) Write(R, Const);
             IF fld.expo THEN Files.WriteString(R, fld.name); OutType(R, fld.type);
