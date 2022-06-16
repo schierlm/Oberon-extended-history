@@ -2,31 +2,31 @@
 
 ORP.Compile @/s ~
 
-MODULE M;      (*no error message*)
+MODULE M;                                   (*no error message*)
   TYPE T0* = RECORD i: INTEGER END ;
 END M.
 
-MODULE M0;      (*no error message*)
+MODULE M0;                                  (*no error message*)
   TYPE T0* = RECORD i: INTEGER END ;
 END M0.
 
-MODULE M1;      (*no error message*)
+MODULE M1;                                  (*no error message*)
   IMPORT M0;
   TYPE T1* = RECORD (M0.T0) j: INTEGER END ;
   VAR a: M0.T0; b: T1;
 BEGIN a := b
 END M1.
 
-MODULE M2;      (*no error message*)
+MODULE M2;                                  (*no error message*)
   IMPORT M0, M1;
 END M2.
 
-MODULE M3;      (*no error message*)
+MODULE M3;                                  (*no error message*)
   TYPE T3* = POINTER TO R3;
     R3* = RECORD i: INTEGER END ;
 END M3.
 
-MODULE M4;      (*no error message*)
+MODULE M4;                                  (*no error message*)
   IMPORT M3;
   TYPE T4* = POINTER TO R4;
     R4* = RECORD (M3.R3) j: INTEGER END ;
@@ -43,11 +43,11 @@ MODULE A1; IMPORT M1 := M, M := M0; END A1. (*no error message (M imported under
 MODULE A2; IMPORT M0 := M, M := M0; END A2. (*no error message (M imported under alias M0, M then reused as alias for M0)*)
 MODULE A3; IMPORT M0 := M, X := M0; END A3. (*no error message (M imported under alias M0, M0 then imported under alias X)*)
 
-MODULE A4; IMPORT M0, M1; END A4.           (*no error message (M0 explicitly imported and re-imported)*)
-MODULE A5; IMPORT M := M0, M1; END A5.      (*no error message (M0 explicitly imported and re-imported)*)
+MODULE A4; IMPORT M0, M1; END A4.           (*no error message (M0 first explicitly imported, then (only) re-imported) by M1*)
+MODULE A5; IMPORT M := M0, M1; END A5.      (*no error message (M0 first explicitly imported, then (only) re-imported) by M1*)
 
-MODULE A6; IMPORT M1, M0 := M; END A6.      (*ORB1: conflict with re-import; ORB, ORB2: no error message*)
-MODULE A7; IMPORT M0 := M, M1; END A7.      (*ORB1: conflict with alias; ORB, ORB2: no error message*)
+MODULE A6; IMPORT M1, M0 := M; END A6.      (*no error message*)
+MODULE A7; IMPORT M0 := M, M1; END A7.      (*no error message*)
 
 --------------------------- Test suite B --------------------------------------
 
@@ -55,32 +55,41 @@ ORP.Compile @/s ~
 
 MODULE B1;
   IMPORT M1;
-  TYPE T2* = RECORD (M1.T1) ch: CHAR END ;  (*re-imports the type M0.T0*)
+  TYPE T2* = RECORD (M1.T1) ch: CHAR END ;  (*re-imports the type M0.T0, but module M0 remains invisible*)
   VAR a: M1.T1; b: T2;
-    M0: INTEGER;                            (*ORB1: mult def; ORB, ORB2: no error message*)
+    M0: INTEGER;                            (*no error message*)
 BEGIN a := b
 END B1.
 
-MODULE B2;                                  (*no error message*)
-  IMPORT M := M0, M1;
-  VAR a: M.T0; b: M1.T1;
+MODULE B2;
+  IMPORT M1;
+  TYPE T2* = RECORD (M1.T1) ch: CHAR END ;  (*re-imports the type M0.T0, but module M0 remains invisible*)
+    M0 = RECORD x: INTEGER END ;            (*no error message*)
+    T3 = POINTER TO M0;
+  VAR a: M1.T1; b: T2;
 BEGIN a := b
 END B2.
 
 MODULE B3;                                  (*no error message*)
-  IMPORT M := M0, M0 := M1;
-  VAR a: M.T0; b: M0.T1;
+  IMPORT M := M0, M1;
+  VAR a: M.T0; b: M1.T1;
 BEGIN a := b
 END B3.
 
 MODULE B4;                                  (*no error message*)
-  IMPORT Y1 := M0, M1;
-  VAR a: Y1.T0; b: M1.T1;
+  IMPORT M := M0, M0 := M1;
+  VAR a: M.T0; b: M0.T1;
 BEGIN a := b
 END B4.
 
 MODULE B5;                                  (*no error message*)
-  IMPORT D := Display, Oberon;              (*module Oberon re-imports module Display*)
+  IMPORT Y1 := M0, M1;
+  VAR a: Y1.T0; b: M1.T1;
+BEGIN a := b
+END B5.
+
+MODULE B6;                                  (*no error message*)
+  IMPORT D := Display, Oberon;              (*module Display is explicitly imported before it is re-imported by module Oberon*)
   VAR m1: D.FrameMsg; m2: Oberon.InputMsg;
   PROCEDURE Handle(V: D.Frame; VAR M: D.FrameMsg);
   BEGIN
@@ -89,19 +98,19 @@ MODULE B5;                                  (*no error message*)
       D.FrameMsg: m1 := M
     END
   END Handle;
-END B5.
-
-MODULE B6;                                  (*ORB1: conflict with re-import; ORB, ORB2: no error message*)
-  IMPORT M1, M0 := M;
-  VAR a: M0.T0; b: M1.T1;
-BEGIN (*a := b*)                            (*this WOULD be an illegal assignment, because M0.T0 is in fact M.T0*)
 END B6.
 
-MODULE B7;                                  (*ORB1: conflict with alias; ORB, ORB2: no error message*)
-  IMPORT M0 := M, M1;
+MODULE B7;                                  (*no error message*)
+  IMPORT M1, M0 := M;                       (*M1 re-imports M0, but there is no conflict with the alias name M0*)
   VAR a: M0.T0; b: M1.T1;
-BEGIN (*a := b*)                            (*this WOULD be an illegal assignment, because M0.T0 is in fact M.T0*)
+BEGIN (*a := b*)                            (*this, however, WOULD be an illegal assignment, because M0.T0 is in fact M.T0*)
 END B7.
+
+MODULE B8;                                  (*no error mesage*)
+  IMPORT M0 := M, M1;                       (*M1 re-imports M0, but there is no conflict with the alias name M0*)
+  VAR a: M0.T0; b: M1.T1;
+BEGIN (*a := b*)                            (*this, however, WOULD be an illegal assignment, because M0.T0 is in fact M.T0*)
+END B8.
 
 --------------------------- Test suite C ------------------------------------
 
@@ -118,7 +127,7 @@ MODULE C7; IMPORT X := M, M; END C7.         (*mult def*)
 MODULE C8; IMPORT X := M, Y := M; END C8.    (*mult def*)
 MODULE C9; IMPORT M, X := M, Y := M; END C9. (*mult def 2x*)
 
-MODULE C10; IMPORT M1, M0; END C10.          (*ORB1, ORB: invalid import order, ORB2: no error message*)
+MODULE C10; IMPORT M1, M0; END C10.          (*invalid import order*)
 
 --------------------------- Test suite D ------------------------------------
 
@@ -158,7 +167,7 @@ MODULE D5;                                  (*no error message*)
 BEGIN a := b
 END D5.
 
-MODULE D6;                                  (*ORB1, ORB: invalid import order; ORB2: no error message*)
+MODULE D6;                                  (*invalid import order*)
   IMPORT M1, M0;
   VAR a: M0.T0; b: M1.T1;
 BEGIN a := b
@@ -170,9 +179,8 @@ MODULE D7;                                  (*no error message*)
 BEGIN a := b
 END D7.
 
-MODULE D8;                                  (*ORB1, ORB: invalid import order; ORB2: no error message*)
+MODULE D8;                                  (*invalid import order*)
   IMPORT M4, M3;
   VAR a: M3.T3; b: M4.T4;
 BEGIN a := b
 END D8.
-
