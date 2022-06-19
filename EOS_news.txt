@@ -49,3 +49,4 @@
 2022-05-29 ORB - ORB.InType updated (variable last removed)
 2022-06-12 ORB, ORG, ORP - Terminate list of record base types with ORB.noType; this change in the data structure makes the compiler simpler
 2022-06-15 ORB - Set mod.rdo in ORB.ThisModule, simplify ORB.thisimport by using the fact that ORB.thisObj skips over re-imports
+2022-06-19 ORB - Remove unnecessary code in ORB.InType
