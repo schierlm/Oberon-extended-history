@@ -276,7 +276,7 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 21.6.2
           InType(R, thismod, obj.type); obj.lev := -thismod.lev;
           IF class = Const THEN
             IF obj.type.form = Real THEN Files.ReadInt(R, obj.val) ELSE Files.ReadNum(R, obj.val) END
-          ELSIF class = Var THEN Files.ReadNum(R, obj.val); obj.rdo := TRUE	    
+          ELSIF class = Var THEN Files.ReadNum(R, obj.val); obj.rdo := TRUE
           ELSIF obj.type.typobj = NIL THEN obj.type.typobj := obj
           END ;
           obj.next := thismod.dsc; thismod.dsc := obj; Read(R, class)
