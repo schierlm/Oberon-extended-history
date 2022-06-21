@@ -1,4 +1,4 @@
-MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 19.6.22 Extended Oberon*)
+MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 21.6.22 Extended Oberon*)
   IMPORT Files, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
@@ -274,10 +274,10 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 19.6.2
         WHILE class # 0 DO
           NEW(obj); obj.class := class; Files.ReadString(R, obj.name);
           InType(R, thismod, obj.type); obj.lev := -thismod.lev;
-          IF class = Typ THEN obj.type.typobj := obj
-          ELSIF class = Const THEN
+          IF class = Const THEN
             IF obj.type.form = Real THEN Files.ReadInt(R, obj.val) ELSE Files.ReadNum(R, obj.val) END
-          ELSIF class = Var THEN Files.ReadNum(R, obj.val); obj.rdo := TRUE
+          ELSIF class = Var THEN Files.ReadNum(R, obj.val); obj.rdo := TRUE	    
+          ELSIF obj.type.typobj = NIL THEN obj.type.typobj := obj
           END ;
           obj.next := thismod.dsc; thismod.dsc := obj; Read(R, class)
         END

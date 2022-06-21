@@ -50,3 +50,4 @@
 2022-06-12 ORB, ORG, ORP - Terminate list of record base types with ORB.noType; this change in the data structure makes the compiler simpler
 2022-06-15 ORB - Set mod.rdo in ORB.ThisModule, simplify ORB.thisimport by using the fact that ORB.thisObj skips over re-imports
 2022-06-19 ORB - Remove unnecessary code in ORB.InType
+2022-06-21 ORB - Correct ORB.Import for case where module M1 defines M1.T1 to be an alias type of M0.T0 and a client imports both M0 and M1
