@@ -213,9 +213,7 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 21.6.2
       IF form = Pointer THEN InType(R, thismod, t.base); t.size := 4
       ELSIF form = Array THEN InType(R, thismod, t.base); Files.ReadNum(R, t.len); Files.ReadNum(R, t.size)
       ELSIF form = Record THEN InType(R, thismod, t.base); t.dsc := t.base.dsc;
-        Files.ReadNum(R, t.len);  (*TD adr/exno*)
-        Files.ReadNum(R, t.nofpar);  (*ext level*)
-        Files.ReadNum(R, t.size);
+        Files.ReadNum(R, t.len); Files.ReadNum(R, t.nofpar); Files.ReadNum(R, t.size);  (*TD adr exno, ext level, size*)
         Read(R, class);
         WHILE class # 0 DO  (*fields*)
           NEW(fld); fld.class := class; fld.next := t.dsc; t.dsc := fld; Files.ReadString(R, fld.name);
@@ -231,7 +229,8 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 21.6.2
           IF class = Const THEN Files.ReadNum(R, fld.lev) END ;  (*mthno*)
           Read(R, class)
         END
-      ELSIF form IN {Proc, TProc} THEN InType(R, thismod, t.base); t.dsc := NIL; np := 0; Read(R, class);
+      ELSIF form IN {Proc, TProc} THEN InType(R, thismod, t.base); t.dsc := NIL;
+        Read(R, class); np := 0;
         WHILE class # 0 DO  (*parameters*)
           NEW(par); par.class := class; par.next := t.dsc; t.dsc := par; Read(R, readonly); par.rdo := readonly = 1;
           InType(R, thismod, par.type); INC(np); Read(R, class)
