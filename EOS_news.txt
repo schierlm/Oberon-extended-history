@@ -52,4 +52,4 @@
 2022-06-19 ORB - Remove unnecessary code in ORB.InType
 2022-06-21 ORB - Correct ORB.Import for case where module M1 defines M1.T1 to be an alias type of M0.T0 and a client imports both M0 and M1
 2022-06-21 ORB - Use Files.WriteNum and Files.ReadNum for real constants
-2022-07-01 ORP - Modify ORP.selector to enforce the rule that a redefined method must be called from the scope of the overriding method
+2022-07-01 ORP - ORP.selector now checks whether a redefined method is called from the overriding method and whether the receivers are the same
