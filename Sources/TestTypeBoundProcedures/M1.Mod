@@ -1,4 +1,4 @@
-MODULE M1;  (*test type-bound procedures / AP 1.5.21 Extended Oberon*)
+MODULE M1;  (*test type-bound procedures / AP 1.7.22 Extended Oberon*)
   IMPORT M0, Out;
 
   TYPE
@@ -22,18 +22,23 @@ MODULE M1;  (*test type-bound procedures / AP 1.5.21 Extended Oberon*)
   END Method1;
 
   PROCEDURE (VAR rec: Rec1Ext1) Method1P (str: ARRAY OF CHAR; p: LONGINT); (*private*)
-  BEGIN rec.Method1^(str, p)
+  BEGIN
+    (*rec.Method1^(str, p)*)  (*would lead to a "redefined method must be called from overriding method" error*)
+    rec.Method1(str, p)  (*a regular method call is ok*)
   END Method1P;
 
   PROCEDURE (VAR rec: Rec1Ext1) Method2P (str: ARRAY OF CHAR; p: LONGINT); (*private*)
-  BEGIN rec.Method1^(str, p)
+  BEGIN
+    (*rec.Method1^(str, p)*)  (*would lead to a "redefined method must be called from overriding method" error*)
+    rec.Method1(str, p)  (*a regular method call is ok*)
   END Method2P;
 
   PROCEDURE (VAR rec: Rec1Ext1) Method2* (str: ARRAY OF CHAR; p: LONGINT); (*exported*)
   BEGIN Out.String("  Hello from M1.Rec1Ext1.Method2 (overwritten method); str = "); Out.String(str);
     Out.String(", cnt ="); Out.Int(p, 4); Out.String(", rec.x1 ="); Out.Int(rec.x1, 4); INC(rec.x1); Out.Ln;
-    Out.String("  Calling super method M1.Rec1Ext1.Method1^ = M0.Rec1.Method1 with str = Method1"); Out.Ln;
-    rec.Method1^("Method1", p)
+    Out.String("  Calling super method M1.Rec1Ext1.Method2^ = M0.Rec1.Method2 with str = Method2"); Out.Ln;
+    rec.Method2^("Method2", p)  (*calling the redefined method from within the overriding method is ok*)
+    (*rec.Method1^("Method1", p)*)  (*would lead to a "redefined method must be called from overriding method" error*)
   END Method2;
 
   PROCEDURE (ptr: PtrRec1Ext1) Method3* (str: ARRAY OF CHAR; p: LONGINT);
@@ -52,7 +57,7 @@ MODULE M1;  (*test type-bound procedures / AP 1.5.21 Extended Oberon*)
 
   PROCEDURE (VAR rec: Rec1Ext11) Method2a* (str: ARRAY OF CHAR; p: LONGINT);
   BEGIN Out.String("  Hello from M1.Rec1Ext11.Method2a"); Out.Ln
-    (*rec.Method2a^(str, p)*)  (*would lead to "method undefined in base types"* error mesage*)
+    (*rec.Method2a^(str, p)*)  (*would lead to a "method undefined in base types"* error*)
   END Method2a;
 
   PROCEDURE (VAR rec: Rec1Ext11) Method2c* (str: ARRAY OF CHAR; p: LONGINT);  (*another method at the same ext level is ok*)

@@ -1,4 +1,4 @@
-MODULE M3;  (*test type-bound procedures / AP 1.5.21 Extended Oberon*)
+MODULE M3;  (*test type-bound procedures / AP 1.7.22 Extended Oberon*)
   IMPORT Out;
 
   TYPE
@@ -87,9 +87,11 @@ MODULE M3;  (*test type-bound procedures / AP 1.5.21 Extended Oberon*)
     INC(ptr^.x1); ptr.Method1("Method1b", ptr^.x1, B); Out.Ln
   END Go1b;
 
-  (*PROCEDURE Go1r*;  (*would lead to "incompatible receiver" error*)
+  (*
+  PROCEDURE Go1r*;  (*would lead to "incompatible receiver" error*)
   BEGIN INC(rec.x2); rec.Method1("Method1r", rec.x2, B); Out.Ln
-  END Go1r;*)
+  END Go1r;
+  *)
 
   PROCEDURE Go2*;  (*caller AUTOMATICALLY passes the de-referenced ptr^ to the method which accepts a VAR record*)
   BEGIN Out.String("Calling ptr.Method2 with str = Method2"); Out.Ln;
@@ -106,16 +108,20 @@ MODULE M3;  (*test type-bound procedures / AP 1.5.21 Extended Oberon*)
     INC(ptrext.x2); ptrext.Method2("Method2e", ptrext.x2, B); Out.Ln
   END Go2e;
 
-  PROCEDURE Go2s*;  (*super call of a method bound to the base type of an extension) via pointer*)
+  (*the following two super calls would lead to a "redefined method must be called from overriding method" error*)
+  
+  (*
+  PROCEDURE Go2s*;  (*super call of a method bound to the base type of an extension via pointer*)
   BEGIN Out.String("Calling ptrext.Method2 with str = Method2s (super call via pointer)"); Out.Ln;
     INC(ptrext.x2); ptrext.Method2^("Method2s (super call via pointer)", ptrext.x2, B); Out.Ln
   END Go2s;
 
-  PROCEDURE Go2sr*;  (*super call of a method bound to the base type of an extension) via record*)
+  PROCEDURE Go2sr*;  (*super call of a method bound to the base type of an extension via record*)
   BEGIN Out.String("Calling recext.Method2^ with str = Method2s (super call via record)"); Out.Ln;
     recext.x2 := 1; recext.Method2^("Method2s (super call via record)", recext.x2, B); Out.Ln END
   Go2sr;
-
+  *)
+  
   PROCEDURE Go3*;  (*call of a method that is a function procedure*)
     VAR res: INTEGER;
   BEGIN Out.String("Calling ptr.Method3 twice, with str = Method3a and with str = Method3b"); Out.Ln;
@@ -208,8 +214,6 @@ M3.Go1b     # Method1 (caller EXPLICITLY de-references ptr^ BEFORE calling a met
 M3.Go2       # Method2 (caller AUTOMATICALLY passes the de-referenced ptr^ to a method which accepts a VAR record)
 M3.Go2r     # Method2 (a statically declared global record can also be a receiver)
 M3.Go2e     # Method2 (call a method that is bound to a record extension)
-M3.Go2s     # Method2 (super call of a method bound to the base type of an extension) via pointer
-M3.Go2sr     # Method2 (super call of a method bound to the base type of an extension) via record
 
 M3.Go3       # Method3 call (call of a method that is a function procedure)
 

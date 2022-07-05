@@ -154,14 +154,17 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
             IF obj # NIL THEN
               IF obj.type.form = ORB.TProc THEN  (*type-bound procedure*)
                 IF sym = ORS.arrow THEN (*super call*)
-                  ORS.Get(sym); xt := x.type; fld := ORB.FindFld(obj.name, xt);
-                  IF fld # NIL THEN xt := xt.base; fld := NIL;
-                    WHILE (fld = NIL) & (xt # ORB.noType) DO fld := ORB.FindFld(obj.name, xt); xt := xt.base END ;
-                    IF (fld # NIL) & (fld.type.form = ORB.TProc) THEN obj := fld;
-                      CheckReceiver(x, obj); ORG.Method(x, obj, TRUE); DisallowMethods(x.type.base)
-                    ELSE ORS.Mark("method undefined in base types")
+                  IF obj.type.dsc = ORB.topScope.next THEN
+                    ORS.Get(sym); xt := x.type; fld := ORB.FindFld(obj.name, xt);
+                    IF fld # NIL THEN xt := xt.base; fld := NIL;
+                      WHILE (fld = NIL) & (xt # ORB.noType) DO fld := ORB.FindFld(obj.name, xt); xt := xt.base END ;
+                      IF (fld # NIL) & (fld.type.form = ORB.TProc) THEN obj := fld;
+                        CheckReceiver(x, obj); ORG.Method(x, obj, TRUE); DisallowMethods(x.type.base)
+                      ELSE ORS.Mark("method undefined in base types")
+                      END
+                    ELSE ORS.Mark("method undefined at this extension level")
                     END
-                  ELSE ORS.Mark("method undefined at this extension level")
+                  ELSE ORS.Mark("redefined method must be called from overriding method")
                   END
                 ELSE (*method call*) CheckReceiver(x, obj); ORG.Method(x, obj, FALSE)
                 END
