@@ -131,12 +131,35 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     IF ~guard THEN x.type := ORB.boolType END
   END TypeTest;
 
+  PROCEDURE Method(VAR x: ORG.Item; obj: ORB.Object);
+    VAR fld: ORB.Object; xt: ORB.Type;
+  BEGIN
+   IF sym = ORS.arrow THEN (*super call*)
+      IF obj.type.dsc = ORB.topScope.next THEN
+        IF obj.type.dsc = x.obj THEN
+          ORS.Get(sym); xt := x.type; fld := ORB.FindFld(obj.name, xt);
+          IF fld # NIL THEN xt := xt.base; fld := NIL;
+            WHILE (fld = NIL) & (xt # ORB.noType) DO fld := ORB.FindFld(obj.name, xt); xt := xt.base END ;
+            IF (fld # NIL) & (fld.type.form = ORB.TProc) THEN obj := fld;
+              CheckReceiver(x, obj); ORG.Method(x, obj, TRUE); DisallowMethods(x.type.base)
+            ELSE ORS.Mark("method undefined in base types")
+            END
+          ELSE ORS.Mark("method undefined at this extension level")
+          END
+        ELSE ORS.Mark("receiver must be the same as in overriding method")
+        END
+      ELSE ORS.Mark("redefined method must be called from overriding method")
+      END
+    ELSE (*method call*) CheckReceiver(x, obj); ORG.Method(x, obj, FALSE)
+    END
+  END Method;
+	      
   PROCEDURE selector(VAR x: ORG.Item);
-    VAR y: ORG.Item; obj, fld: ORB.Object; xt: ORB.Type;
+    VAR y: ORG.Item; obj: ORB.Object;
   BEGIN
     WHILE (sym = ORS.lbrak) OR (sym = ORS.period) OR (sym = ORS.arrow)
         OR (sym = ORS.lparen) & (x.type.form IN {ORB.Record, ORB.Pointer}) DO
-      IF sym = ORS.lbrak THEN x.obj := NIL;
+      IF sym = ORS.lbrak THEN
         IF x.type.form = ORB.Pointer THEN ORG.DeRef(x); x.type := x.type.base END ;
         REPEAT ORS.Get(sym); expression(y);
           IF x.type.form = ORB.Array THEN
@@ -152,28 +175,8 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
           IF x.type.form = ORB.Record THEN
             obj := ORB.thisfield(x.type); ORS.Get(sym);
             IF obj # NIL THEN
-              IF obj.type.form = ORB.TProc THEN  (*type-bound procedure*)
-                IF sym = ORS.arrow THEN (*super call*)
-                  IF obj.type.dsc = ORB.topScope.next THEN
-                    IF obj.type.dsc = x.obj THEN
-                      ORS.Get(sym); xt := x.type; fld := ORB.FindFld(obj.name, xt);
-                      IF fld # NIL THEN xt := xt.base; fld := NIL;
-                        WHILE (fld = NIL) & (xt # ORB.noType) DO fld := ORB.FindFld(obj.name, xt); xt := xt.base END ;
-                        IF (fld # NIL) & (fld.type.form = ORB.TProc) THEN obj := fld;
-                          CheckReceiver(x, obj); ORG.Method(x, obj, TRUE); DisallowMethods(x.type.base)
-                        ELSE ORS.Mark("method undefined in base types")
-                        END
-                      ELSE ORS.Mark("method undefined at this extension level")
-                      END
-                    ELSE ORS.Mark("receiver must be the same as in overriding method")
-                    END
-                  ELSE ORS.Mark("redefined method must be called from overriding method")
-                  END
-                ELSE (*method call*) CheckReceiver(x, obj); ORG.Method(x, obj, FALSE)
-                END
-              ELSE ORG.Field(x, obj)
-              END ;
-              x.type := obj.type; x.obj := NIL
+              IF obj.type.form = ORB.TProc THEN Method(x, obj) ELSE ORG.Field(x, obj) END ;
+              x.type := obj.type
             ELSE ORS.Mark("undef")
             END
           ELSE ORS.Mark("not a record")
@@ -185,7 +188,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
         IF x.type.form = ORB.Pointer THEN ORG.DeRef(x); x.type := x.type.base
         ELSE ORS.Mark("not a pointer")
         END
-      ELSIF (sym = ORS.lparen) & (x.type.form IN {ORB.Record, ORB.Pointer}) THEN (*type guard*) x.obj := NIL;
+      ELSIF (sym = ORS.lparen) & (x.type.form IN {ORB.Record, ORB.Pointer}) THEN (*type guard*)
         ORS.Get(sym);
         IF sym = ORS.ident THEN
           qualident(obj);
@@ -195,7 +198,8 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
         ELSE ORS.Mark("not an identifier")
         END ;
         Check(ORS.rparen, " ) missing")
-      END
+      END ;
+      x.obj := NIL
     END
   END selector;
 
