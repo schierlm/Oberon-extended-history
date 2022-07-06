@@ -133,10 +133,10 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
 
   PROCEDURE selector(VAR x: ORG.Item);
     VAR y: ORG.Item; obj, fld: ORB.Object; xt: ORB.Type;
-  BEGIN fld := x.obj;
+  BEGIN
     WHILE (sym = ORS.lbrak) OR (sym = ORS.period) OR (sym = ORS.arrow)
-        OR (sym = ORS.lparen) & (x.type.form IN {ORB.Record, ORB.Pointer}) DO x.obj := NIL;
-      IF sym = ORS.lbrak THEN
+        OR (sym = ORS.lparen) & (x.type.form IN {ORB.Record, ORB.Pointer}) DO
+      IF sym = ORS.lbrak THEN x.obj := NIL;
         IF x.type.form = ORB.Pointer THEN ORG.DeRef(x); x.type := x.type.base END ;
         REPEAT ORS.Get(sym); expression(y);
           IF x.type.form = ORB.Array THEN
@@ -155,7 +155,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
               IF obj.type.form = ORB.TProc THEN  (*type-bound procedure*)
                 IF sym = ORS.arrow THEN (*super call*)
                   IF obj.type.dsc = ORB.topScope.next THEN
-                    IF obj.type.dsc = fld THEN
+                    IF obj.type.dsc = x.obj THEN
                       ORS.Get(sym); xt := x.type; fld := ORB.FindFld(obj.name, xt);
                       IF fld # NIL THEN xt := xt.base; fld := NIL;
                         WHILE (fld = NIL) & (xt # ORB.noType) DO fld := ORB.FindFld(obj.name, xt); xt := xt.base END ;
@@ -173,7 +173,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
                 END
               ELSE ORG.Field(x, obj)
               END ;
-              x.type := obj.type
+              x.type := obj.type; x.obj := NIL
             ELSE ORS.Mark("undef")
             END
           ELSE ORS.Mark("not a record")
@@ -185,7 +185,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
         IF x.type.form = ORB.Pointer THEN ORG.DeRef(x); x.type := x.type.base
         ELSE ORS.Mark("not a pointer")
         END
-      ELSIF (sym = ORS.lparen) & (x.type.form IN {ORB.Record, ORB.Pointer}) THEN (*type guard*)
+      ELSIF (sym = ORS.lparen) & (x.type.form IN {ORB.Record, ORB.Pointer}) THEN (*type guard*) x.obj := NIL;
         ORS.Get(sym);
         IF sym = ORS.ident THEN
           qualident(obj);
