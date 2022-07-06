@@ -153,7 +153,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
     ELSE (*method call*) CheckReceiver(x, obj); ORG.Method(x, obj, FALSE)
     END
   END Method;
-	      
+
   PROCEDURE selector(VAR x: ORG.Item);
     VAR y: ORG.Item; obj: ORB.Object;
   BEGIN
