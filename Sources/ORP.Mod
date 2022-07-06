@@ -134,7 +134,7 @@ MODULE ORP; (*N. Wirth 1.7.97 / 8.3.2020  Oberon compiler for RISC in Oberon-07 
   PROCEDURE Method(VAR x: ORG.Item; obj: ORB.Object);
     VAR fld: ORB.Object; xt: ORB.Type;
   BEGIN
-   IF sym = ORS.arrow THEN (*super call*)
+    IF sym = ORS.arrow THEN (*super call*)
       IF obj.type.dsc = ORB.topScope.next THEN
         IF obj.type.dsc = x.obj THEN
           ORS.Get(sym); xt := x.type; fld := ORB.FindFld(obj.name, xt);
