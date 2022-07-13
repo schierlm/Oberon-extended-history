@@ -148,7 +148,7 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 13.7.2
       WHILE (fld # NIL) & (fld.name # id) DO fld := fld.next END ;  (*search id in fields of base types of rec*)
       IF (fld = NIL) OR (fld.class = Const) THEN
         NEW(new); new.name := id; new.class := Const; new.rdo := FALSE; new.dsc := NIL; new.next := bot; mth := new;
-        IF fld = NIL THEN new.lev := NofMethods(rec) ELSE new.lev := fld.lev; redef := fld END ;  (*mthno*)
+        IF fld = NIL THEN new.lev := NofMethods(rec) ELSE new.lev := fld.lev; redef := fld END ;  (*assign mthno*)
         IF rec.dsc = bot THEN rec.dsc := new; UpdateLinks(rec, new, bot) ELSE fld0.next := new END
       ELSE mth := fld; ORS.Mark("mult def")
       END
@@ -213,10 +213,8 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 13.7.2
     ELSE NEW(t); T := t; typtab[ref] := t; t.mno := thismod.lev;
       Read(R, form); t.form := form;
       IF form = Pointer THEN InType(R, thismod, t.base); t.size := 4
-      ELSIF form = Array THEN
-        InType(R, thismod, t.base); Files.ReadNum(R, t.len); Files.ReadNum(R, t.size)
-      ELSIF form = Record THEN
-        InType(R, thismod, t.base);
+      ELSIF form = Array THEN InType(R, thismod, t.base); Files.ReadNum(R, t.len); Files.ReadNum(R, t.size)
+      ELSIF form = Record THEN InType(R, thismod, t.base);
         IF t.base.form = NoTyp THEN t.base := NIL; t.dsc := NIL ELSE t.dsc := t.base.dsc END ;
         Files.ReadNum(R, t.len); Files.ReadNum(R, t.nofpar); Files.ReadNum(R, t.size);  (*TD adr exno, ext level, size*)
         Read(R, class);
@@ -258,9 +256,8 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 13.7.2
   END InType;
 
   PROCEDURE Import*(VAR modid, modid1: ORS.Ident);
-    VAR key: LONGINT; class, k: INTEGER;
+    VAR key: LONGINT; class: INTEGER;
       obj, thismod: Object;
-      t: Type;
       modname, fname: ORS.Ident;
       F: Files.File; R: Files.Rider;
   BEGIN
@@ -276,12 +273,9 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 13.7.2
         WHILE class # 0 DO
           NEW(obj); obj.class := class; Files.ReadString(R, obj.name);
           InType(R, thismod, obj.type); obj.lev := -thismod.lev;
-          IF class = Typ THEN t := obj.type;
-            IF t.typobj = NIL THEN t.typobj := obj END ;
-            Read(R, k);  (*fixup bases of previously declared pointer types*)
-            WHILE k # 0 DO typtab[k].base := t; Read(R, k) END
-          ELSIF class = Const THEN Files.ReadNum(R, obj.val)
+          IF class = Const THEN Files.ReadNum(R, obj.val)
           ELSIF class = Var THEN Files.ReadNum(R, obj.val); obj.rdo := TRUE
+          ELSIF obj.type.typobj = NIL THEN obj.type.typobj := obj
           END ;
           obj.next := thismod.dsc; thismod.dsc := obj; Read(R, class)
         END
@@ -366,7 +360,7 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 13.7.2
 
   PROCEDURE Export*(VAR modid: ORS.Ident; VAR newSF: BOOLEAN; VAR key: LONGINT);
     VAR x, sum, oldkey: LONGINT;
-      obj, obj0: Object;
+      obj: Object;
       filename: ORS.Ident;
       F, F1: Files.File; R, R1: Files.Rider;
   BEGIN Ref := TProc + 1; MakeFileName(filename, modid, ".smb");
@@ -379,16 +373,7 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 13.7.2
       IF obj.expo THEN
         Write(R, obj.class); Files.WriteString(R, obj.name);
         OutType(R, obj.type);
-        IF obj.class = Typ THEN
-          IF obj.type.form = Record THEN
-            obj0 := topScope.next;  (*check whether this is base of previously declared pointer types*)
-            WHILE obj0 # obj DO
-              IF (obj0.type.form = Pointer) & (obj0.type.base = obj.type) & (obj0.type.ref > 0) THEN Write(R, obj0.type.ref) END ;
-              obj0 := obj0.next
-            END
-          END ;
-          Write(R, 0)
-        ELSIF obj.class = Const THEN
+        IF obj.class = Const THEN
           IF obj.type.form = Proc THEN Files.WriteNum(R, obj.exno)
           ELSIF obj.type.form = String THEN Files.WriteNum(R, obj.exno + obj.val DIV C20 (*len*) * C20)
           ELSE Files.WriteNum(R, obj.val)

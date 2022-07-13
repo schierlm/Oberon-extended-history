@@ -50,5 +50,5 @@
 2022-06-15 ORB - Set mod.rdo in ORB.ThisModule, simplify ORB.thisimport by using the fact that ORB.thisObj skips over re-imports
 2022-06-21 ORB - Correct ORB.Import for case where module M1 defines M1.T1 to be an alias type of M0.T0 and a client imports both M0 and M1
 2022-06-21 ORB - Use Files.WriteNum and Files.ReadNum for real constants
-2022-07-01 ORP - ORP.selector now checks whether a redefined method is called from the overriding method and whether the receivers are the same
-2022-07-13 ORB, ORG, ORP, ORTool - Re-introduce fixups for types in symbol files
+2022-07-01 ORP - ORP.Method now checks whether a redefined method is called from the overriding method and whether the receivers are the same
+
