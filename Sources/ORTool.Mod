@@ -1,4 +1,4 @@
-MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 22.5.22 Extended Oberon*)
+MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 13.7.22 Extended Oberon*)
   IMPORT SYSTEM, Files, Modules, Texts, Oberon, ORB;
   CONST TAB = 09X;  (*copied from Input for use as cross development tool*)
   VAR W: Texts.Writer;
@@ -80,7 +80,15 @@ MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 22.5.22 Extended Oberon*)
           WHILE class # 0 DO
             Texts.WriteInt(W, class, 4); Files.ReadString(R, name); Texts.Write(W, " "); Texts.WriteString(W, name);
             ReadType(R);
-            IF (class = ORB.Const) OR (class = ORB.Var) THEN Files.ReadNum(R, k); Texts.WriteInt(W, k, 5) END ;
+            IF class = ORB.Typ THEN
+              Texts.Write(W, "("); Read(R, class);
+              WHILE class # 0 DO  (*pointer base fixup*)
+                Texts.WriteString(W, " ->"); Texts.WriteInt(W, class, 4); Read(R, class)
+              END ;
+              Texts.Write(W, ")")
+            ELSIF (class = ORB.Const) OR (class = ORB.Var) THEN
+              Files.ReadNum(R, k); Texts.WriteInt(W, k, 5);  (*Reals, Strings!*)
+            END ;
             Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
             Read(R, class)
           END
@@ -289,7 +297,7 @@ MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 22.5.22 Extended Oberon*)
      END
   END DecMod;
 
-BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "ORTool 18.2.2013 / AP 22.5.22");
+BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "ORTool 18.2.2013 / AP 13.7.22");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf);
   mnemo0[0] := "MOV";
   mnemo0[1] := "LSL";

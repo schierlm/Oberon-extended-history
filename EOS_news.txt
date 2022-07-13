@@ -47,9 +47,8 @@
 2022-05-01 Modules, ORL - Renamed fields data and code to var and prg in module descriptors
 2022-05-22 ORB, ORTool - Streamlined symbol files by removing unnecessary fixup code in procedures Import and Export
 2022-05-29 ORB - ORB.InType updated (variable last removed)
-2022-06-12 ORB, ORG, ORP - Terminate list of record base types with ORB.noType; this change in the data structure makes the compiler simpler
 2022-06-15 ORB - Set mod.rdo in ORB.ThisModule, simplify ORB.thisimport by using the fact that ORB.thisObj skips over re-imports
-2022-06-19 ORB - Remove unnecessary code in ORB.InType
 2022-06-21 ORB - Correct ORB.Import for case where module M1 defines M1.T1 to be an alias type of M0.T0 and a client imports both M0 and M1
 2022-06-21 ORB - Use Files.WriteNum and Files.ReadNum for real constants
 2022-07-01 ORP - ORP.selector now checks whether a redefined method is called from the overriding method and whether the receivers are the same
+2022-07-13 ORB, ORG, ORP, ORTool - Re-introduce fixups for types in symbol files
