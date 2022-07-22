@@ -51,4 +51,4 @@
 2022-06-21 ORB - Correct ORB.Import for case where module M1 defines M1.T1 to be an alias type of M0.T0 and a client imports both M0 and M1
 2022-06-21 ORB - Use Files.WriteNum and Files.ReadNum for real constants
 2022-07-01 ORP - ORP.Method now checks whether a redefined method is called from the overriding method and whether the receivers are the same
-
+2022-07-22 ORB - Eliminate the invalid import order restriction (allow explicit import of a module after types from it have previously been re-imported)
