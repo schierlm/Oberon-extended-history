@@ -280,9 +280,9 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 1.8.22
           IF class = Const THEN Files.ReadNum(R, obj.val)
           ELSIF class = Var THEN Files.ReadNum(R, obj.val); obj.rdo := TRUE
           ELSIF obj.type.typobj = NIL THEN (*alias type*) obj.type.typobj := obj
-          ELSE reimported := obj.type.typobj.expo
+          ELSE reimported := obj.type.typobj.expo; obj.type.typobj.expo := FALSE
           END ;
-          IF ~reimported THEN obj.next := thismod.dsc; thismod.dsc := obj; obj.expo := FALSE END ;
+          IF ~reimported THEN obj.next := thismod.dsc; thismod.dsc := obj END ;
           Read(R, class)
         END
       ELSE ORS.Mark("import not available")
