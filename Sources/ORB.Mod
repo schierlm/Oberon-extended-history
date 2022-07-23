@@ -277,13 +277,13 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 1.8.22
         WHILE class # 0 DO
           NEW(obj); obj.class := class; Files.ReadString(R, obj.name);
           InType(R, thismod, obj.type); obj.lev := -thismod.lev;
-          IF class = Const THEN Files.ReadNum(R, obj.val); obj0 := bot
-          ELSIF class = Var THEN Files.ReadNum(R, obj.val); obj.rdo := TRUE; obj0 := bot
-          ELSE obj0 := thismod.dsc;
-            WHILE (obj0 # bot) & (obj0.name # obj.name) DO obj0 := obj0.next END ;
+          IF class = Const THEN Files.ReadNum(R, obj.val); obj0 := NIL
+          ELSIF class = Var THEN Files.ReadNum(R, obj.val); obj.rdo := TRUE; obj0 := NIL
+          ELSE obj0 := bot;
+            WHILE (obj0 # NIL) & (obj0.name # obj.name) DO obj0 := obj0.next END ;
             IF obj.type.typobj = NIL THEN obj.type.typobj := obj END
           END ;
-          IF obj0 = bot THEN obj.next := thismod.dsc; thismod.dsc := obj END ;
+          IF obj0 = NIL THEN obj.next := thismod.dsc; thismod.dsc := obj END ;
           Read(R, class)
         END
       ELSE ORS.Mark("import not available")
