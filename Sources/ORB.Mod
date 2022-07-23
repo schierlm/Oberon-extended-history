@@ -269,7 +269,7 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 1.8.22
         Files.Set(R, F, 0); Files.ReadInt(R, key); Files.ReadInt(R, key); Files.ReadString(R, modname);
         thismod := ThisModule(modid, modid1, TRUE, key);
         FOR class := TProc+1 TO maxTypTab-1 DO typtab[class] := NIL END ;
-        obj := thismod.dsc;  (*pre-populate typtab with previously re-imported types*)
+        obj := thismod.dsc;  (*initialize typtab with previously re-imported types*)
         WHILE obj # NIL DO typtab[obj.type.orgref] := obj.type; obj.expo := TRUE; obj := obj.next END ;
         Read(R, class); (*version key*)
         IF class # versionkey THEN ORS.Mark("wrong version") END ;
