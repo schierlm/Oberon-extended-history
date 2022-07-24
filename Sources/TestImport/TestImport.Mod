@@ -157,10 +157,6 @@ MODULE D4;                                  (*mult def*)
 BEGIN a := b; c := b
 END D4.
 
---------------------------- Test suite E ------------------------------------
-
-ORP.Compile @/s ~
-
 MODULE D5;                                  (*no error message*)
   IMPORT M0, M1;
   VAR a: M0.T0; b: M1.T1;
