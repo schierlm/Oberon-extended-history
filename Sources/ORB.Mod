@@ -257,8 +257,8 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 1.8.22
   END InType;
 
   PROCEDURE Import*(VAR modid, modid1: ORS.Ident);
-    VAR key: LONGINT; class: INTEGER; reimported: BOOLEAN;
-      obj, thismod: Object;
+    VAR key: LONGINT; class: INTEGER;
+      obj, obj0, bot, thismod: Object;
       modname, fname: ORS.Ident;
       F: Files.File; R: Files.Rider;
   BEGIN
@@ -267,22 +267,23 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 1.8.22
     ELSE MakeFileName(fname, modid1, ".smb"); F := Files.Old(fname);
       IF F # NIL THEN
         Files.Set(R, F, 0); Files.ReadInt(R, key); Files.ReadInt(R, key); Files.ReadString(R, modname);
-        thismod := ThisModule(modid, modid1, TRUE, key);
+        thismod := ThisModule(modid, modid1, TRUE, key); bot := thismod.dsc;
         FOR class := TProc+1 TO maxTypTab-1 DO typtab[class] := NIL END ;
-        obj := thismod.dsc;  (*initialize typtab with previously re-imported types*)
-        WHILE obj # NIL DO typtab[obj.type.orgref] := obj.type; obj.expo := TRUE; obj := obj.next END ;
+        obj := bot;  (*initialize typtab with previously re-imported types*)
+        WHILE obj # NIL DO typtab[obj.type.orgref] := obj.type; obj := obj.next END ;
         Read(R, class); (*version key*)
         IF class # versionkey THEN ORS.Mark("wrong version") END ;
         Read(R, class);
         WHILE class # 0 DO
           NEW(obj); obj.class := class; Files.ReadString(R, obj.name);
-          InType(R, thismod, obj.type); obj.lev := -thismod.lev; reimported := FALSE;
-          IF class = Const THEN Files.ReadNum(R, obj.val)
-          ELSIF class = Var THEN Files.ReadNum(R, obj.val); obj.rdo := TRUE
-          ELSIF obj.type.typobj = NIL THEN (*alias*) obj.type.typobj := obj
-          ELSE reimported := obj.type.typobj.expo
+          InType(R, thismod, obj.type); obj.lev := -thismod.lev;
+          IF class = Const THEN Files.ReadNum(R, obj.val); obj0 := NIL
+          ELSIF class = Var THEN Files.ReadNum(R, obj.val); obj.rdo := TRUE; obj0 := NIL
+          ELSE obj0 := bot;
+            WHILE (obj0 # NIL) & (obj0.name # obj.name) DO obj0 := obj0.next END ;
+            IF obj.type.typobj = NIL THEN obj.type.typobj := obj END
           END ;
-          IF reimported THEN obj.type.typobj.expo := FALSE ELSE obj.next := thismod.dsc; thismod.dsc := obj END ;
+          IF obj0 = NIL THEN obj.next := thismod.dsc; thismod.dsc := obj END ;
           Read(R, class)
         END
       ELSE ORS.Mark("import not available")
