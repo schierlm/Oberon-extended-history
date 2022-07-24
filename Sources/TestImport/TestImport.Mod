@@ -127,7 +127,7 @@ MODULE C7; IMPORT X := M, M; END C7.         (*mult def*)
 MODULE C8; IMPORT X := M, Y := M; END C8.    (*mult def*)
 MODULE C9; IMPORT M, X := M, Y := M; END C9. (*mult def 2x*)
 
-MODULE C10; IMPORT M1, M0; END C10.          (*invalid import order*)
+MODULE C10; IMPORT M1, M0; END C10.          (*invalid import order in Variant 1, no error message in Variant 2*)
 
 --------------------------- Test suite D ------------------------------------
 
@@ -167,7 +167,7 @@ MODULE D5;                                  (*no error message*)
 BEGIN a := b
 END D5.
 
-MODULE D6;                                  (*invalid import order*)
+MODULE D6;                                  (*invalid import order in Variant 1, no error message in Variant 2*)
   IMPORT M1, M0;
   VAR a: M0.T0; b: M1.T1;
 BEGIN a := b
@@ -179,8 +179,29 @@ MODULE D7;                                  (*no error message*)
 BEGIN a := b
 END D7.
 
-MODULE D8;                                  (*invalid import order*)
+MODULE D8;                                  (*invalid import order in Variant 1, no error message in Variant 2*)
   IMPORT M4, M3;
   VAR a: M3.T3; b: M4.T4;
 BEGIN a := b
 END D8.
+
+
+--------------------------- Test suite E ------------------------------------
+
+ORP.Compile @/s ~
+
+MODULE E0;
+ TYPE A* = RECORD i: INTEGER END ;
+   B* = A;
+END E0.
+
+MODULE E1;
+  IMPORT E0;
+  VAR a*: E0.A;  (*re-exports E0.A, but not E0.B*)
+END E1.
+
+MODULE E2;
+  IMPORT E1, E0;  (*E1 re-imports E0.A*)
+  VAR a*: E0.A; b*: E0.B;
+BEGIN a := b
+END E2.
