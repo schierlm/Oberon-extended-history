@@ -40,8 +40,7 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 1.8.22
       len*: LONGINT;  (*for arrays, len < 0 => open array; for records: adr of descriptor*)
       dsc*, typobj*: Object;
       base*: Type;  (*for arrays, records, pointers*)
-      size*: LONGINT;  (*in bytes; always multiple of 4, except for Byte, Bool and Char*)
-      reimport: BOOLEAN
+      size*: LONGINT  (*in bytes; always multiple of 4, except for Byte, Bool and Char*)
     END ;
 
   (* Object classes and the meaning of "val":
@@ -271,7 +270,7 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 1.8.22
         thismod := ThisModule(modid, modid1, TRUE, key);
         FOR class := TProc+1 TO maxTypTab-1 DO typtab[class] := NIL END ;
         obj := thismod.dsc;  (*initialize typtab with previously re-imported types*)
-        WHILE obj # NIL DO obj.type.reimport := TRUE; typtab[obj.type.orgref] := obj.type; obj := obj.next END ;
+        WHILE obj # NIL DO obj.type.mno := -obj.type.mno; typtab[obj.type.orgref] := obj.type; obj := obj.next END ;
         Read(R, class); (*version key*)
         IF class # versionkey THEN ORS.Mark("wrong version") END ;
         Read(R, class);
@@ -282,7 +281,7 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 1.8.22
           ELSIF class = Var THEN Files.ReadNum(R, obj.val); obj.rdo := TRUE
           ELSIF obj.type.typobj = NIL THEN obj.type.typobj := obj
           END ;
-          IF obj.type.reimport THEN obj.type.reimport := FALSE ELSE obj.next := thismod.dsc; thismod.dsc := obj END ;
+          IF obj.type.mno < 0 THEN obj.type.mno := -obj.type.mno ELSE obj.next := thismod.dsc; thismod.dsc := obj END ;
           Read(R, class)
         END
       ELSE ORS.Mark("import not available")

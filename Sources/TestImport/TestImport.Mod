@@ -53,18 +53,18 @@ MODULE A7; IMPORT M0 := M, M1; END A7.      (*no error message*)
 
 ORP.Compile @/s ~
 
-MODULE B1;
+MODULE B1;                                  (*no error message*)
   IMPORT M1;
   TYPE T2* = RECORD (M1.T1) ch: CHAR END ;  (*re-imports the type M0.T0, but module M0 remains invisible*)
   VAR a: M1.T1; b: T2;
-    M0: INTEGER;                            (*no error message*)
+    M0: INTEGER;
 BEGIN a := b
 END B1.
 
-MODULE B2;
+MODULE B2;                                  (*no error message*)
   IMPORT M1;
   TYPE T2* = RECORD (M1.T1) ch: CHAR END ;  (*re-imports the type M0.T0, but module M0 remains invisible*)
-    M0 = RECORD x: INTEGER END ;            (*no error message*)
+    M0 = RECORD x: INTEGER END ;
     T3 = POINTER TO M0;
   VAR a: M1.T1; b: T2;
 BEGIN a := b
@@ -112,92 +112,94 @@ MODULE B8;                                  (*no error mesage*)
 BEGIN (*a := b*)                            (*this, however, WOULD be an illegal assignment, because M0.T0 is in fact M.T0*)
 END B8.
 
+
 --------------------------- Test suite C ------------------------------------
 
 ORP.Compile @/s ~
 
-MODULE C1; IMPORT M, M; END C1.              (*mult def*)
-MODULE C2; IMPORT M, M := M0; END C2.        (*mult def*)
-MODULE C3; IMPORT M := M0, M; END C3.        (*mult def*)
-MODULE C4; IMPORT M := M0, M := M0; END C4.  (*mult def*)
-MODULE C5; IMPORT X := M, X := M0; END C5.   (*mult def*)
+MODULE C1;                                  (*no error message*)
+  IMPORT M0, M1;
+  VAR a: M0.T0; b: M1.T1;
+BEGIN a := b
+END C1.
 
-MODULE C6; IMPORT M, X := M; END C6.         (*mult def*)
-MODULE C7; IMPORT X := M, M; END C7.         (*mult def*)
-MODULE C8; IMPORT X := M, Y := M; END C8.    (*mult def*)
-MODULE C9; IMPORT M, X := M, Y := M; END C9. (*mult def 2x*)
+MODULE C2;                                  (*no error message*)
+  IMPORT M1, M0;                            (*M0 is first-reimported by M1, then M0 is xexplicitly imported*)
+  VAR a: M0.T0; b: M1.T1;
+BEGIN a := b
+END C2.
 
-MODULE C10; IMPORT M1, M0; END C10.          (*invalid import order in Variant 1, no error message in Variant 2*)
+MODULE C3;                                  (*no error message*)
+  IMPORT M3, M4;
+  VAR a: M3.T3; b: M4.T4;
+BEGIN a := b
+END C3.
+
+MODULE C4;                                  (*no error message*)
+  IMPORT M4, M3;                            (*M4 is first-reimported by M4, then M3 is xexplicitly imported*)
+  VAR a: M3.T3; b: M4.T4;
+BEGIN a := b
+END C4.
 
 --------------------------- Test suite D ------------------------------------
 
 ORP.Compile @/s ~
 
-MODULE D1;                                  (*mult def*)
+MODULE D0;                                  (*no error message*)
+ TYPE A* = RECORD i: INTEGER END ;
+   B* = A;
+END D0.
+
+MODULE D1;                                  (*no error message*)
+  IMPORT D0;
+  VAR a*: D0.A;                             (*re-exports E0.A, but not E0.B*)
+END D1.
+
+MODULE D2;                                  (*no error message*)
+  IMPORT D1, D0;                            (*E1 re-imports E0.A*)
+  VAR a*: D0.A; b*: D0.B;
+BEGIN a := b
+END D2.
+
+--------------------------- Test suite E (should produce error messages) ------------------------------------
+
+ORP.Compile @/s ~
+
+MODULE E1; IMPORT M, M; END E1.              (*mult def*)
+MODULE E2; IMPORT M, M := M0; END E2.        (*mult def*)
+MODULE E3; IMPORT M := M0, M; END E3.        (*mult def*)
+MODULE E4; IMPORT M := M0, M := M0; END E4.  (*mult def*)
+MODULE E5; IMPORT X := M, X := M0; END E5.   (*mult def*)
+
+MODULE E6; IMPORT M, X := M; END E6.         (*mult def*)
+MODULE E7; IMPORT X := M, M; END E7.         (*mult def*)
+MODULE E8; IMPORT X := M, Y := M; END E8.    (*mult def*)
+MODULE E9; IMPORT M, X := M, Y := M; END E9. (*mult def 2x*)
+
+--------------------------- Test suite F (should produce error messages) ------------------------------------
+
+ORP.Compile @/s ~
+
+MODULE F1;                                  (*mult def*)
   IMPORT M := M0, M0;                       (*because a module M0 is imported under *two* different names M and M0*)
   VAR a: M.T0; b: M0.T0;
 BEGIN a := b
-END D1.
+END F1.
 
-MODULE D2;                                  (*mult def*)
+MODULE F2;                                  (*mult def*)
   IMPORT M := M0, M2, M;                    (*because the name M is used twice, once as an alias, once as a module name*)
   TYPE T3* = RECORD (M2.T2) ch: CHAR END ;
   VAR a: M2.T2; b: T3; c: M.T0;
 BEGIN a := b; c := b
-END D2.
+END F2.
 
-MODULE D3;                                  (*mult def*)
+MODULE F3;                                  (*mult def*)
   IMPORT M := M0, M := M2;                  (*because the name M is used twice as an alias*)
-END D3.
+END F3.
 
-MODULE D4;                                  (*mult def*)
+MODULE F4;                                  (*mult def*)
   IMPORT M, M := M0, M2;                    (*because the name M is used twice, once as an alias, once as a module name*)
   TYPE T3* = RECORD (M2.T2) ch: CHAR END ;
   VAR a: M2.T2; b: T3; c: M.T0;
 BEGIN a := b; c := b
-END D4.
-
-MODULE D5;                                  (*no error message*)
-  IMPORT M0, M1;
-  VAR a: M0.T0; b: M1.T1;
-BEGIN a := b
-END D5.
-
-MODULE D6;                                  (*invalid import order in Variant 1, no error message in Variant 2*)
-  IMPORT M1, M0;
-  VAR a: M0.T0; b: M1.T1;
-BEGIN a := b
-END D6.
-
-MODULE D7;                                  (*no error message*)
-  IMPORT M3, M4;
-  VAR a: M3.T3; b: M4.T4;
-BEGIN a := b
-END D7.
-
-MODULE D8;                                  (*invalid import order in Variant 1, no error message in Variant 2*)
-  IMPORT M4, M3;
-  VAR a: M3.T3; b: M4.T4;
-BEGIN a := b
-END D8.
-
-
---------------------------- Test suite E ------------------------------------
-
-ORP.Compile @/s ~
-
-MODULE E0;
- TYPE A* = RECORD i: INTEGER END ;
-   B* = A;
-END E0.
-
-MODULE E1;
-  IMPORT E0;
-  VAR a*: E0.A;  (*re-exports E0.A, but not E0.B*)
-END E1.
-
-MODULE E2;
-  IMPORT E1, E0;  (*E1 re-imports E0.A*)
-  VAR a*: E0.A; b*: E0.B;
-BEGIN a := b
-END E2.
+END F4.
