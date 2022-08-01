@@ -235,13 +235,13 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 1.8.22
           Read(R, class)
         END ;
         IF last = NIL THEN t.dsc := obj ELSE last.next := obj END
-      ELSIF form IN {Proc, TProc} THEN InType(R, thismod, t.base); t.dsc := NIL;
-        Read(R, class); np := 0;
+      ELSIF form IN {Proc, TProc} THEN InType(R, thismod, t.base);
+        obj := NIL; np := 0; Read(R, class);
         WHILE class # 0 DO  (*parameters*)
-          NEW(par); par.class := class; par.next := t.dsc; t.dsc := par; Read(R, readonly); par.rdo := readonly = 1;
-          InType(R, thismod, par.type); INC(np); Read(R, class)
+          NEW(par); par.class := class; Read(R, readonly); par.rdo := readonly = 1;
+          InType(R, thismod, par.type); par.next := obj; obj := par; INC(np); Read(R, class)
         END ;
-        t.nofpar := np; t.size := 4
+        t.dsc := obj; t.nofpar := np; t.size := 4
       END ;
       Files.ReadString(R, modname);
       IF modname[0] #  0X THEN  (*re-import*)
