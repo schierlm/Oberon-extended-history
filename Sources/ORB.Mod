@@ -221,7 +221,7 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 7.8.22
           IF obj # NIL THEN T := obj.type  (*type object found in object list of mod*)
           ELSE (*insert new type object in object list of mod*)
             NEW(obj); obj.name := name; obj.class := Typ; obj.next := mod.dsc; mod.dsc := obj; obj.type := t;
-            t.mno := mod.lev; t.typobj := obj; t.orgref := orgref; T := t
+            t.mno := mod.lev; t.typobj := obj; t.orgref := orgref
           END
         ELSIF typtab[ref] # NIL THEN (*type was previously re-imported*) T := typtab[ref]
         END ;
