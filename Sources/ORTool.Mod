@@ -1,4 +1,4 @@
-MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 1.8.22 Extended Oberon*)
+MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 7.8.22 Extended Oberon*)
   IMPORT SYSTEM, Files, Modules, Texts, Oberon, ORB;
   CONST TAB = 09X;  (*copied from Input for use as cross development tool*)
   VAR W: Texts.Writer;
@@ -13,13 +13,21 @@ MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 1.8.22 Extended Oberon*)
 
   PROCEDURE ReadType(VAR R: Files.Rider);
     VAR key, len, size, off: INTEGER;
-      ref, class, form, readonly: INTEGER;
+      ref, orgref, class, form, readonly: INTEGER;
       name, modname: ARRAY 32 OF CHAR;
   BEGIN INC(typlev); Read(R, ref); Texts.Write(W, " "); Texts.WriteLn(W);
     FOR off := 0 TO typlev DO Texts.Write(W, 09X) END ;
     Texts.Write(W, "[");
     IF ref < 0 THEN Texts.Write(W, "^"); Texts.WriteInt(W, -ref, 1)
     ELSE Texts.WriteInt(W, ref, 1);
+      IF ref > 0 THEN  (*first occurence*)
+        Files.ReadString(R, modname);
+        IF modname[0] # 0X THEN
+          Files.ReadInt(R, key); Files.ReadString(R, name); Read(R, orgref);
+          Texts.Write(W, " "); Texts.WriteString(W, modname); Texts.Write(W, "."); Texts.WriteString(W, name);
+          Texts.WriteHex(W, key)
+        END
+      END ;
       Read(R, form); Texts.WriteString(W, "  form = "); Texts.WriteInt(W, form, 1);
       IF form = ORB.Pointer THEN ReadType(R)
       ELSIF form = ORB.Array THEN
@@ -50,12 +58,6 @@ MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 1.8.22 Extended Oberon*)
           ReadType(R); Read(R, class)
         END ;
         Texts.Write(W, ")")
-      END ;
-      Files.ReadString(R, modname);
-      IF modname[0] # 0X THEN
-        Files.ReadInt(R, key); Files.ReadString(R, name); Read(R, class);
-        Texts.Write(W, " "); Texts.WriteString(W, modname); Texts.Write(W, "."); Texts.WriteString(W, name);
-        Texts.WriteHex(W, key)
       END
     END ;
     Texts.Write(W, "]"); DEC(typlev)

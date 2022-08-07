@@ -11,12 +11,12 @@ Features
 * Smooth line scrolling with variable line spaces
 * Multiple logical displays
 * Improved decoder tools
-* Improved import/export, e.g. import any number of modules
+* Improved import/export, e.g. import any number of modules, import modules in any order
 * Simple batch execution facility
 
-**Last release:** 1.8.2022 / Extended-Oberon-1.26
+**Last release:** 7.8.2022 / Extended-Oberon-1.27
 
-**Last update:** 1.8.2022
+**Last update:** 7.8.2022
 
 The file [**S3RISCinstall.tar.gz**](Documentation/S3RISCinstall.tar.gz) always reflects the *latest* version of Extended Oberon, as described in the file [**EOS_news.txt**](EOS_news.txt).
 

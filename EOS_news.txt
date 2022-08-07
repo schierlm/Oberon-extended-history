@@ -52,3 +52,4 @@
 2022-07-01 ORP - ORP.Method now checks whether a redefined method is called from the overriding method and whether the receivers are the same
 2022-07-22 ORB - Eliminate the invalid import order restriction (allow explicit import of a module after types from it have previously been re-imported)
 2022-08-01 ORB - Re-introduce fix in ORB.InType (variable 'last') to handle cyclic references correctly
+2022-08-07 ORB - Write name and key of a re-imported module before instead of after the type description in the symbol file
