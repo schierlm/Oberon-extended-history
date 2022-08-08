@@ -211,7 +211,7 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 7.8.22
   BEGIN Read(R, ref);
     IF ref < 0 THEN T := typtab[-ref]  (*already read*)
     ELSE NEW(t); T := t; t.mno := thismod.lev; t.orgref := ref;
-      IF ref > 0 THEN  (*first occurence*)
+      IF ref > 0 THEN  (*named type*)
         Files.ReadString(R, modname);
         IF modname[0] #  0X THEN  (*re-import*)
           Files.ReadInt(R, key); Files.ReadString(R, name); Read(R, orgref);
