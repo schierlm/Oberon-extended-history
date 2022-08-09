@@ -20,7 +20,7 @@ MODULE ORTool;  (*NW 18.2.2013 / 12.4.2017 / AP 7.8.22 Extended Oberon*)
     Texts.Write(W, "[");
     IF ref < 0 THEN Texts.Write(W, "^"); Texts.WriteInt(W, -ref, 1)
     ELSE Texts.WriteInt(W, ref, 1);
-      IF ref > 0 THEN  (*first occurence*)
+      IF ref > 0 THEN  (*named type*)
         Files.ReadString(R, modname);
         IF modname[0] # 0X THEN
           Files.ReadInt(R, key); Files.ReadString(R, name); Read(R, orgref);
