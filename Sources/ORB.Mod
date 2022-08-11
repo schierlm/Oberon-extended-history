@@ -179,7 +179,7 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 11.8.2
     VAR mod: Module; obj, obj1, obj2: Object;
   BEGIN obj1 := topScope; obj := obj1.next;  (*search for module*)
     WHILE (obj # NIL) & (obj(Module).orgname # orgname) DO obj1 := obj; obj := obj1.next END ;
-    IF decl & ((obj = NIL) OR ~obj.rdo) THEN obj2 := topScope.next;  (*search for alias*)
+    IF decl THEN obj2 := topScope.next;  (*search for alias*)
       WHILE (obj2 # NIL) & ((obj2.name # name) OR ~obj2.rdo) DO obj2 := obj2.next END ;
       IF obj2 # NIL THEN ORS.Mark("mult def") END
     END ;
