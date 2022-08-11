@@ -1,4 +1,4 @@
-MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 7.8.22 Extended Oberon*)
+MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 11.8.22 Extended Oberon*)
   IMPORT Files, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
@@ -176,20 +176,18 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 7.8.22
   END MakeFileName;
 
   PROCEDURE ThisModule(name, orgname: ORS.Ident; decl: BOOLEAN; key: LONGINT): Object;
-    VAR mod: Module; obj, obj1: Object;
+    VAR mod: Module; obj, obj1, obj2: Object;
   BEGIN obj1 := topScope; obj := obj1.next;  (*search for module*)
     WHILE (obj # NIL) & (obj(Module).orgname # orgname) DO obj1 := obj; obj := obj1.next END ;
-    IF obj = NIL THEN (*new module*)
-      IF decl THEN obj := topScope.next;  (*search for alias*)
-        WHILE (obj # NIL) & ((obj.name # name) OR ~obj.rdo) DO obj := obj.next END ;
-        IF obj # NIL THEN ORS.Mark("mult def") END
-      END ;
-      IF obj = NIL THEN (*insert new module*)
-        NEW(mod); mod.class := Mod; mod.rdo := decl;
-        mod.name := name; mod.orgname := orgname; mod.val := key;
-        mod.lev := nofmod; INC(nofmod); mod.type := noType; mod.dsc := NIL; mod.next := NIL;
-        obj1.next := mod; obj := mod
-      END
+    IF decl & ((obj = NIL) OR ~obj.rdo) THEN obj2 := topScope.next;  (*search for alias*)
+      WHILE (obj2 # NIL) & ((obj2.name # name) OR ~obj2.rdo) DO obj2 := obj2.next END ;
+      IF obj2 # NIL THEN ORS.Mark("mult def") END
+    END ;
+    IF obj = NIL THEN (*insert new module*)
+      NEW(mod); mod.class := Mod; mod.rdo := decl;
+      mod.name := name; mod.orgname := orgname; mod.val := key;
+      mod.lev := nofmod; INC(nofmod); mod.type := noType; mod.dsc := NIL; mod.next := NIL;
+      obj1.next := mod; obj := mod
     ELSIF decl THEN (*module already present, explicit import by declaration*)
       IF obj.rdo THEN ORS.Mark("mult def") ELSE obj.name := name; obj.rdo := TRUE END
     END ;

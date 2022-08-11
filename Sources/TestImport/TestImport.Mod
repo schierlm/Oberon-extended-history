@@ -176,6 +176,11 @@ MODULE E7; IMPORT X := M, M; END E7.         (*mult def*)
 MODULE E8; IMPORT X := M, Y := M; END E8.    (*mult def*)
 MODULE E9; IMPORT M, X := M, Y := M; END E9. (*mult def 2x*)
 
+MODULE E10;                                 (*mult def*)
+  IMPORT M1, M0 := M, M0;                   (*M1 re-imports M0, initially no conflict with the alias name M0, but then conflict*)
+  VAR a: M0.T0; b: M1.T1;                   (*the direct import of M0 turns a previous re-import of M0 into an explicit one*)
+END E10.                                    (*this too must be detected*)
+
 --------------------------- Test suite F (should produce error messages) ------------------------------------
 
 ORP.Compile @/s ~
