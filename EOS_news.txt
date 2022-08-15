@@ -54,3 +54,4 @@
 2022-08-01 ORB - Re-introduce fix in ORB.InType (variable 'last') to handle cyclic references correctly
 2022-08-07 ORB - Write name and key of a re-imported module before instead of after the type description in the symbol file
 2022-08-11 ORB - Also detect a conflict with a module alias if a previously re-imported module is later explicitly imported
+2022-08-15 ORB - Minimize the number of searches through the module list in ORB.ThisModule
