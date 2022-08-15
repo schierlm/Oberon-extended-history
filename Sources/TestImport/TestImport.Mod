@@ -39,15 +39,16 @@ END M4.
 ORP.Compile @/s ~
 
 MODULE A0; IMPORT M0, X := M1; END A0.      (*no error message*)
-MODULE A1; IMPORT M1 := M, M := M0; END A1. (*no error message (M imported under alias M1, M then reused as alias for M0)*)
-MODULE A2; IMPORT M0 := M, M := M0; END A2. (*no error message (M imported under alias M0, M then reused as alias for M0)*)
-MODULE A3; IMPORT M0 := M, X := M0; END A3. (*no error message (M imported under alias M0, M0 then imported under alias X)*)
 
-MODULE A4; IMPORT M0, M1; END A4.           (*no error message (M0 first explicitly imported, then (only) re-imported) by M1*)
-MODULE A5; IMPORT M := M0, M1; END A5.      (*no error message (M0 first explicitly imported, then (only) re-imported) by M1*)
+MODULE A1; IMPORT M0 := M, M := M1; END A1. (*no error message, M imported under alias M1, M then reused as alias for M1*)
+MODULE A2; IMPORT M0 := M, M := M0; END A2. (*no error message, M imported under alias M0, M then reused as alias for M0 itself*)
 
-MODULE A6; IMPORT M1, M0 := M; END A6.      (*no error message*)
-MODULE A7; IMPORT M0 := M, M1; END A7.      (*no error message*)
+MODULE A3; IMPORT M0 := M, X := M0; END A3. (*no error message, M imported under alias M0, M0 then imported under alias X*)
+MODULE A4; IMPORT M0 := M, M := M0; END A4. (*no error message, M imported under alias M0, M0 then imported under alias M, same as A2*)
+
+MODULE A5; IMPORT M0, M1; END A5.           (*no error message, M0 first explicitly imported, then re-imported) by M1*)
+MODULE A6; IMPORT M := M0, M1; END A6.      (*no error message, M0 first explicitly imported, then re-imported) by M1*)
+MODULE A7; IMPORT M1, M0 := M; END A7.      (*no error message, M0 first re-imported by M1, then M explicitly imported under an alias*)
 
 --------------------------- Test suite B --------------------------------------
 
