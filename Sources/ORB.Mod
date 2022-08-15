@@ -179,8 +179,7 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 15.8.2
     VAR mod: Module; obj, obj1: Object;
   BEGIN obj1 := topScope;
     IF decl THEN obj := obj1.next;  (*search for alias*)
-      WHILE (obj # NIL) & ((obj.name # name) OR ~obj.rdo) DO obj := obj.next END ;
-      IF obj # NIL THEN ORS.Mark("mult def") END
+      WHILE (obj # NIL) & ((obj.name # name) OR ~obj.rdo) DO obj := obj.next END
     ELSE obj := NIL
     END ;
     IF obj = NIL THEN obj := obj1.next;  (*search for module*)
@@ -193,6 +192,7 @@ MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 5.3.2019  in Oberon-07 / AP 15.8.2
       ELSIF decl THEN (*module already present, explicit import by declaration*)
         IF obj.rdo THEN ORS.Mark("mult def") ELSE obj.name := name; obj.rdo := TRUE END
       END
+    ELSE ORS.Mark("mult def")
     END ;
     RETURN obj
   END ThisModule;
