@@ -1,30 +1,11 @@
 # The Extended Oberon operating system and the programming language Oberon-2 (2020 Edition)
-The Extended Oberon System is a revision of the *Project Oberon 2013* operating system and its compiler.
 
-Note: In this repository, the term "Project Oberon 2013" refers to a re-implementation of the original "Project Oberon" on an FPGA development board around 2013, as published at www.projectoberon.com.
+This is an archive of older versions from [Extended Oberon](https://github.com/andreaspirklbauer/Oberon-extended).
 
-Features
+Some versions were downloaded from [Software Heritage](https://softwareheritage.org/), some are from my private archives when I build Experimental Oberon disk images. The most recent ones are from GitHub's event feed which makes it possible to detect force-pushes and graft together their history.
 
-* Programming language Oberon-2 (2020 Edition) defined as a superset of the Oberon-07 language
-* Safe module unloading and module finalization
-* System building and maintenance tools
-* Smooth line scrolling with variable line spaces
-* Multiple logical displays
-* Improved decoder tools
-* Improved import/export, e.g. import any number of modules and in any order
-* Simple batch execution facility
+The movie files as well as the disk images have been removed, and are instead available as an archive (containing all the different movie files/disk images)
+in the Releases section.
 
-**Last release:** 15.8.2022 / Extended-Oberon-1.7
-
-**Last update:** 15.8.2022
-
-The file [**S3RISCinstall.tar.gz**](Documentation/S3RISCinstall.tar.gz) always reflects the *latest* version of Extended Oberon, as described in the file [**EOS_news.txt**](EOS_news.txt).
-
-Documentation: [**Documentation**](Documentation)
-
-------------------------------------------------------
-
-# Instructions for converting an existing Project Oberon 2013 system to Extended Oberon
-
-If you run Oberon in an emulator on the desktop (e.g., http://github.com/pdewacht/oberon-risc-emu), you can simply backup your existing S3RISCinstall directory, download the compressed archive [**S3RISCinstall.tar.gz**](Documentation/S3RISCinstall.tar.gz) from this repository (containing Extended Oberon) to your emulator directory, run the command *tar xvzf S3RISCinstall.tar.gz* in that directory and then restart the emulator.
-
+Note that the disk image archive is a `7-Zip` archive containing uncompressed `tar` archives, as that way saves a lot of space (all the original .gz archives
+have a few hundred Megabytes, uncompressed more than 9 Gigabytes, yet the recompressed archive is less than 8 Megabytes.)
